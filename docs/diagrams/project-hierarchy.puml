@@ -1,0 +1,87 @@
+@startuml
+!theme plain
+title Cấu Trúc Phân Cấp Dự Án
+
+object "Project" as proj {
+    id = uuid
+    name = "Vinhomes Smart City"
+    code = "VHS-2024"
+    status = "OPEN"
+    totalUnits = 1000
+    commissionRate = 2.0%
+}
+
+object "Building A1" as b1 {
+    id = uuid
+    code = "A1"
+    name = "Block A1"
+    totalFloors = 25
+    totalUnits = 200
+}
+
+object "Building A2" as b2 {
+    code = "A2"
+    name = "Block A2"
+}
+
+object "Floor 8" as f8 {
+    id = uuid
+    number = 8
+    totalUnits = 8
+}
+
+object "Floor 9" as f9 {
+    number = 9
+}
+
+object "Unit 01" as u1 {
+    code = "A1-08-01"
+    area = 75
+    bedrooms = 2
+    price = 2,500,000,000
+    status = "AVAILABLE"
+}
+
+object "Unit 02" as u2 {
+    code = "A1-08-02"
+    status = "RESERVED_HOLD"
+}
+
+object "Unit 03" as u3 {
+    code = "A1-08-03"
+    status = "DEPOSITED"
+}
+
+object "Unit 05" as u5 {
+    code = "A1-08-05"
+    status = "SOLD"
+}
+
+proj *-- b1
+proj *-- b2
+b1 *-- f8
+b1 *-- f9
+f8 *-- u1
+f8 *-- u2
+f8 *-- u3
+f8 *-- u5
+
+note right of proj
+  Mỗi dự án có:
+  - Nhiều buildings
+  - Master plan
+  - Commission rate default
+end note
+
+note right of u1
+  Unit code format:
+  {Building}-{Floor}-{Number}
+  
+  A1-08-01 means:
+  - Block A1
+  - Tầng 8
+  - Căn 01
+end note
+
+@enduml
+

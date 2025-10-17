@@ -1,0 +1,227 @@
+@startuml
+!theme plain
+title Database ERD - Hệ Thống Bán Căn Hộ
+
+entity "users" as users {
+  * id : UUID <<PK>>
+  --
+  * email : VARCHAR(255) <<UK>>
+  * password : VARCHAR(255)
+  * phone : VARCHAR(20) <<UK>>
+  * fullName : VARCHAR(100)
+  avatar : VARCHAR(500)
+  * role : ENUM
+  * isActive : BOOLEAN
+  * createdAt : TIMESTAMP
+  * updatedAt : TIMESTAMP
+}
+
+entity "projects" as projects {
+  * id : UUID <<PK>>
+  --
+  * code : VARCHAR(20) <<UK>>
+  * name : VARCHAR(200)
+  * status : ENUM
+  developer : VARCHAR(200)
+  location : VARCHAR(255)
+  city : VARCHAR(100)
+  totalUnits : INTEGER
+  soldUnits : INTEGER
+  commissionRate : FLOAT
+  masterPlan : VARCHAR(500)
+  * createdBy : UUID <<FK>>
+  * createdAt : TIMESTAMP
+}
+
+entity "buildings" as buildings {
+  * id : UUID <<PK>>
+  --
+  * projectId : UUID <<FK>>
+  * code : VARCHAR(20)
+  * name : VARCHAR(100)
+  totalFloors : INTEGER
+  totalUnits : INTEGER
+  soldUnits : INTEGER
+  order : INTEGER
+}
+
+entity "floors" as floors {
+  * id : UUID <<PK>>
+  --
+  * buildingId : UUID <<FK>>
+  * number : INTEGER
+  name : VARCHAR(50)
+  totalUnits : INTEGER
+  soldUnits : INTEGER
+  floorPlan : VARCHAR(500)
+}
+
+entity "units" as units {
+  * id : UUID <<PK>>
+  --
+  * code : VARCHAR(50) <<UK>>
+  * floorId : UUID <<FK>>
+  * buildingId : UUID <<FK>>
+  * projectId : UUID <<FK>>
+  number : VARCHAR(10)
+  * area : FLOAT
+  bedrooms : INTEGER
+  bathrooms : INTEGER
+  * price : FLOAT
+  commissionRate : FLOAT
+  * status : ENUM
+  direction : VARCHAR(50)
+  layoutImage : VARCHAR(500)
+  soldAt : TIMESTAMP
+  soldBy : UUID <<FK>>
+}
+
+entity "reservations" as reservations {
+  * id : UUID <<PK>>
+  --
+  * code : VARCHAR(50) <<UK>>
+  * unitId : UUID <<FK>>
+  * ctvId : UUID <<FK>>
+  * customerName : VARCHAR(100)
+  * customerPhone : VARCHAR(20)
+  customerEmail : VARCHAR(255)
+  * status : ENUM
+  * reservedUntil : TIMESTAMP
+  extendCount : INTEGER
+  notes : TEXT
+  cancelledBy : UUID <<FK>>
+}
+
+entity "bookings" as bookings {
+  * id : UUID <<PK>>
+  --
+  * code : VARCHAR(50) <<UK>>
+  * unitId : UUID <<FK>>
+  * ctvId : UUID <<FK>>
+  reservationId : UUID <<FK>>
+  * customerName : VARCHAR(100)
+  * customerPhone : VARCHAR(20)
+  customerIdCard : VARCHAR(20)
+  * bookingAmount : FLOAT
+  paymentProof : JSON
+  * status : ENUM
+  * expiresAt : TIMESTAMP
+  approvedBy : UUID <<FK>>
+}
+
+entity "deposits" as deposits {
+  * id : UUID <<PK>>
+  --
+  * code : VARCHAR(50) <<UK>>
+  * unitId : UUID <<FK>>
+  * ctvId : UUID <<FK>>
+  bookingId : UUID <<FK>>
+  * customerName : VARCHAR(100)
+  * customerIdCard : VARCHAR(20)
+  * depositAmount : FLOAT
+  depositPercentage : FLOAT
+  paymentProof : JSON
+  contractUrl : VARCHAR(500)
+  * status : ENUM
+  dueDate : TIMESTAMP
+}
+
+entity "payment_schedules" as schedules {
+  * id : UUID <<PK>>
+  --
+  * depositId : UUID <<FK>>
+  * installment : INTEGER
+  * percentage : FLOAT
+  * amount : FLOAT
+  dueDate : TIMESTAMP
+  * status : ENUM
+  paidAmount : FLOAT
+}
+
+entity "payments" as payments {
+  * id : UUID <<PK>>
+  --
+  * scheduleId : UUID <<FK>>
+  * depositId : UUID <<FK>>
+  * amount : FLOAT
+  * paymentDate : TIMESTAMP
+  paymentMethod : VARCHAR(50)
+  paymentProof : JSON
+  * status : ENUM
+  confirmedBy : UUID <<FK>>
+}
+
+entity "commissions" as commissions {
+  * id : UUID <<PK>>
+  --
+  * unitId : UUID <<FK>>
+  * ctvId : UUID <<FK>>
+  * depositId : UUID <<FK>>
+  * amount : FLOAT
+  * status : ENUM
+  paidAt : TIMESTAMP
+}
+
+entity "payment_requests" as requests {
+  * id : UUID <<PK>>
+  --
+  * commissionId : UUID <<FK>>
+  * ctvId : UUID <<FK>>
+  * amount : FLOAT
+  * status : ENUM
+  approvedBy : UUID <<FK>>
+  approvedAt : TIMESTAMP
+}
+
+entity "otps" as otps {
+  * id : UUID <<PK>>
+  --
+  * phone : VARCHAR(20)
+  * code : VARCHAR(6)
+  * purpose : ENUM
+  * expiresAt : TIMESTAMP
+  verified : BOOLEAN
+  attempts : INTEGER
+}
+
+entity "audit_logs" as logs {
+  * id : UUID <<PK>>
+  --
+  userId : UUID <<FK>>
+  * action : VARCHAR(50)
+  * entityType : VARCHAR(50)
+  * entityId : UUID
+  oldValue : JSON
+  newValue : JSON
+  ipAddress : VARCHAR(50)
+  * createdAt : TIMESTAMP
+}
+
+' Relationships
+users ||--o{ projects : creates
+users ||--o{ reservations : creates
+users ||--o{ bookings : creates
+users ||--o{ deposits : creates
+users ||--o{ commissions : earns
+users ||--o{ requests : requests
+
+projects ||--o{ buildings : contains
+buildings ||--o{ floors : contains
+floors ||--o{ units : contains
+
+units ||--o| reservations : has
+units ||--o| bookings : has
+units ||--o| deposits : has
+units ||--o| commissions : generates
+
+reservations ||--o| bookings : upgrades_to
+bookings ||--o| deposits : upgrades_to
+
+deposits ||--|{ schedules : has
+schedules ||--o{ payments : has
+
+deposits ||--o| commissions : generates
+commissions ||--o{ requests : has
+
+@enduml
+

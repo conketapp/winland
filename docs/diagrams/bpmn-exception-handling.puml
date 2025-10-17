@@ -1,0 +1,168 @@
+@startuml
+!theme plain
+title BPMN - Xử Lý Ngoại Lệ & Edge Cases
+
+|System|
+start
+
+split
+  ' === CASE 1: Conflict ===
+  partition "Race Condition" {
+    :2 CTV cùng giữ\n1 căn (same time);
+    
+    |Database|
+    :Row-level lock\non unit;
+    
+    |CTV A|
+    :Request đến trước\n0.001s;
+    
+    |Database|
+    :CTV A lock row;
+    :Process transaction A;
+    :Update unit\n= RESERVED;
+    :Commit;
+    :Release lock;
+    
+    |CTV A|
+    :Success ✅;
+    
+    |CTV B|
+    :Request đến sau;
+    
+    |Database|
+    :Wait for lock...;
+    :Lock released;
+    :Read unit status\n= RESERVED;
+    
+    |System|
+    :Check: AVAILABLE?\nNO!;
+    :Rollback transaction B;
+    
+    |CTV B|
+    :Error 409 ❌\n"Căn đã được giữ";
+  }
+
+split again
+  ' === CASE 2: Payment Overdue ===
+  partition "Payment Overdue" {
+    |Cronjob|
+    :Check payment schedules\ndueDate < now();
+    :Find 10 overdue;
+    
+    repeat :For each overdue;
+      |System|
+      :Update status\n= OVERDUE;
+      :Calculate:\ndays overdue;
+      
+      if (Days > 7?) then (yes - Serious)
+        |System|
+        :Mark as\nCRITICAL;
+        
+        |Notification|
+        :SMS to Customer:\n"Quá hạn TT 10 ngày\nRisk mất cọc";
+        :Notify Admin:\n"CRITICAL overdue";
+        :Notify CTV:\n"Khách quá hạn";
+        
+        |Admin|
+        if (Days > 30?) then (yes)
+          :Decision:\nCancel deposit?;
+          
+          if (Cancel?) then (yes)
+            |System|
+            :Cancel deposit;
+            :Apply penalty\n(mất 50% cọc);
+            :Release unit;
+            stop
+          else (no - Grace period)
+            |Admin|
+            :Extend deadline\n+7 days;
+            
+            |System|
+            :Update dueDate;
+            
+            |Notification|
+            :Notify customer\nnew deadline;
+          endif
+        endif
+      else (no - < 7 days)
+        |Notification|
+        :Email reminder\nto customer;
+      endif
+    repeat while (More overdue?)
+  }
+
+split again
+  ' === CASE 3: Cancellation ===
+  partition "Cancellation Flow" {
+    |Customer|
+    :Yêu cầu hủy cọc;
+    
+    |CTV|
+    :Liên hệ Admin;
+    
+    |Admin|
+    :Review:\n- Lý do hủy\n- Đã TT bao nhiêu\n- Stage nào;
+    
+    if (Lý do hợp lệ?) then (yes)
+      |Admin|
+      :Approve cancellation;
+      
+      |System|
+      :Calculate refund;
+      
+      if (Khách hủy?) then (yes)
+        :Refund = 50% cọc;
+      else (Công ty hủy)
+        :Refund = 100% cọc;
+      endif
+      
+      :Create refund record;
+      :Update deposit\n= CANCELLED;
+      :Release unit\n= AVAILABLE;
+      
+      |Finance|
+      :Process refund\nchuyển khoản;
+      
+      |Notification|
+      :Notify customer\nrefund amount;
+      
+      stop
+    else (no)
+      |Admin|
+      :Reject cancellation;
+      :Yêu cầu khách\ncontinue TT;
+      stop
+    endif
+  }
+
+split again
+  ' === CASE 4: System Error ===
+  partition "Error Recovery" {
+    |System|
+    :Transaction failed\n(DB error);
+    
+    |Error Handler|
+    :Catch exception;
+    :Rollback transaction;
+    :Log error details;
+    
+    |Monitoring|
+    :Alert admin:\n"Transaction failed";
+    
+    |System|
+    :Return error\nto user;
+    
+    |User|
+    :Retry hoặc\ncontact support;
+    
+    |Admin|
+    :Check logs;
+    :Manual fix\n(if needed);
+    
+    stop
+  }
+
+end split
+
+@enduml
+

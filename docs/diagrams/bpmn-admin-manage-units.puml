@@ -1,0 +1,92 @@
+@startuml
+!theme plain
+title BPMN - Admin Quản Lý Căn Hộ (Bulk Import)
+
+|Admin|
+start
+:Tạo dự án mới;
+:Thiết lập:\n- Tên, code, địa chỉ\n- Commission rate\n- Upload master plan;
+
+:Download Excel template;
+
+|Admin|
+:Fill Excel:\n- Building, Floor, Unit\n- Area, Price, Bedrooms\n- Direction, etc.;
+note right: Example:\nA1, 8, 01, 75, 2.5tỷ\nA1, 8, 02, 80, 2.7tỷ\n...(200 rows)
+
+:Upload Excel file;
+
+|System|
+:Parse Excel;
+
+fork
+  :Validate row 1;
+fork again
+  :Validate row 2;
+fork again
+  :Validate row 3;
+fork again
+  :...;
+fork again
+  :Validate row 200;
+end fork
+
+:Collect errors;
+
+if (Có lỗi?) then (yes)
+  |Admin|
+  :Xem báo cáo lỗi:\n"Row 5: Price invalid\nRow 12: Area missing";
+  
+  if (Skip errors?) then (yes)
+    |System|
+    :Import các rows hợp lệ;
+  else (no - Fix all)
+    |Admin|
+    :Fix Excel;
+    :Upload lại;
+    stop
+  endif
+else (no - All valid)
+  |System|
+  :Generate preview;
+  
+  |Admin|
+  :Xem preview:\n"200 căn\nBlock: A1, A2, B1\nGiá từ 2-5 tỷ";
+  
+  if (Confirm import?) then (yes)
+    |System|
+    :BEGIN TRANSACTION;
+    
+    repeat
+      :Tạo/Get Building;
+      :Tạo/Get Floor;
+      :Generate unit code:\nA1-08-01;
+      :INSERT Unit\nstatus = AVAILABLE;
+    repeat while (More rows?)
+    
+    :COMMIT TRANSACTION;
+    :Ghi audit log:\n"Imported 200 units";
+    
+    |Admin|
+    :Success:\n"✅ Đã import 200 căn";
+    
+    :Vào "Quản lý căn hộ";
+    :Xem danh sách căn;
+    
+    fork
+      :Filter by building;
+    fork again
+      :Search by code;
+    fork again
+      :View floor plan\n(interactive map);
+    end fork
+    
+    stop
+  else (no - Cancel)
+    |System|
+    :Discard preview;
+    stop
+  endif
+endif
+
+@enduml
+

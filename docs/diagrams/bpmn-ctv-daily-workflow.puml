@@ -1,0 +1,94 @@
+@startuml
+!theme plain
+title BPMN - Luồng Công Việc Hàng Ngày Của CTV
+
+|CTV|
+start
+:Đăng nhập\n(SĐT + OTP);
+
+|System|
+:Verify OTP + Password;
+:Generate JWT token;
+
+|CTV|
+:Vào Dashboard;
+:Xem tổng quan:\n- Giữ chỗ: 3 căn\n- Booking: 2 căn\n- Cọc: 1 căn\n- HH chờ: 50tr;
+
+split
+  :Check notifications;
+  if (Có thông báo mới?) then (yes)
+    :Đọc:\n"Giữ chỗ A1-08-05\nsắp hết hạn (2h)";
+    :Click vào căn;
+    :Quyết định:\nGia hạn/Hủy/Nâng cấp;
+  endif
+split again
+  :Tìm căn mới\ncho khách;
+  :Vào "Tìm kiếm căn";
+  :Filter:\n- Dự án\n- Giá: 2-3 tỷ\n- 2PN;
+  
+  |System|
+  :Tìm kiếm\n& return results;
+  
+  |CTV|
+  :Xem 25 kết quả;
+  :Click vào căn phù hợp;
+  :Xem chi tiết:\n- Mặt bằng\n- Hướng\n- View\n- Hoa hồng: 50tr;
+  
+  if (Khách thích?) then (yes)
+    :Tạo giữ chỗ;
+    -> Giữ chỗ flow;
+  endif
+split again
+  :Follow up khách cũ;
+  :Vào "My Bookings";
+  :Xem booking\nđang chờ khách TT;
+  :Gọi điện khách;
+  
+  if (Khách đồng ý TT?) then (yes)
+    :Nhắc khách\nchuyển khoản;
+    :Chờ khách chuyển;
+    :Upload chứng từ;
+    -> Chờ admin duyệt;
+  endif
+split again
+  :Theo dõi thanh toán;
+  :Vào "Deposits";
+  :Xem lịch thanh toán;
+  
+  if (Gần đến hạn TT?) then (yes)
+    :Nhắc khách\n(SMS/Call);
+    :Khách chuyển khoản;
+    :Ghi nhận thanh toán;
+    -> Chờ admin confirm;
+  endif
+  
+  if (Thanh toán đủ 100%?) then (yes)
+    |System|
+    :Unit = SOLD;
+    :Tính hoa hồng;
+    :Notify CTV;
+    
+    |CTV|
+    :Nhận thông báo:\n"Hoa hồng: 50tr";
+    :Vào "Commissions";
+    :Tạo Payment Request;
+    -> Chờ admin duyệt;
+  endif
+end split
+
+:Kết thúc ngày làm việc;
+:Đăng xuất;
+stop
+
+note right of CTV
+  CTV có thể làm
+  song song nhiều việc:
+  
+  - Follow multiple khách
+  - Giữ nhiều căn
+  - Theo dõi thanh toán
+  - Tìm khách mới
+end note
+
+@enduml
+

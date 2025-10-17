@@ -1,0 +1,93 @@
+@startuml
+!theme plain
+title BPMN - Quy Trình Giữ Chỗ Căn Hộ
+
+|CTV|
+start
+:Xem danh sách\ncăn hộ available;
+:Chọn căn muốn giữ;
+:Click "Giữ chỗ";
+:Điền form:\n- Tên khách\n- SĐT khách\n- Email\n- Ghi chú;
+
+|System|
+:Validate input;
+
+if (Thông tin hợp lệ?) then (yes)
+  :Check unit status;
+  
+  if (Unit = AVAILABLE?) then (yes)
+    :Lock unit\n(Database transaction);
+    :Generate mã phiếu:\nRSV-YYYYMMDD-XXX;
+    :Lấy config:\nreservation_duration_hours;
+    :Tính thời hạn:\nnow() + 24h;
+    :Tạo Reservation\nstatus = ACTIVE;
+    :Update Unit\nstatus = RESERVED_HOLD;
+    :Ghi audit log;
+    
+    |Notification|
+    :Gửi thông báo:\n- CTV: Thành công\n- Admin: New reservation;
+    
+    |CTV|
+    :Nhận confirmation;\nnote right: Hiển thị countdown\n23:59:00
+    
+    :Xem "My Reservations";
+    
+    fork
+      :Countdown timer\nchạy real-time;
+    fork again
+      :CTV theo dõi\ntrạng thái;
+    end fork
+    
+    if (Khách đồng ý mua?) then (yes)
+      :Click "Nâng cấp\nlên Booking";
+      
+      |System|
+      :Chuyển sang\nquy trình Booking;
+      stop
+    else (no)
+      if (Hết thời gian?) then (yes)
+        |Cronjob|
+        :Auto expire\nreservation;
+        :Update status\n= EXPIRED;
+        :Release unit\n= AVAILABLE;
+        
+        |Notification|
+        :Thông báo CTV:\n"Giữ chỗ hết hạn";
+        
+        |CTV|
+        :Nhận thông báo;
+        stop
+      else (CTV hủy)
+        |CTV|
+        :Click "Hủy giữ chỗ";
+        :Nhập lý do (optional);
+        
+        |System|
+        :Update status\n= CANCELLED;
+        :Release unit\n= AVAILABLE;
+        :Ghi log;
+        
+        |CTV|
+        :Nhận confirmation;
+        stop
+      endif
+    endif
+  else (no - Đã bị giữ)
+    |System|
+    :Error 409:\n"Căn đã được giữ";
+    
+    |CTV|
+    :Nhận thông báo lỗi;
+    stop
+  endif
+else (no - Invalid)
+  |System|
+  :Error: Validation failed;
+  
+  |CTV|
+  :Sửa thông tin;
+  :Submit lại;
+endif
+
+@enduml
+

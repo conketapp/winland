@@ -1,0 +1,68 @@
+@startuml
+!theme plain
+title Quy trình Cọc → Thanh Toán → Bán
+
+actor "CTV" as ctv
+actor "Admin" as admin
+participant "System" as sys
+database "DB" as db
+participant "PDF Generator" as pdf
+participant "Commission" as comm
+
+== Tạo Cọc ==
+
+ctv -> sys: Tạo phiếu cọc
+sys -> sys: Validate:\n- depositAmount >= 5% price\n- Upload đủ giấy tờ
+sys -> sys: Generate code:\nDEP-20251020-001
+sys -> pdf: Generate contract PDF\n(template + data)
+pdf --> sys: contract.pdf URL
+sys -> db: INSERT deposits\nstatus = PENDING_APPROVAL
+sys -> db: UPDATE units\nstatus = DEPOSITED
+sys --> ctv: Success +\nContract PDF
+
+admin -> sys: Duyệt cọc
+sys -> db: UPDATE deposits\nstatus = CONFIRMED
+sys -> db: INSERT payment_schedules\n(4 đợt thanh toán)
+sys --> admin: "Đã duyệt"
+
+== Thanh Toán Từng Đợt ==
+
+loop Cho mỗi đợt thanh toán
+    ctv -> sys: Ghi nhận thanh toán đợt N
+    sys -> db: INSERT payments\nstatus = PENDING_CONFIRMATION
+    
+    admin -> sys: Xác nhận payment
+    sys -> db: UPDATE payments\nstatus = CONFIRMED
+    sys -> db: UPDATE payment_schedules\nstatus = PAID
+    
+    sys -> sys: Calculate %:\ntotalPaid / unitPrice
+    
+    alt % < 100%
+        sys --> ctv: "Đã nhận thanh toán\nCòn lại: X VNĐ"
+    else % >= 100%
+        sys -> db: UPDATE units\nstatus = SOLD\nsoldAt = now()
+        sys -> sys: Trigger commission
+        sys --> ctv: "Căn đã bán!\nChờ tính hoa hồng"
+    end
+end
+
+== Tính Hoa Hồng ==
+
+sys -> comm: Calculate commission
+comm -> db: Get unit.price, commissionRate
+comm -> comm: amount = price × rate / 100
+comm -> db: INSERT commissions\nstatus = PENDING
+comm -> sys: Commission created
+sys --> ctv: Notification:\n"Hoa hồng: 50tr VNĐ"
+
+ctv -> sys: Tạo Payment Request
+sys -> db: INSERT payment_requests\nstatus = PENDING
+sys --> ctv: "Đã gửi yêu cầu"
+
+admin -> sys: Duyệt payment request
+sys -> db: UPDATE payment_requests\nstatus = APPROVED
+sys -> db: UPDATE commissions\nstatus = PAID\npaidAt = now()
+sys --> ctv: "Đã chuyển khoản\n50tr VNĐ"
+
+@enduml
+

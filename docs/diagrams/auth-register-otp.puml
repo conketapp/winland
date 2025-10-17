@@ -1,0 +1,48 @@
+@startuml
+!theme plain
+title Đăng ký tài khoản (SĐT + OTP)
+
+actor "CTV" as user
+participant "Frontend" as fe
+participant "Backend API" as api
+participant "SMS Service" as sms
+database "Database" as db
+
+user -> fe: Nhập SĐT
+fe -> api: POST /api/auth/send-otp\n{phone: "0912345678"}
+api -> db: Check SĐT đã tồn tại?
+alt SĐT đã tồn tại
+    db --> api: Exists
+    api --> fe: Error 409\n"SĐT đã đăng ký"
+    fe --> user: Hiển thị lỗi
+else SĐT hợp lệ
+    db --> api: Not exists
+    api -> api: Generate OTP (6 số)
+    api -> db: Save OTP\n(expiresAt = now + 5min)
+    api -> sms: Send SMS(phone, code)
+    sms --> user: SMS: "Mã OTP: 123456"
+    api --> fe: Success\n{otpId: "xxx"}
+    fe --> user: Hiển thị form nhập OTP
+    
+    user -> fe: Nhập OTP + Họ tên + Mật khẩu
+    fe -> api: POST /api/auth/register\n{otpId, code, fullName, password}
+    api -> db: Verify OTP
+    
+    alt OTP sai
+        db --> api: Invalid/Expired
+        api --> fe: Error 400\n"OTP không đúng"
+        fe --> user: Hiển thị lỗi\nCòn X lần thử
+    else OTP đúng
+        db --> api: Valid
+        api -> api: Hash password (bcrypt)
+        api -> db: Create User\n(role = CTV)
+        api -> api: Generate JWT token
+        api -> db: Save login log
+        api --> fe: Success\n{user, accessToken}
+        fe -> fe: Save token localStorage
+        fe --> user: Redirect → Dashboard
+    end
+end
+
+@enduml
+

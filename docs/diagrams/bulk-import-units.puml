@@ -1,0 +1,65 @@
+@startuml
+!theme plain
+title Bulk Import Căn Hộ (Excel)
+
+actor "Admin" as admin
+participant "Frontend" as fe
+participant "Backend" as api
+participant "Excel Parser" as excel
+database "DB" as db
+
+admin -> fe: Click "Import căn hộ"
+fe --> admin: Download Excel template
+
+admin -> admin: Fill Excel:\nBuilding, Floor, Unit,\nArea, Price, etc.
+
+admin -> fe: Upload Excel file
+fe -> api: POST /api/units/import\n(multipart/form-data)
+
+api -> excel: Parse Excel
+excel -> excel: Read rows,\nvalidate format
+
+loop For each row
+    excel -> excel: Validate:\n- Required fields\n- Data types\n- Price > 0\n- Area > 0
+    
+    alt Validation failed
+        excel -> excel: Add to errors:\n"Row 5: Price invalid"
+    else Valid
+        excel -> excel: Add to preview:\n{building, floor, unit, ...}
+    end
+end
+
+alt Có errors
+    excel --> api: {errors: [...]}
+    api --> fe: Error 400\n{errors}
+    fe --> admin: "Có lỗi ở row X, Y, Z"
+    admin -> admin: Fix Excel
+    admin -> fe: Upload lại
+else No errors
+    excel --> api: {data: [...], preview: [...]}
+    api --> fe: Success\n{preview}
+    fe --> admin: "Preview 200 căn\nBuilding codes:\nA1, A2, B1..."
+    
+    admin -> fe: Review preview
+    admin -> fe: Click "Xác nhận import"
+    
+    fe -> api: POST /api/units/confirm-import
+    
+    api -> db: BEGIN TRANSACTION
+    
+    loop For each row
+        api -> db: Find or create Building
+        api -> db: Find or create Floor
+        api -> api: Generate unit code:\nA1-08-05
+        api -> db: INSERT unit
+    end
+    
+    api -> db: COMMIT TRANSACTION
+    api -> db: INSERT audit_log:\n"Imported 200 units"
+    
+    api --> fe: Success\n{created: 200}
+    fe --> admin: "✅ Đã import 200 căn"
+end
+
+@enduml
+

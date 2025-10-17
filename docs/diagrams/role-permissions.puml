@@ -1,0 +1,73 @@
+@startuml
+!theme plain
+title Role-Based Access Control (RBAC)
+
+package "Resources" {
+    [Projects]
+    [Units]
+    [Reservations]
+    [Bookings]
+    [Deposits]
+    [Payments]
+    [Commissions]
+    [System Configs]
+    [Users]
+    [Audit Logs]
+}
+
+actor "SUPER_ADMIN" as sa
+actor "ADMIN" as admin
+actor "CTV" as ctv
+actor "USER/GUEST" as user
+
+sa --> [Projects] : CRUD
+sa --> [Units] : CRUD + Bulk Import
+sa --> [Reservations] : View All, Cancel Any
+sa --> [Bookings] : View All, Approve, Cancel
+sa --> [Deposits] : View All, Approve, Cancel
+sa --> [Payments] : View All, Confirm
+sa --> [Commissions] : View All, Calculate
+sa --> [System Configs] : CRUD
+sa --> [Users] : CRUD, Reset Password
+sa --> [Audit Logs] : View All
+
+admin --> [Projects] : CRUD
+admin --> [Units] : CRUD + Bulk Import
+admin --> [Reservations] : View All, Cancel Any
+admin --> [Bookings] : View All, Approve, Cancel
+admin --> [Deposits] : View All, Approve, Cancel
+admin --> [Payments] : View All, Confirm
+admin --> [Commissions] : View All
+admin --> [System Configs] : View, Update
+admin --> [Users] : View, Update (limited)
+admin --> [Audit Logs] : View All
+
+ctv --> [Projects] : View (public)
+ctv --> [Units] : View Available, Search
+ctv --> [Reservations] : Create, View Own, Cancel Own
+ctv --> [Bookings] : Create, View Own
+ctv --> [Deposits] : Create, View Own
+ctv --> [Payments] : Record (pending confirm)
+ctv --> [Commissions] : View Own, Request Payment
+ctv --> [System Configs] : View (readonly)
+ctv --> [Users] : View Own Profile, Update Own
+
+user --> [Projects] : View (public info)
+user --> [Units] : View (limited info)
+
+note right of sa
+  Full access
+  Override tất cả rules
+  Manage admins & CTVs
+end note
+
+note right of ctv
+  Chỉ thao tác trên
+  resources của mình
+  
+  Không xem được
+  data của CTV khác
+end note
+
+@enduml
+

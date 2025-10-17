@@ -1,0 +1,65 @@
+@startuml
+!theme plain
+title Cronjob Auto Expire (Chạy mỗi 15 phút)
+
+participant "Cronjob" as cron
+database "DB" as db
+participant "Notification" as notif
+participant "Audit" as audit
+
+== Every 15 Minutes ==
+
+cron -> cron: Trigger scheduled job
+
+group Expire Reservations
+    cron -> db: SELECT * FROM reservations\nWHERE status = 'ACTIVE'\nAND reservedUntil < NOW()
+    db --> cron: List expired (VD: 5 records)
+    
+    loop For each expired reservation
+        cron -> db: BEGIN TRANSACTION
+        cron -> db: UPDATE reservations\nSET status = 'EXPIRED'
+        cron -> db: UPDATE units\nSET status = 'AVAILABLE'
+        cron -> db: INSERT audit_logs
+        cron -> db: COMMIT
+        
+        cron -> notif: Send to CTV:\n"Giữ chỗ căn A1-08-05\nđã hết hạn"
+    end
+    
+    cron -> cron: Log: "Expired 5 reservations"
+end
+
+group Expire Bookings
+    cron -> db: SELECT * FROM bookings\nWHERE status = 'PENDING_PAYMENT'\nAND expiresAt < NOW()
+    db --> cron: List expired
+    
+    loop For each expired booking
+        cron -> db: UPDATE bookings\nSET status = 'EXPIRED'
+        cron -> db: UPDATE units\nSET status = 'AVAILABLE'
+        cron -> notif: Notify CTV
+    end
+end
+
+group Check Payment Overdue
+    cron -> db: SELECT * FROM payment_schedules\nWHERE status = 'PENDING'\nAND dueDate < NOW()
+    db --> cron: List overdue
+    
+    loop For each overdue
+        cron -> db: UPDATE status = 'OVERDUE'
+        cron -> notif: Send warning:\n- CTV\n- Customer (SMS)\n- Admin
+    end
+end
+
+cron -> cron: Job completed
+
+note right of cron
+  Cron schedule:
+  */15 * * * *
+  (Every 15 minutes)
+  
+  Can also run:
+  - Every 5 minutes (more responsive)
+  - Every hour (less load)
+end note
+
+@enduml
+

@@ -1,0 +1,56 @@
+@startuml
+!theme plain
+title Lịch Thanh Toán (Payment Schedule)
+
+participant "CTV" as ctv
+participant "System" as sys
+database "DB" as db
+
+== Tạo Lịch Thanh Toán (Auto) ==
+
+sys -> sys: Deposit CONFIRMED
+sys -> db: Get unit.price = 2,500,000,000
+sys -> db: Get deposit.amount = 125,000,000 (5%)
+
+sys -> sys: Generate schedule:
+
+note right
+  Đợt 1: Cọc - 5% - 125tr
+  Đợt 2: 30% - 750tr - 30 days
+  Đợt 3: 30% - 750tr - 60 days  
+  Đợt 4: 35% - 875tr - Bàn giao
+end note
+
+sys -> db: INSERT payment_schedules (4 rows)
+sys -> db: UPDATE schedule[0]\nstatus = PAID
+
+== Ghi Nhận Thanh Toán ==
+
+ctv -> sys: Xem lịch thanh toán
+sys -> db: Get schedules by depositId
+db --> sys: 4 installments
+sys --> ctv: Hiển thị table:\n- Đợt 1: ✅ Đã thanh toán\n- Đợt 2: ⏱️ Hạn 30/11\n- Đợt 3: ⏱️ Hạn 30/12\n- Đợt 4: ⏱️ TBD
+
+ctv -> sys: Click "Thanh toán đợt 2"
+sys --> ctv: Form:\n- Số tiền: 750tr\n- Ngày TT\n- Upload chứng từ
+
+ctv -> sys: Submit
+sys -> db: INSERT payments\ninstallment = 2\nstatus = PENDING_CONFIRMATION
+
+actor "Admin" as admin
+admin -> sys: Xác nhận payment
+sys -> db: UPDATE payments\nstatus = CONFIRMED
+sys -> db: UPDATE payment_schedules[1]\nstatus = PAID
+
+sys -> sys: Calculate:\ntotalPaid = sum(payments)\npercentComplete = totalPaid/unitPrice
+
+alt percentComplete >= 100%
+    sys -> db: UPDATE units\nstatus = SOLD\nsoldAt = now()
+    sys -> sys: Trigger commission
+    sys --> ctv: 🎉 Căn đã bán!\nHoa hồng: 50tr
+else < 100%
+    sys --> ctv: Đã nhận thanh toán\nCòn: X VNĐ
+end
+
+@enduml
+

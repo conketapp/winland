@@ -1,0 +1,93 @@
+@startuml
+!theme plain
+title Quy trình Booking Căn Hộ
+
+actor "CTV" as ctv
+participant "Frontend" as fe
+participant "Backend API" as api
+database "Database" as db
+participant "QR Generator" as qr
+participant "Notification" as notif
+
+ctv -> fe: Click "Tạo Booking"
+fe -> api: GET /api/system-configs?category=booking
+api -> db: Get booking configs
+db --> api: {booking_amount: 10000000}
+api --> fe: Config data
+fe --> ctv: Show form booking
+
+ctv -> fe: Điền form:\n- Thông tin khách đầy đủ\n- CMND\n- Địa chỉ
+fe --> ctv: Hiển thị QR thanh toán
+
+fe -> api: POST /api/qr/generate\n{amount, content}
+api -> qr: Generate QR
+qr --> api: QR base64
+api --> fe: QR image
+fe --> ctv: Hiển thị QR code
+
+ctv -> ctv: Khách chuyển khoản
+ctv -> fe: Upload chứng từ\n(screenshot/photo)
+
+fe -> api: POST /api/bookings\n{unitId, customerInfo, paymentProof...}
+
+api -> db: BEGIN TRANSACTION
+api -> db: Check unit available?
+
+alt Unit không available
+    db --> api: Not available
+    api -> db: ROLLBACK
+    api --> fe: Error 409
+    fe --> ctv: "Căn đã có người đặt"
+else Unit available
+    db --> api: Available
+    
+    api -> api: Generate code:\nBOK-20251020-001
+    api -> api: expiresAt = now() + 48h
+    
+    api -> db: INSERT bookings\nstatus = PENDING_APPROVAL
+    api -> db: UPDATE units\nstatus = RESERVED_BOOKING
+    
+    alt Có reservation trước đó
+        api -> db: UPDATE reservations\nstatus = UPGRADED
+    end
+    
+    api -> db: INSERT transactions
+    api -> db: INSERT audit_logs
+    api -> db: COMMIT
+    
+    api -> notif: Notify:\n- CTV: Booking created\n- Admin: Cần duyệt
+    
+    api --> fe: Success 201\n{booking object}
+    fe --> ctv: "Booking thành công!\nChờ admin duyệt"
+end
+
+== Admin Approval ==
+
+actor "Admin" as admin
+admin -> fe: Vào "Quản lý Booking"
+fe -> api: GET /api/bookings?status=PENDING_APPROVAL
+api -> db: Get bookings
+db --> api: List bookings
+api --> fe: Booking list
+fe --> admin: Hiển thị danh sách
+
+admin -> fe: Click booking detail
+fe --> admin: Show: Info + Chứng từ
+
+admin -> fe: Click "Duyệt"
+fe -> api: POST /api/bookings/:id/approve
+
+api -> db: UPDATE bookings\nstatus = CONFIRMED\napprovedBy = adminId
+api -> db: INSERT audit_logs
+api -> notif: Notify CTV + Customer
+api --> fe: Success
+fe --> admin: "Đã duyệt"
+
+note right of notif
+  Send SMS to customer:
+  "Booking căn A1-08-05
+  đã được xác nhận"
+end note
+
+@enduml
+

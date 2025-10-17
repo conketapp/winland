@@ -1,0 +1,63 @@
+@startuml
+!theme plain
+title Quy trình Giữ Chỗ Căn Hộ
+
+actor "CTV" as ctv
+participant "Frontend" as fe
+participant "Backend API" as api
+database "Database" as db
+participant "Notification" as notif
+
+ctv -> fe: Xem chi tiết căn
+fe -> api: GET /api/units/:id
+api -> db: Get unit info
+db --> api: Unit data
+api --> fe: Unit detail
+fe --> ctv: Hiển thị thông tin\nButton "Giữ chỗ"
+
+ctv -> fe: Click "Giữ chỗ"
+fe --> ctv: Show form giữ chỗ
+
+ctv -> fe: Điền thông tin:\n- Tên khách\n- SĐT khách\n- Email\n- Ghi chú
+fe -> fe: Validate form
+
+fe -> api: POST /api/reservations\n{unitId, customerName, customerPhone...}
+
+api -> db: BEGIN TRANSACTION
+api -> db: Lock unit row (FOR UPDATE)
+api -> db: Check unit.status = AVAILABLE?
+
+alt Unit không available
+    db --> api: Status = RESERVED/DEPOSITED
+    api -> db: ROLLBACK
+    api --> fe: Error 409\n"Căn đã được giữ"
+    fe --> ctv: "Căn đã có người giữ"
+else Unit available
+    db --> api: Status = AVAILABLE
+    
+    api -> api: Generate code:\nRSV-20251020-001
+    api -> api: Get config:\nreservation_duration_hours = 24
+    api -> api: Calculate:\nreservedUntil = now() + 24h
+    
+    api -> db: INSERT INTO reservations\n(code, unitId, ctvId, customerName...)\nstatus = ACTIVE
+    api -> db: UPDATE units\nSET status = 'RESERVED_HOLD'
+    api -> db: INSERT INTO transactions\n(type = RESERVATION)
+    api -> db: INSERT INTO audit_logs
+    
+    api -> db: COMMIT TRANSACTION
+    
+    api -> notif: Send notification:\n- CTV: Success\n- Admin: New reservation
+    
+    api --> fe: Success 201\n{reservation object}
+    fe --> ctv: "Giữ chỗ thành công!"\nCountdown: 23h 59m
+    fe -> fe: Start countdown timer
+end
+
+note right of db
+  Lock mechanism ngăn
+  race condition khi
+  2 CTV cùng giữ 1 căn
+end note
+
+@enduml
+

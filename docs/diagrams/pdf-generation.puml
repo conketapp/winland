@@ -1,0 +1,99 @@
+@startuml
+!theme plain
+title PDF Generation (Phiếu & Hợp Đồng)
+
+participant "System" as sys
+participant "Template Engine" as tpl
+participant "PDF Generator" as pdf
+participant "Storage" as s3
+database "DB" as db
+
+== Generate Reservation PDF ==
+
+sys -> db: Get reservation data
+db --> sys: {code, customer, unit, ctv...}
+
+sys -> db: Get system configs\n(logo, company info)
+db --> sys: Configs
+
+sys -> tpl: Render template:\nreservation_template.html\n+ data
+tpl --> sys: HTML content
+
+sys -> pdf: Convert HTML to PDF\n(puppeteer/wkhtmltopdf)
+pdf --> sys: PDF buffer
+
+sys -> s3: Upload PDF:\nreservations/{id}/phieu-giu-cho.pdf
+s3 --> sys: URL
+
+sys -> db: UPDATE reservations\nSET pdfUrl = url
+
+sys --> sys: Return PDF URL
+
+== Generate Deposit Contract ==
+
+sys -> db: Get deposit data:\n- Customer (name, CMND, address)\n- Unit (code, area, price)\n- Payment schedule
+db --> sys: Full data
+
+sys -> db: Get contract template\n(legal approved)
+db --> sys: Template content
+
+sys -> tpl: Replace variables:\n{{customerName}}\n{{customerIdCard}}\n{{unitCode}}\n{{depositAmount}}\n{{schedule}}
+
+tpl --> sys: Filled contract HTML
+
+sys -> pdf: Generate PDF:\n- Header: Logo, company\n- Content: Contract terms\n- Schedule table\n- Signature placeholders\n- Footer: Legal text
+
+pdf --> sys: Contract PDF buffer
+
+sys -> s3: Upload:\ndeposits/{id}/hop-dong-coc.pdf
+s3 --> sys: URL
+
+sys -> db: UPDATE deposits\nSET contractUrl = url
+
+sys --> sys: Return contract URL
+
+note right of pdf
+  PDF Template includes:
+  
+  1. Header
+     - Logo
+     - Company name, address
+  
+  2. Body
+     - Title: HỢP ĐỒNG ĐẶT CỌC
+     - Mã: DEP-xxx
+     - Customer info
+     - Unit info
+     - Deposit amount
+     - Payment schedule table
+     - Terms & conditions
+  
+  3. Signature Section
+     - Bên A (Company)
+     - Bên B (Customer)
+     - Witness (CTV)
+  
+  4. Footer
+     - Date, place
+     - Legal disclaimer
+end note
+
+== QR Code trong PDF ==
+
+sys -> sys: Generate QR content:\nNoi dung: DEP-xxx NguyenVanA 125000000
+
+sys -> pdf: Embed QR in PDF
+pdf --> sys: PDF with QR
+
+note right of pdf
+  QR Code contains:
+  - Bank info (from config)
+  - Transfer content
+  - Amount
+  
+  Customer scan QR
+  → Auto fill banking app
+end note
+
+@enduml
+

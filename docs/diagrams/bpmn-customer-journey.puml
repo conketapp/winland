@@ -1,0 +1,184 @@
+@startuml
+!theme plain
+title BPMN - Customer Journey (Từ Quan Tâm → Mua Căn)
+
+|Customer|
+start
+:Quan tâm mua căn;
+:Tìm hiểu dự án\n(website/FB/zalo);
+
+|CTV|
+:Tư vấn khách;
+:Gửi thông tin:\n- Brochure\n- Bảng giá\n- Mặt bằng;
+
+|Customer|
+:Xem thông tin;
+
+if (Thích dự án?) then (yes)
+  |Customer|
+  :Hẹn xem căn mẫu;
+  
+  |CTV|
+  :Đưa khách xem\ncăn mẫu;
+  :Tư vấn chi tiết;
+  
+  |Customer|
+  if (Thích căn?) then (yes)
+    :Chọn căn cụ thể:\nA1-08-05;
+    :Đồng ý cho\nCTV giữ chỗ;
+    
+    |CTV|
+    :Vào hệ thống;
+    :Tạo giữ chỗ\ncho căn A1-08-05;
+    :Điền info khách;
+    
+    |System|
+    :Lock căn (24h);
+    :Generate phiếu\nRSV-xxx;
+    
+    |CTV|
+    :Gửi phiếu cho khách;
+    
+    |Customer|
+    :Nhận phiếu\ngiữ chỗ (24h);
+    :Về suy nghĩ;
+    
+    if (Trong 24h) then
+      if (Quyết định mua?) then (yes)
+        :Báo CTV\nđồng ý booking;
+        
+        |CTV|
+        :Nâng cấp lên\nBooking;
+        :Generate QR\n10tr booking;
+        
+        |Customer|
+        :Chuyển khoản\n10,000,000 VNĐ;
+        :Gửi screenshot\ncho CTV;
+        
+        |CTV|
+        :Upload chứng từ;
+        
+        |Admin|
+        :Duyệt booking;
+        
+        |Customer|
+        :Nhận SMS:\n"Booking confirmed";
+        :Chuẩn bị giấy tờ:\n- CMND\n- Hộ khẩu;
+        
+        ' === DEPOSIT PHASE ===
+        
+        |CTV|
+        :Hẹn khách\nký hợp đồng cọc;
+        :Tạo phiếu cọc;
+        
+        |System|
+        :Generate contract.pdf;
+        
+        |CTV|
+        :In hợp đồng;
+        :Gặp khách;
+        
+        |Customer|
+        :Đọc hợp đồng;
+        :Ký hợp đồng;
+        :Chuyển khoản tiền cọc\n125,000,000 (5%);
+        
+        |CTV|
+        :Upload:\n- HĐ đã ký\n- Biên lai cọc\n- CMND khách;
+        
+        |Admin|
+        :Review & duyệt cọc;
+        
+        |System|
+        :Generate payment schedule;
+        
+        |Customer|
+        :Nhận SMS:\nLịch thanh toán:\n- Đợt 2: 750tr (30 days)\n- Đợt 3: 750tr (60 days)\n- Đợt 4: 875tr (bàn giao);
+        
+        ' === PAYMENT PHASE ===
+        
+        repeat
+          |Customer|
+          :Chuyển khoản\ntheo schedule;
+          
+          |CTV|
+          :Nhận thông báo\nkhách đã TT;
+          :Upload chứng từ;
+          
+          |Admin|
+          :Xác nhận payment;
+          
+          |System|
+          :Cập nhật lịch TT;
+          :Tính % complete;
+          
+          |Customer|
+          :Nhận SMS confirm;
+        repeat while (< 100%?)
+        
+        |System|
+        :Thanh toán 100%;
+        :Unit = SOLD;
+        :Tính HH cho CTV;
+        
+        |Customer|
+        :Nhận SMS:\n"Thanh toán hoàn tất\nChờ bàn giao";
+        
+        |CTV|
+        :Nhận notification:\n"Hoa hồng: 50tr";
+        :Yêu cầu rút HH;
+        
+        |Admin|
+        :Chuyển HH cho CTV;
+        
+        |CTV|
+        :Nhận hoa hồng;
+        
+        |Developer|
+        :Bàn giao căn\ncho khách;
+        
+        |Customer|
+        :Nhận căn;
+        :Hoàn tất;
+        stop
+        
+      else (no - Không mua)
+        :Báo CTV hủy;
+        
+        |CTV|
+        :Hủy booking;
+        
+        |System|
+        :Refund 50%;
+        :Release căn;
+        stop
+      endif
+    else (timeout)
+      |System|
+      :Auto expire booking;
+      :Release căn;
+      stop
+    endif
+  else (no - Không quan tâm)
+    |CTV|
+    :Để giữ chỗ\ntự hết hạn;
+    stop
+  endif
+else (no - Không thích)
+  :Cảm ơn CTV;
+  stop
+endif
+
+note right of Customer
+  Thời gian trung bình:
+  - Giữ chỗ: 24h
+  - Booking: 2-3 ngày
+  - Cọc: 3-7 ngày
+  - Thanh toán: 2-3 tháng
+  
+  Total: 2-4 tháng
+  từ quan tâm → nhận căn
+end note
+
+@enduml
+

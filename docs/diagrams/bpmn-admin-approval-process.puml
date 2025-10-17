@@ -1,0 +1,160 @@
+@startuml
+!theme plain
+title BPMN - Quy Trình Duyệt Của Admin
+
+|Admin|
+start
+:Đăng nhập\n(Email + Password);
+
+|System|
+:Load dashboard;
+
+|Admin|
+:Xem pending items:\n- 5 Bookings chờ duyệt\n- 3 Deposits chờ duyệt\n- 2 Payments chờ confirm\n- 1 Payment request chờ duyệt;
+
+split
+  |Admin|
+  :Duyệt Bookings;
+  
+  repeat
+    :Chọn booking\ntừ queue;
+    :View detail:\n- Customer info\n- Payment proof\n- Amount: 10tr;
+    :Download & verify\nchứng từ;
+    
+    if (Chứng từ hợp lệ?) then (yes)
+      :Click "Duyệt";
+      
+      |System|
+      :Update booking\n= CONFIRMED;
+      :Ghi log;
+      
+      |Notification|
+      :SMS to Customer:\n"Booking confirmed";
+      
+      |Admin|
+      :Next booking;
+    else (no)
+      :Click "Từ chối";
+      :Nhập lý do:\n"Chứng từ không rõ";
+      
+      |System|
+      :Update booking\n= CANCELLED;
+      :Release unit;
+      
+      |Notification|
+      :Notify CTV + reason;
+      
+      |Admin|
+      :Next booking;
+    endif
+  repeat while (Còn bookings?)
+
+split again
+  |Admin|
+  :Duyệt Deposits;
+  
+  repeat
+    :Chọn deposit;
+    :Review:\n- CMND khách\n- Biên lai cọc\n- Hợp đồng;
+    :Verify số tiền\n>= 5% giá bán;
+    
+    if (OK?) then (yes)
+      :Approve;
+      
+      |System|
+      :Update deposit\n= CONFIRMED;
+      :Generate payment schedule;
+      
+      |Notification|
+      :SMS + Email to Customer:\n"Cọc xác nhận\nLịch TT: ...";
+      
+      |Admin|
+      :Next deposit;
+    else (no)
+      :Reject + lý do;
+      :Next deposit;
+    endif
+  repeat while (Còn deposits?)
+
+split again
+  |Admin|
+  :Confirm Payments;
+  
+  repeat
+    :Chọn payment\nchờ confirm;
+    :View:\n- Đợt thanh toán: 2\n- Số tiền: 750tr\n- Chứng từ;
+    :Verify chứng từ;
+    
+    if (Hợp lệ?) then (yes)
+      :Confirm;
+      
+      |System|
+      :Update payment\n= CONFIRMED;
+      :Update schedule\n= PAID;
+      :Calculate % complete;
+      
+      if (100% paid?) then (yes)
+        :Update unit\n= SOLD;
+        :Calculate commission;
+        :Create commission\nfor CTV;
+        
+        |Notification|
+        :Notify CTV:\n"Căn đã bán!\nHH: 50tr";
+      endif
+      
+      |Admin|
+      :Next payment;
+    else (no)
+      :Reject;
+    endif
+  repeat while (Còn payments?)
+
+split again
+  |Admin|
+  :Duyệt Payment Requests;
+  
+  repeat
+    :Chọn request;
+    :View:\n- CTV: Nguyen Van A\n- Amount: 90tr\n- Từ 2 commissions;
+    :Verify thông tin TK CTV;
+    
+    if (Approve?) then (yes)
+      :Chuyển khoản\ncho CTV;
+      :Click "Đã chuyển khoản";
+      
+      |System|
+      :Update request\n= APPROVED;
+      :Update commissions\n= PAID;
+      
+      |Notification|
+      :Notify CTV:\n"Đã nhận 90tr";
+      
+      |Admin|
+      :Next request;
+    else (no)
+      :Reject + lý do;
+    endif
+  repeat while (Còn requests?)
+
+end split
+
+:Xem báo cáo\ncuối ngày;
+:Export Excel\nreport;
+:Đăng xuất;
+stop
+
+note right of Admin
+  Admin có thể xử lý
+  song song nhiều tasks:
+  
+  Queue-based workflow
+  
+  Priority:
+  1. Deposits (cao nhất)
+  2. Bookings
+  3. Payments
+  4. Payment requests
+end note
+
+@enduml
+

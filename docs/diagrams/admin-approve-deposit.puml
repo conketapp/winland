@@ -1,0 +1,82 @@
+@startuml
+!theme plain
+title Admin Duyệt Phiếu Cọc
+
+actor "Admin" as admin
+participant "Frontend" as fe
+participant "Backend" as api
+database "DB" as db
+participant "Notification" as notif
+
+admin -> fe: Vào "Quản lý Cọc"
+fe -> api: GET /api/deposits?status=PENDING_APPROVAL
+api -> db: Get pending deposits
+db --> api: List deposits
+api --> fe: Deposit list
+
+fe --> admin: Hiển thị:\n- DEP-001: A1-08-05\n- DEP-002: B2-10-12\n...
+
+admin -> fe: Click deposit detail
+fe -> api: GET /api/deposits/:id
+api -> db: Get deposit + unit + customer
+db --> api: Full data
+api --> fe: Deposit detail
+
+fe --> admin: Show:\n=== Thông tin cọc ===\n- Căn: A1-08-05\n- Khách: Nguyen Van A\n- CMND: 001234567890\n- Số tiền: 125tr (5%)\n\n=== Chứng từ ===\n- Biên lai.jpg\n- CMND.jpg\n- HopDong.pdf\n\n[Download tất cả]
+
+admin -> admin: Review thông tin
+admin -> admin: Kiểm tra:\n- CMND hợp lệ?\n- Biên lai đúng số tiền?\n- Thông tin khớp?
+
+alt Admin approve
+    admin -> fe: Click "Duyệt"
+    fe -> fe: Confirm dialog:\n"Duyệt cọc căn A1-08-05?"
+    admin -> fe: Confirm
+    
+    fe -> api: POST /api/deposits/:id/approve
+    
+    api -> db: BEGIN TRANSACTION
+    api -> db: UPDATE deposits\nstatus = CONFIRMED\napprovedBy = adminId\napprovedAt = now()
+    
+    api -> api: Generate payment schedule
+    api -> db: INSERT payment_schedules\n(4 installments)
+    
+    ' Mark đợt 1 đã thanh toán
+    api -> db: UPDATE payment_schedules[0]\nstatus = PAID
+    
+    api -> db: INSERT audit_logs:\n"Deposit DEP-001 approved"
+    
+    api -> db: COMMIT TRANSACTION
+    
+    api -> notif: Send notifications:
+    notif -> notif: SMS to Customer:\n"Cọc căn A1-08-05\nđã được xác nhận"
+    notif -> notif: In-app to CTV:\n"Cọc đã duyệt"
+    
+    api --> fe: Success
+    fe --> admin: "✅ Đã duyệt cọc\nLịch TT đã tạo"
+    
+else Admin reject
+    admin -> fe: Click "Từ chối"
+    fe --> admin: Dialog:\n"Lý do từ chối:"
+    admin -> fe: Nhập lý do:\n"Chứng từ không rõ ràng"
+    
+    fe -> api: POST /api/deposits/:id/reject\n{reason}
+    
+    api -> db: BEGIN TRANSACTION
+    api -> db: UPDATE deposits\nstatus = CANCELLED\ncancelledReason = reason
+    api -> db: UPDATE units\nstatus = AVAILABLE
+    
+    alt Có booking trước đó
+        api -> db: UPDATE units\nstatus = RESERVED_BOOKING
+    end
+    
+    api -> db: INSERT audit_logs
+    api -> db: COMMIT
+    
+    api -> notif: Notify CTV + Customer
+    
+    api --> fe: Success
+    fe --> admin: "Đã từ chối"
+end
+
+@enduml
+

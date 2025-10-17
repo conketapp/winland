@@ -1,0 +1,86 @@
+@startuml
+!theme plain
+title Kiến Trúc Hệ Thống
+
+package "Client Layer" {
+    [Client Website\nNext.js\n:3000] as client
+    [Admin Panel\nReact+Vite\n:5173] as admin
+    [CTV Portal\nReact+Vite\n:5174] as ctv
+}
+
+package "Backend Layer" {
+    [NestJS API\n:3001] as api
+    
+    package "Modules" {
+        [Auth Module] as auth
+        [Projects Module] as proj
+        [Units Module] as units
+        [Reservations Module] as rsv
+        [Bookings Module] as bok
+        [Deposits Module] as dep
+        [Payments Module] as pay
+        [Commissions Module] as comm
+    }
+    
+    [Prisma ORM] as prisma
+}
+
+package "Data Layer" {
+    database "PostgreSQL" as db
+    database "Redis Cache\n(Future)" as redis
+}
+
+package "External Services" {
+    [SMS Service\n(Twilio/AWS SNS)] as sms
+    [Email Service\n(SendGrid)] as email
+    [File Storage\n(S3/Local)] as storage
+    [PDF Generator] as pdf
+    [QR Generator] as qr
+}
+
+client --> api : REST API
+admin --> api : REST API
+ctv --> api : REST API
+
+api --> auth
+api --> proj
+api --> units
+api --> rsv
+api --> bok
+api --> dep
+api --> pay
+api --> comm
+
+auth --> prisma
+proj --> prisma
+units --> prisma
+rsv --> prisma
+bok --> prisma
+dep --> prisma
+pay --> prisma
+comm --> prisma
+
+prisma --> db
+api ..> redis : Cache
+
+auth --> sms : Send OTP
+rsv --> sms : Notify customer
+bok --> email : Send confirmation
+dep --> pdf : Generate contract
+bok --> qr : Generate QR payment
+dep --> qr
+
+api --> storage : Upload images/docs
+
+note right of db
+  12 tables:
+  - users, projects
+  - buildings, floors, units
+  - reservations, bookings, deposits
+  - payments, payment_schedules
+  - commissions, payment_requests
+  - audit_logs, system_configs, otps
+end note
+
+@enduml
+

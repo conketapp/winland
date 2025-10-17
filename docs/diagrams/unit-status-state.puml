@@ -1,0 +1,46 @@
+@startuml
+!theme plain
+title Trạng Thái Căn Hộ (Unit Status)
+
+[*] --> AVAILABLE : Admin tạo căn
+
+AVAILABLE --> RESERVED_HOLD : CTV tạo\nGiữ chỗ
+RESERVED_HOLD --> AVAILABLE : Hết hạn (24h)\nhoặc CTV hủy
+RESERVED_HOLD --> RESERVED_BOOKING : CTV upgrade\nlên Booking
+
+AVAILABLE --> RESERVED_BOOKING : CTV tạo\nBooking trực tiếp
+RESERVED_BOOKING --> AVAILABLE : Hủy booking\nhoặc hết hạn
+RESERVED_BOOKING --> DEPOSITED : CTV upgrade\nlên Cọc
+
+AVAILABLE --> DEPOSITED : CTV tạo\nCọc trực tiếp
+DEPOSITED --> AVAILABLE : Hủy cọc
+DEPOSITED --> SOLD : Thanh toán\n100%
+
+SOLD --> [*] : Hoàn tất
+
+note right of RESERVED_HOLD
+  Giữ chỗ tạm
+  Không thanh toán
+  Thời hạn: 24h
+end note
+
+note right of RESERVED_BOOKING
+  Có thanh toán booking
+  Thời hạn: 48h
+  Cần admin duyệt
+end note
+
+note right of DEPOSITED
+  Đã cọc chính thức
+  Có hợp đồng
+  Lịch thanh toán
+end note
+
+note right of SOLD
+  Đã bán
+  Commission triggered
+  Không đảo ngược
+end note
+
+@enduml
+

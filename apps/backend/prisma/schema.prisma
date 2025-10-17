@@ -1,0 +1,485 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id                   String           @id @default(uuid())
+  phone                String?          @unique
+  email                String?          @unique
+  password             String
+  fullName             String           @map("full_name")
+  avatar               String?
+  role                 UserRole         @default(CTV)
+  isActive             Boolean          @default(true) @map("is_active")
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+  auditLogs            AuditLog[]
+  bookingApprovals     Booking[]        @relation("BookingApprover")
+  bookings             Booking[]        @relation("CTVBookings")
+  commissions          Commission[]
+  depositCancellations Deposit[]        @relation("DepositCanceller")
+  depositApprovals     Deposit[]        @relation("DepositApprover")
+  deposits             Deposit[]        @relation("CTVDeposits")
+  paymentApprovals     PaymentRequest[] @relation("PaymentApprover")
+  paymentRequests      PaymentRequest[]
+  projectsCreated      Project[]        @relation("ProjectCreator")
+  reservations         Reservation[]    @relation("CTVReservations")
+
+  @@map("users")
+}
+
+model OTP {
+  id         String    @id @default(uuid())
+  phone      String
+  code       String
+  purpose    String
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @map("expires_at")
+  verifiedAt DateTime? @map("verified_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([phone, purpose])
+  @@map("otps")
+}
+
+model Project {
+  id             String        @id @default(uuid())
+  name           String
+  code           String        @unique
+  status         ProjectStatus @default(UPCOMING)
+  developer      String
+  location       String
+  address        String
+  district       String
+  city           String
+  latitude       Float?
+  longitude      Float?
+  totalArea      Float?        @map("total_area")
+  totalBuildings Int?          @map("total_buildings")
+  totalUnits     Int?          @map("total_units")
+  priceFrom      Float?        @map("price_from")
+  priceTo        Float?        @map("price_to")
+  description    String?
+  amenities      String?
+  images         String?
+  masterPlan     String?       @map("master_plan")
+  floorPlan      String?       @map("floor_plan")
+  openDate       DateTime?     @map("open_date")
+  commissionRate Float         @default(2.0) @map("commission_rate")
+  createdBy      String        @map("created_by")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  buildings      Building[]
+  creator        User          @relation("ProjectCreator", fields: [createdBy], references: [id])
+  units          Unit[]
+
+  @@index([code])
+  @@index([status])
+  @@index([city])
+  @@map("projects")
+}
+
+model Building {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  code        String
+  name        String
+  floors      Int
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  floorsData  Floor[]
+  units       Unit[]
+
+  @@unique([projectId, code])
+  @@index([projectId])
+  @@map("buildings")
+}
+
+model Floor {
+  id         String   @id @default(uuid())
+  buildingId String   @map("building_id")
+  number     Int
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  building   Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  units      Unit[]
+
+  @@unique([buildingId, number])
+  @@index([buildingId])
+  @@map("floors")
+}
+
+model Unit {
+  id             String        @id @default(uuid())
+  projectId      String        @map("project_id")
+  buildingId     String        @map("building_id")
+  floorId        String        @map("floor_id")
+  code           String        @unique
+  unitNumber     String        @map("unit_number")
+  unitTypeId     String?       @map("unit_type_id")
+  status         UnitStatus    @default(AVAILABLE)
+  price          Float
+  area           Float
+  bedrooms       Int?
+  bathrooms      Int?
+  direction      String?
+  balcony        Boolean       @default(false)
+  view           String?
+  description    String?
+  floorPlanImage String?       @map("floor_plan_image")
+  images         String?
+  commissionRate Float?        @map("commission_rate")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  bookings       Booking[]
+  commissions    Commission[]
+  deposits       Deposit[]
+  reservations   Reservation[]
+  unitType       UnitType?     @relation(fields: [unitTypeId], references: [id])
+  floor          Floor         @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  building       Building      @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([buildingId])
+  @@index([floorId])
+  @@index([status])
+  @@index([unitTypeId])
+  @@map("units")
+}
+
+model UnitType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  units       Unit[]
+
+  @@map("unit_types")
+}
+
+model Reservation {
+  id              String            @id @default(uuid())
+  code            String            @unique
+  unitId          String            @map("unit_id")
+  ctvId           String            @map("ctv_id")
+  customerName    String            @map("customer_name")
+  customerPhone   String            @map("customer_phone")
+  customerEmail   String?           @map("customer_email")
+  notes           String?
+  status          ReservationStatus @default(ACTIVE)
+  priority        Int               @default(0)
+  reservedUntil   DateTime          @map("reserved_until")
+  extendCount     Int               @default(0) @map("extend_count")
+  cancelledBy     String?           @map("cancelled_by")
+  cancelledReason String?           @map("cancelled_reason")
+  notifiedAt      DateTime?         @map("notified_at")
+  depositDeadline DateTime?         @map("deposit_deadline")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  ctv             User              @relation("CTVReservations", fields: [ctvId], references: [id], onDelete: Cascade)
+  unit            Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId, priority])
+  @@index([ctvId])
+  @@index([status])
+  @@index([code])
+  @@map("reservations")
+}
+
+model Booking {
+  id              String        @id @default(uuid())
+  code            String        @unique
+  unitId          String        @map("unit_id")
+  ctvId           String        @map("ctv_id")
+  customerName    String        @map("customer_name")
+  customerPhone   String        @map("customer_phone")
+  customerEmail   String?       @map("customer_email")
+  customerIdCard  String        @map("customer_id_card")
+  customerAddress String        @map("customer_address")
+  bookingAmount   Float         @map("booking_amount")
+  paymentMethod   String        @default("BANK_TRANSFER") @map("payment_method")
+  paymentProof    String?       @map("payment_proof")
+  status          BookingStatus @default(PENDING_APPROVAL)
+  expiresAt       DateTime      @map("expires_at")
+  approvedBy      String?       @map("approved_by")
+  approvedAt      DateTime?     @map("approved_at")
+  cancelledReason String?       @map("cancelled_reason")
+  refundAmount    Float?        @map("refund_amount")
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  approver        User?         @relation("BookingApprover", fields: [approvedBy], references: [id])
+  ctv             User          @relation("CTVBookings", fields: [ctvId], references: [id], onDelete: Cascade)
+  unit            Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId])
+  @@index([ctvId])
+  @@index([status])
+  @@index([code])
+  @@map("bookings")
+}
+
+model Deposit {
+  id                String            @id @default(uuid())
+  code              String            @unique
+  unitId            String            @map("unit_id")
+  ctvId             String            @map("ctv_id")
+  customerName      String            @map("customer_name")
+  customerPhone     String            @map("customer_phone")
+  customerEmail     String?           @map("customer_email")
+  customerIdCard    String            @map("customer_id_card")
+  customerAddress   String            @map("customer_address")
+  depositAmount     Float             @map("deposit_amount")
+  depositPercentage Float             @map("deposit_percentage")
+  depositDate       DateTime          @map("deposit_date")
+  paymentMethod     String            @default("BANK_TRANSFER") @map("payment_method")
+  paymentProof      String?           @map("payment_proof")
+  contractUrl       String?           @map("contract_url")
+  status            DepositStatus     @default(PENDING_APPROVAL)
+  approvedBy        String?           @map("approved_by")
+  approvedAt        DateTime?         @map("approved_at")
+  cancelledBy       String?           @map("cancelled_by")
+  cancelledReason   String?           @map("cancelled_reason")
+  refundAmount      Float?            @map("refund_amount")
+  notes             String?
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  commissions       Commission?
+  canceller         User?             @relation("DepositCanceller", fields: [cancelledBy], references: [id])
+  approver          User?             @relation("DepositApprover", fields: [approvedBy], references: [id])
+  ctv               User              @relation("CTVDeposits", fields: [ctvId], references: [id], onDelete: Cascade)
+  unit              Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  paymentSchedules  PaymentSchedule[]
+  transactions      Transaction[]
+
+  @@index([unitId])
+  @@index([ctvId])
+  @@index([status])
+  @@index([code])
+  @@map("deposits")
+}
+
+model PaymentSchedule {
+  id           String                @id @default(uuid())
+  depositId    String                @map("deposit_id")
+  installment  Int
+  name         String
+  percentage   Float
+  amount       Float
+  dueDate      DateTime?             @map("due_date")
+  status       PaymentScheduleStatus @default(PENDING)
+  paidAmount   Float                 @default(0) @map("paid_amount")
+  paidAt       DateTime?             @map("paid_at")
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+  deposit      Deposit               @relation(fields: [depositId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([depositId])
+  @@index([status])
+  @@map("payment_schedules")
+}
+
+model Transaction {
+  id                String            @id @default(uuid())
+  depositId         String            @map("deposit_id")
+  paymentScheduleId String?           @map("payment_schedule_id")
+  amount            Float
+  paymentDate       DateTime          @map("payment_date")
+  paymentMethod     String            @default("BANK_TRANSFER") @map("payment_method")
+  paymentProof      String?           @map("payment_proof")
+  transactionRef    String?           @map("transaction_ref")
+  status            TransactionStatus @default(PENDING_CONFIRMATION)
+  confirmedAt       DateTime?         @map("confirmed_at")
+  notes             String?
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  paymentSchedule   PaymentSchedule?  @relation(fields: [paymentScheduleId], references: [id])
+  deposit           Deposit           @relation(fields: [depositId], references: [id], onDelete: Cascade)
+
+  @@index([depositId])
+  @@index([paymentScheduleId])
+  @@index([status])
+  @@map("transactions")
+}
+
+model Commission {
+  id              String           @id @default(uuid())
+  unitId          String           @map("unit_id")
+  ctvId           String           @map("ctv_id")
+  depositId       String           @unique @map("deposit_id")
+  amount          Float
+  rate            Float
+  status          CommissionStatus @default(PENDING)
+  paidAt          DateTime?        @map("paid_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  deposit         Deposit          @relation(fields: [depositId], references: [id], onDelete: Cascade)
+  ctv             User             @relation(fields: [ctvId], references: [id], onDelete: Cascade)
+  unit            Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  paymentRequests PaymentRequest[]
+
+  @@index([unitId])
+  @@index([ctvId])
+  @@index([status])
+  @@map("commissions")
+}
+
+model PaymentRequest {
+  id              String               @id @default(uuid())
+  commissionId    String               @map("commission_id")
+  ctvId           String               @map("ctv_id")
+  amount          Float
+  bankName        String?              @map("bank_name")
+  bankAccount     String?              @map("bank_account")
+  bankAccountName String?              @map("bank_account_name")
+  status          PaymentRequestStatus @default(PENDING)
+  requestedAt     DateTime             @default(now()) @map("requested_at")
+  approvedBy      String?              @map("approved_by")
+  approvedAt      DateTime?            @map("approved_at")
+  rejectedReason  String?              @map("rejected_reason")
+  notes           String?
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  approver        User?                @relation("PaymentApprover", fields: [approvedBy], references: [id])
+  ctv             User                 @relation(fields: [ctvId], references: [id], onDelete: Cascade)
+  commission      Commission           @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+
+  @@index([commissionId])
+  @@index([ctvId])
+  @@index([status])
+  @@map("payment_requests")
+}
+
+model SystemConfig {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  type        String
+  label       String
+  category    String
+  description String?
+  editableBy  String   @default("ADMIN") @map("editable_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@index([key])
+  @@map("system_configs")
+}
+
+model PdfTemplate {
+  id          String   @id @default(uuid())
+  type        String
+  name        String
+  templateUrl String?  @map("template_url")
+  variables   String?
+  isDefault   Boolean  @default(false) @map("is_default")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@map("pdf_templates")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?  @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  oldValue   String?  @map("old_value")
+  newValue   String?  @map("new_value")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  CTV
+  USER
+}
+
+enum ProjectStatus {
+  UPCOMING
+  OPEN
+  CLOSED
+}
+
+enum UnitStatus {
+  AVAILABLE
+  RESERVED_BOOKING
+  DEPOSITED
+  SOLD
+}
+
+enum ReservationStatus {
+  ACTIVE
+  YOUR_TURN
+  MISSED
+  EXPIRED
+  CANCELLED
+  COMPLETED
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  PENDING_APPROVAL
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+  UPGRADED
+}
+
+enum DepositStatus {
+  PENDING_APPROVAL
+  CONFIRMED
+  OVERDUE
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentScheduleStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum TransactionStatus {
+  PENDING_CONFIRMATION
+  CONFIRMED
+  CANCELLED
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+}
+
+enum PaymentRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}

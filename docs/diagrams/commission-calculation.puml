@@ -1,0 +1,56 @@
+@startuml
+!theme plain
+title Commission Calculation Flow
+
+start
+
+:Unit status changed to SOLD;
+
+:System triggered;
+
+:Get deposit record;
+
+if (Deposit exists?) then (yes)
+  :Get CTV from deposit.ctvId;
+  :Get Unit info;
+  
+  :Calculate rate:\nrate = unit.commissionRate\n|| project.commissionRate;
+  
+  note right
+    Priority:
+    1. Unit rate (if set)
+    2. Project default rate
+  end note
+  
+  :Calculate amount:\namount = unit.price × rate / 100;
+  
+  note right
+    Example:
+    price = 2,500,000,000
+    rate = 2%
+    amount = 50,000,000 VNĐ
+  end note
+  
+  :Check: Commission đã tồn tại?;
+  
+  if (Already exists?) then (yes)
+    :Error: "Commission đã tạo";
+    stop
+  else (no)
+    :Create Commission record:\n- unitId\n- ctvId\n- depositId\n- amount\n- status = PENDING;
+    
+    :Insert audit_log;
+    
+    :Send notification to CTV:\n"Bạn có hoa hồng mới\n50,000,000 VNĐ";
+    
+    :Update CTV stats:\ntotalCommissionEarned += amount;
+    
+    stop
+  endif
+else (no)
+  :Error: "No deposit found";
+  stop
+endif
+
+@enduml
+

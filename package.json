@@ -1,0 +1,33 @@
+{
+  "name": "batdongsan-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real Estate Platform Monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "backend:dev": "npm run dev --workspace=@batdongsan/backend",
+    "admin:dev": "npm run dev --workspace=@batdongsan/admin",
+    "client:dev": "npm run dev --workspace=@batdongsan/client",
+    "backend:build": "npm run build --workspace=@batdongsan/backend",
+    "admin:build": "npm run build --workspace=@batdongsan/admin",
+    "client:build": "npm run build --workspace=@batdongsan/client"
+  },
+  "devDependencies": {
+    "prettier": "^3.1.0",
+    "turbo": "^1.11.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
+

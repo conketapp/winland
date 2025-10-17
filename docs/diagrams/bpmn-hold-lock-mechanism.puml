@@ -1,0 +1,97 @@
+@startuml
+!theme plain
+title BPMN - Cơ Chế Giữ Căn & Lock (Manual Hold)
+
+|#AntiqueWhite|CTV A|
+start
+:Tìm thấy căn\nphù hợp cho khách;
+:Click "Giữ căn"\n(Manual button);
+
+|#LightBlue|System|
+:Check: Unit available?;
+
+if (Available?) then (yes)
+  :BEGIN TRANSACTION;
+  :Lock unit row\n(FOR UPDATE);
+  :Create Reservation\nfor CTV A;
+  :Update Unit:\n- status = RESERVED_HOLD\n- holdBy = CTV A\n- holdUntil = now() + 24h;
+  :COMMIT;
+  
+  |#LightGreen|Notification|
+  :Notify CTV A:\n"✅ Giữ căn thành công\nCountdown: 24h";
+  
+  |#AntiqueWhite|CTV A|
+  :Nhận confirmation;
+  :Theo dõi countdown;
+  
+  |#PeachPuff|CTV B|
+  :Cùng lúc đó,\nCTV B cũng thấy\ncăn này;
+  :Click "Giữ căn";
+  
+  |#LightBlue|System|
+  :Check: Unit available?;
+  
+  if (Available?) then (no - Locked!)
+    :Return Error 409;
+    
+    |#PeachPuff|CTV B|
+    :❌ Thấy thông báo:\n"Căn đang được giữ\nbởi CTV khác\nĐến: 15:30 22/10";
+    
+    :CTV B KHÔNG thể:\n- Giữ căn\n- Booking\n- Cọc;
+    
+    :Chờ hết hạn\nhoặc tìm căn khác;
+    
+    |#AntiqueWhite|CTV A|
+    fork
+      :Tiếp tục flow:;
+      :Tạo booking;
+      :Khách cọc;
+      :Khách thanh toán;
+      :Unit SOLD;
+      
+      |#LightBlue|System|
+      :Calculate commission\nfor CTV A;
+      :CTV A = 100% HH;
+      
+      |#AntiqueWhite|CTV A|
+      :Nhận 50tr HH;
+      stop
+    fork again
+      :Hoặc hủy/hết hạn;
+      
+      |#LightBlue|System|
+      :Release lock;
+      :Unit = AVAILABLE;
+      
+      |#LightGreen|Notification|
+      :Notify all CTVs:\n"Căn A1-08-05\navailable lại";
+      
+      |#PeachPuff|CTV B|
+      :Thấy căn available;
+      :Giữ căn;
+      -> CTV B now owns;
+      stop
+    end fork
+  endif
+else (no)
+  |#AntiqueWhite|CTV A|
+  :Error: Không available;
+  stop
+endif
+
+note right of System
+  **LOCK MECHANISM:**
+  
+  1. Manual hold button
+  2. First come, first served
+  3. Lock căn cho CTV đó
+  4. CTV khác BỊ BLOCK
+  5. Auto release khi hết hạn
+  
+  **NO SHARING:**
+  - 1 căn = 1 CTV duy nhất
+  - Commission 100% cho CTV hold
+end note
+
+@enduml
+

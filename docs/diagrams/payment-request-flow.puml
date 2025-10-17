@@ -1,0 +1,79 @@
+@startuml
+!theme plain
+title CTV Yêu Cầu Thanh Toán Hoa Hồng
+
+actor "CTV" as ctv
+participant "Frontend" as fe
+participant "Backend" as api
+database "DB" as db
+actor "Admin" as admin
+participant "Notification" as notif
+
+== CTV Tạo Payment Request ==
+
+ctv -> fe: Vào "Hoa hồng của tôi"
+fe -> api: GET /api/commissions/my-commissions
+api -> db: SELECT * FROM commissions\nWHERE ctvId = :id\nAND status = 'PENDING'
+db --> api: List commissions
+api --> fe: Commission list
+
+fe --> ctv: Hiển thị:\n- Căn A1-08-05: 50tr\n- Căn B2-10-12: 40tr\nTổng: 90tr
+
+ctv -> fe: Select commissions\n(có thể chọn nhiều)
+ctv -> fe: Click "Yêu cầu thanh toán"
+
+fe -> api: POST /api/payment-requests\n{commissionIds: [...]}
+
+api -> db: Calculate total amount
+api -> db: BEGIN TRANSACTION
+api -> db: INSERT payment_requests\n(ctvId, amount, status = PENDING)
+api -> db: Link commissions to request
+api -> db: INSERT audit_logs
+api -> db: COMMIT
+
+api -> notif: Notify Admin:\n"CTV X yêu cầu thanh toán\n90,000,000 VNĐ"
+
+api --> fe: Success\n{paymentRequest}
+fe --> ctv: "Yêu cầu đã gửi\nChờ admin duyệt"
+
+== Admin Review & Approve ==
+
+admin -> fe: Vào "Payment Requests"
+fe -> api: GET /api/payment-requests?status=PENDING
+api -> db: Get pending requests
+db --> api: List requests
+api --> fe: Request list
+fe --> admin: Hiển thị danh sách
+
+admin -> fe: Click request detail
+fe --> admin: Show:\n- CTV: Nguyen Van A\n- Số tiền: 90tr\n- Commissions: 2 căn\n- Ngày yêu cầu
+
+admin -> fe: Verify thông tin TK CTV
+
+alt Admin approve
+    admin -> fe: Click "Duyệt"
+    fe -> api: POST /api/payment-requests/:id/approve
+    
+    api -> db: BEGIN TRANSACTION
+    api -> db: UPDATE payment_requests\nstatus = APPROVED\napprovedBy = adminId
+    api -> db: UPDATE commissions\nstatus = PAID\npaidAt = now()
+    api -> db: INSERT audit_logs
+    api -> db: COMMIT
+    
+    api -> notif: Notify CTV:\n"Đã chuyển khoản 90tr"
+    
+    api --> fe: Success
+    fe --> admin: "Đã duyệt"
+else Admin reject
+    admin -> fe: Click "Từ chối"
+    admin -> fe: Nhập lý do
+    fe -> api: POST /api/payment-requests/:id/reject\n{reason}
+    
+    api -> db: UPDATE payment_requests\nstatus = REJECTED\nrejectedReason = reason
+    api -> notif: Notify CTV + lý do
+    api --> fe: Success
+    fe --> admin: "Đã từ chối"
+end
+
+@enduml
+

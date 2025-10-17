@@ -1,0 +1,72 @@
+@startuml
+!theme plain
+title Race Condition Prevention (Database Lock)
+
+participant "CTV A\n(Browser)" as ctva
+participant "CTV B\n(Browser)" as ctvb
+participant "API Server" as api
+database "PostgreSQL" as db
+
+== Scenario: 2 CTV cùng giữ 1 căn ==
+
+ctva -> api: POST /api/reservations\n{unitId: "abc"}
+ctvb -> api: POST /api/reservations\n{unitId: "abc"}
+
+note over api
+  2 requests cùng lúc
+  cho cùng 1 unitId
+end note
+
+api -> db: BEGIN TRANSACTION (CTV A)
+api -> db: BEGIN TRANSACTION (CTV B)
+
+api -> db: SELECT * FROM units\nWHERE id = 'abc'\n**FOR UPDATE** (CTV A)
+
+note right of db
+  Database lock!
+  CTV A lock row
+  CTV B phải CHỜ
+end note
+
+db --> api: Unit data (AVAILABLE)\n[Row locked by CTV A]
+
+api -> api: Check status = AVAILABLE ✓
+
+api -> db: UPDATE units\nSET status = 'RESERVED_HOLD'\nWHERE id = 'abc' (CTV A)
+
+api -> db: INSERT reservations... (CTV A)
+
+api -> db: COMMIT TRANSACTION (CTV A)
+
+note over db
+  Lock released!
+  CTV B có thể tiếp tục
+end note
+
+db --> api: Transaction A success
+
+api --> ctva: ✅ Success 201\n"Giữ chỗ thành công"
+
+' Now CTV B continues
+api -> db: SELECT * FROM units\nWHERE id = 'abc'\n**FOR UPDATE** (CTV B)
+
+db --> api: Unit data (RESERVED_HOLD)\n[No lock now]
+
+api -> api: Check status = AVAILABLE?\n❌ NO (status = RESERVED_HOLD)
+
+api -> db: ROLLBACK TRANSACTION (CTV B)
+
+db --> api: Rollback complete
+
+api --> ctvb: ❌ Error 409\n"Căn đã được giữ\nbởi CTV khác"
+
+note over api
+  Database row-level locking
+  ngăn chặn conflict
+  
+  First come, first served
+  based on transaction order
+end note
+
+@enduml
+

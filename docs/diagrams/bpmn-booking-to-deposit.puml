@@ -1,0 +1,143 @@
+@startuml
+!theme plain
+title BPMN - Quy Trình Booking → Cọc → Thanh Toán
+
+|CTV|
+start
+:Có Reservation ACTIVE\nhoặc\nTạo Booking mới;
+
+:Click "Tạo Booking";
+
+:Điền form booking:\n- Thông tin khách đầy đủ\n- CMND, địa chỉ;
+
+|System|
+:Generate booking code:\nBOK-YYYYMMDD-XXX;
+:Lấy config:\nbooking_amount = 10tr;
+:Generate QR code\nthanh toán;
+
+|CTV|
+:Gửi QR cho khách;
+
+|Customer|
+:Chuyển khoản\n10,000,000 VNĐ;
+
+|CTV|
+:Upload chứng từ\nchuyển khoản;
+
+|System|
+:Tạo Booking\nstatus = PENDING_APPROVAL;
+:Update Unit\n= RESERVED_BOOKING;
+if (Có Reservation?) then (yes)
+  :Update Reservation\n= UPGRADED;
+endif
+
+|Admin|
+:Nhận notification:\n"Booking mới cần duyệt";
+:Vào "Quản lý Booking";
+:Review thông tin\nvà chứng từ;
+
+if (Approve?) then (yes)
+  |System|
+  :Update Booking\n= CONFIRMED;
+  :Ghi log;
+  
+  |Notification|
+  :SMS to Customer:\n"Booking đã xác nhận";
+  
+  |CTV|
+  :Nhận confirmation;
+  :Click "Nâng cấp lên Cọc";
+  
+  ' === DEPOSIT PHASE ===
+  
+  |CTV|
+  :Điền form cọc:\n- Số tiền cọc (min 5%)\n- Upload CMND, giấy tờ;
+  
+  |System|
+  :Validate:\ndeposit >= 5% × price;
+  :Generate deposit code:\nDEP-YYYYMMDD-XXX;
+  
+  |PDF Generator|
+  :Generate hợp đồng cọc\n(template + data);
+  :Return contract.pdf;
+  
+  |System|
+  :Tạo Deposit\nstatus = PENDING_APPROVAL;
+  :Update Booking\n= UPGRADED;
+  :Update Unit\n= DEPOSITED;
+  :Generate QR thanh toán;
+  
+  |CTV|
+  :Download contract.pdf;
+  :In hợp đồng;
+  :Khách ký;
+  :Upload hợp đồng đã ký\n+ chứng từ TT cọc;
+  
+  |Admin|
+  :Review deposit;
+  
+  if (Approve deposit?) then (yes)
+    |System|
+    :Update Deposit\n= CONFIRMED;
+    :Generate Payment Schedule:\n- Đợt 1: Cọc (paid)\n- Đợt 2: 30% (30 days)\n- Đợt 3: 30% (60 days)\n- Đợt 4: 35% (bàn giao);
+    
+    |Notification|
+    :SMS to Customer:\n"Cọc đã xác nhận\nLịch thanh toán...";
+    
+    ' === PAYMENT PHASE ===
+    
+    |CTV|
+    repeat
+      :Đợi khách TT\ntheo schedule;
+      :Khách chuyển khoản;
+      :Upload chứng từ TT;
+      
+      |Admin|
+      :Xác nhận payment;
+      
+      |System|
+      :Ghi nhận thanh toán;
+      :Cập nhật schedule\n= PAID;
+      :Tính % complete;
+      
+    repeat while (< 100%?)
+    
+    |System|
+    :Thanh toán đủ 100%;
+    :Update Unit\n= SOLD;
+    :Calculate commission:\namount = price × rate;
+    :Tạo Commission\n= PENDING;
+    
+    |Notification|
+    :Notify CTV:\n"Chúc mừng!\nHoa hồng: 50tr";
+    
+    |CTV|
+    :Click "Yêu cầu\nthanh toán HH";
+    
+    |System|
+    :Tạo Payment Request;
+    
+    |Admin|
+    :Duyệt payment request;
+    :Chuyển khoản cho CTV;
+    :Mark Commission = PAID;
+    
+    |CTV|
+    :Nhận hoa hồng;
+    stop
+  else (no - Reject deposit)
+    |System|
+    :Cancel deposit;
+    :Unit = AVAILABLE;
+    stop
+  endif
+else (no - Reject booking)
+  |System|
+  :Cancel booking;
+  :Unit = AVAILABLE;
+  :Refund 50% (nếu có);
+  stop
+endif
+
+@enduml
+

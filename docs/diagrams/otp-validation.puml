@@ -1,0 +1,62 @@
+@startuml
+!theme plain
+title OTP Validation Flow
+
+start
+
+:User nhập SĐT;
+
+:System validate SĐT format;
+
+if (SĐT hợp lệ?) then (yes)
+  :Check rate limit\n3 OTP/giờ/SĐT;
+  
+  if (Chưa vượt limit?) then (yes)
+    :Generate OTP (6 số);
+    :Save to DB:\n- code\n- expiresAt = now()+5min\n- attempts = 0;
+    :Send SMS;
+    :Return otpId;
+    
+    :User nhập OTP;
+    
+    :System verify;
+    
+    if (OTP exists?) then (yes)
+      if (Chưa expire?) then (yes)
+        if (Code match?) then (yes)
+          :Mark verified = true;
+          :Continue registration;
+          stop
+        else (no)
+          :Tăng attempts++;
+          
+          if (attempts >= 3?) then (yes)
+            :Block OTP này;
+            :Error: "Đã nhập sai 3 lần";
+            stop
+          else (no)
+            :Error: "OTP sai\nCòn X lần";
+            :User nhập lại;
+            stop
+          endif
+        endif
+      else (no)
+        :Error: "OTP đã hết hạn";
+        :Show button "Gửi lại";
+        stop
+      endif
+    else (no)
+      :Error: "OTP không tồn tại";
+      stop
+    endif
+  else (no)
+    :Error: "Đã gửi quá 3 lần\nThử lại sau 1h";
+    stop
+  endif
+else (no)
+  :Error: "SĐT không hợp lệ";
+  stop
+endif
+
+@enduml
+
