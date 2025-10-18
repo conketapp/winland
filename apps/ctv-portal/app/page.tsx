@@ -3,18 +3,19 @@
 /**
  * 🔑 LOGIN PAGE (CTV Portal)
  * CTV authentication with phone/password
- * 
+ * @author Windland Team
  * @route /
  * @features Auto-fill credentials, JWT auth, Real API integration
  */
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Phone, Lock } from 'lucide-react';
+import { Phone, LockKeyhole, ScanBarcode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { apiClient } from '@/lib/api';
+import { motion } from 'framer-motion';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function LoginPage() {
       // Store token and user data
       localStorage.setItem('ctv_token', response.accessToken);
       localStorage.setItem('ctv_user', JSON.stringify(response.user));
-      
+
       // Redirect to dashboard
       router.push('/dashboard');
     } catch (error: any) {
@@ -49,20 +50,24 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo/Header */}
-        <div className="text-center mb-8">
-          <div className="inline-block p-4 bg-white rounded-full mb-4">
-            <span className="text-4xl">🏠</span>
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">CTV Portal</h1>
-          <p className="text-blue-100">Cộng tác viên Bất động sản</p>
-        </div>
-
         {/* Login Form */}
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md"
+        >
         <Card>
           <CardContent className="pt-6 space-y-4">
+            {/* Header */}
+            <div className="text-center space-y-2">
+              <h1 className="text-3xl font-bold tracking-tighter">
+                Đăng nhập CTV Portal
+              </h1>
+              <p className="text-gray-500">Cộng Tác Viên Bất Động Sản Windland</p>
+            </div>
             <form onSubmit={handleLogin} className="space-y-4">
               {/* Phone Input */}
               <div className="space-y-2">
@@ -89,7 +94,7 @@ export default function LoginPage() {
                   Mật khẩu
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <LockKeyhole className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
                     id="password"
                     type="password"
@@ -107,6 +112,8 @@ export default function LoginPage() {
                 <label htmlFor="otp" className="block text-sm font-semibold text-gray-700">
                   Mã OTP
                 </label>
+                <div className="relative">
+                <ScanBarcode className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <Input
                   id="otp"
                   type="text"
@@ -114,8 +121,10 @@ export default function LoginPage() {
                   onChange={(e) => setOtpCode(e.target.value)}
                   placeholder="123456"
                   maxLength={6}
+                  className="pl-12"
                   required
                 />
+                </div>
               </div>
 
               {/* Login Button */}
@@ -137,10 +146,12 @@ export default function LoginPage() {
             </div>
           </CardContent>
         </Card>
+        </motion.div>
+
 
         {/* Footer */}
-        <p className="text-center text-blue-100 text-sm mt-6">
-          © 2025 Batdongsan Platform
+        <p className="text-center text-gray-500 text-sm mt-6">
+          Bất Động Sản Windland . © 2025
         </p>
       </div>
     </div>
