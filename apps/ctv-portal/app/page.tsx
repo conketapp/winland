@@ -89,7 +89,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
       <ToastContainer />
       {/* Background Image with Overlay */}
-      <div className="absolute inset-0">
+      <div className="fixed inset-0 -z-20">
         <Image
           src={LoginCTVPortalBackground}
           alt="Background"
@@ -101,7 +101,7 @@ export default function LoginPage() {
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900/95 via-slate-900/90 to-slate-800/95" />
 
-      <div className="flex flex-col justify-center items-center w-full h-screen bg-slate-50 dark:bg-gray-800">
+      <div className="flex flex-col justify-center items-center">
         {/* Login Form */}
         <motion.div
           initial={{ opacity: 0, y: 50 }}
@@ -227,8 +227,8 @@ export default function LoginPage() {
           </div>
         </motion.div>
         {/* Centered footer under the login form */}
-        <div className="w-full flex justify-center mt-6">
-          <p className="text-center text-gray-500 text-sm">
+        <div className="w-full flex justify-center mt-6 relative overflow-hidden">
+          <p className="text-center text-gray-300 text-sm">
             © 2025 Bất Động Sản Windland. All rights reserved.
           </p>
         </div>
