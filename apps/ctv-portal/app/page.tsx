@@ -16,15 +16,16 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { apiClient } from '@/lib/api';
 import { motion } from 'framer-motion';
+import { ToastContainer, toast } from 'react-toastify';
 import Image from 'next/image'
 import LoginCTVPortalImage from "../assets/images/login_ctvportal.png"
 import LoginCTVPortalBackground from "../assets/images/login_ctvportal_background.jpg"
 
 export default function LoginPage() {
   const router = useRouter();
-  const [phone, setPhone] = useState('0912345671');
-  const [password, setPassword] = useState('ctv123');
-  const [otpCode, setOtpCode] = useState('123456');
+  const [phone, setPhone] = useState(''); //0912345671
+  const [password, setPassword] = useState(''); //ctv123
+  const [otpCode, setOtpCode] = useState(''); //123456
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -34,6 +35,7 @@ export default function LoginPage() {
 
     try {
       // Call real API
+      console.log('Login with:', { phone, password, otpCode });
       const response = await apiClient.post('/auth/login-ctv', {
         phone,
         password,
@@ -44,18 +46,48 @@ export default function LoginPage() {
       localStorage.setItem('ctv_token', response.accessToken);
       localStorage.setItem('ctv_user', JSON.stringify(response.user));
 
+      console.log('Login successful');
       // Redirect to dashboard
       router.push('/dashboard');
-    } catch (error: any) {
-      console.error('Login failed:', error);
-      alert(error.message || 'Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.');
+    } catch (error: unknown) {
+      const original = error;
+      // Try to extract HTTP info if this is an axios-like error
+      try {
+        const ae = original as Record<string, unknown>;
+        const resp = ae && (ae['response'] as Record<string, unknown> | undefined);
+        const cfg = ae && (ae['config'] as Record<string, unknown> | undefined);
+        if (resp && cfg) {
+          const method = ((cfg['method'] as string) || 'POST').toString().toUpperCase();
+          // full URL if present else fallback
+          const url = (cfg['url'] as string) || ((cfg['baseURL'] as string) ? (cfg['baseURL'] as string) + (cfg['url'] as string) : '/auth/login-ctv');
+          const status = resp['status'] as number;
+          const statusText = (resp['statusText'] as string) || '';
+          console.log(`${method} ${url} ${status} (${statusText})`);
+        } else {
+          console.error('Login failed:', original);
+        }
+      } catch (e) {
+        console.error('Login failed (could not parse error):', original);
+      }
+    } finally {
       setLoading(false);
+      toast.error('Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.', {
+        position: "top-center",
+        closeOnClick: true,
+        toastId: 'login-error',
+        style: {
+          width: '420px',
+          maxWidth: '100%',
+          textAlign: 'center',
+        },
+      });
     }
   };
 
   return (
 
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
+      <ToastContainer />
       {/* Background Image with Overlay */}
       <div className="absolute inset-0">
         <Image
