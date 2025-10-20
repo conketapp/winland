@@ -121,14 +121,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4 sm:p-6">
       <ToastContainer />
-      {/* Background Image with Overlay */}
+      {/* Background Image with Overlay - Fixed preload issue */}
       <div className="fixed inset-0 -z-20">
-        <Image
-          src={LoginCTVPortalBackground}
-          alt="Background"
-          fill
-          className="object-cover"
-          priority
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${LoginCTVPortalBackground.src})` }}
         />
       </div>
       {/* Gradient Overlay */}
@@ -158,7 +155,8 @@ export default function LoginPage() {
                   <CardContent className="pt-4 sm:pt-8 space-y-4 w-full">
                     {/* Header */}
                     <div className="text-center space-y-2">
-                      <h1 className={`${isMobile ? 'text-2xl' : isTablet ? 'text-3xl' : isDesktop ? 'text-2xl sm:text-3xl' : 'text-2xl sm:text-3xl'} font-bold tracking-tighter text-blue-900 dark:text-blue-400`}>
+                      <h1 className={`${isMobile ? 'text-2xl' : isTablet ? 'text-3xl' : isDesktop ? 'text-2xl sm:text-3xl' : 'text-2xl sm:text-3xl'}
+                                        font-bold tracking-tighter text-blue-900 dark:text-blue-400`}>
                         Đăng nhập CTV Portal
                       </h1>
                     </div>
@@ -241,8 +239,8 @@ export default function LoginPage() {
                         type="submit"
                         disabled={loading}
                         className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800
-                                  text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300 
-                                    hover:scale-[1.02] active:scale-[0.98] py-3 text-base sm:text-lg"
+                                text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300
+                                hover:scale-[1.02] active:scale-[0.98] py-3 text-base sm:text-lg"
                         size="lg"
                       >
                         {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
