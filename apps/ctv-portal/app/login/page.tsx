@@ -2,7 +2,7 @@
 
 /**
  * 🔑 LOGIN PAGE (CTV Portal)
- * CTV authentication with phone/password
+ * CTV authentication with userPhone/userPassword
  * @author Windland Team
  * @route /
  * @features Auto-fill credentials, JWT auth, Real API integration
@@ -10,18 +10,20 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Smartphone, LockKeyhole, Eye, EyeOff, Moon, Sun } from 'lucide-react';
+import { Smartphone, LockKeyhole, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { apiClient } from '@/lib/api';
 import { motion } from 'framer-motion';
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
+import { ImageWithFallback } from "@/components/ui/imagewithfallback";
+import { toastNotification } from '@/app/utils/toastNotification';
 import Image from 'next/image'
 import LoginCTVPortalImage from "@/assets/images/login_ctvportal.png"
 import LoginCTVPortalBackground from "@/assets/images/login_ctvportal_background.jpg"
+import LoginCTVPortalFallBackground from "@/assets/images/before_login_ctv_background.jpg"
 
 // Device detection hook
 const useDeviceDetect = () => {
@@ -95,15 +97,16 @@ const useTheme = () => {
     return { theme, systemTheme, toggleTheme, isDark: theme === 'dark' };
 };
 
+
 export default function LoginPage() {
     const router = useRouter();
-    const [phone, setPhone] = useState(''); //0912345671
-    const [password, setPassword] = useState(''); //ctv123
+    const [userPhone, setUserPhone] = useState(''); //0912345671
+    const [userPassword, setUserPassword] = useState(''); //ctv123
     const [loading, setLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const { isMobile, isTablet, isDesktop } = useDeviceDetect();
-    const { theme, toggleTheme, isDark } = useTheme();
+    const { theme, isDark } = useTheme();
 
     // Update theme-color meta tag
     useEffect(() => {
@@ -128,64 +131,29 @@ export default function LoginPage() {
     const handleButtonLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-
-        try {
-            // Call real API
-            console.log('Login with:', { phone, password });
-            const response = await apiClient.post('/auth/login-ctv', {
-                phone,
-                password,
-            });
-
-            // Store token and user data
-            localStorage.setItem('ctv_token', response.accessToken);
-            localStorage.setItem('ctv_user', JSON.stringify(response.user));
-
+        console.log('Login with:', { userPhone, userPassword });
+        if (userPhone === '0912345673' && userPassword === 'ctv456') {
             console.log('Login successful');
-            // Redirect to dashboard
-            router.push('/dashboard');
-        } catch (error: unknown) {
-            const original = error;
-            // Try to extract HTTP info if this is an axios-like error
             try {
-                const ae = original as Record<string, unknown>;
-                const resp = ae && (ae['response'] as Record<string, unknown> | undefined);
-                const cfg = ae && (ae['config'] as Record<string, unknown> | undefined);
-                if (resp && cfg) {
-                    const method = ((cfg['method'] as string) || 'POST').toString().toUpperCase();
-                    // full URL if present else fallback
-                    const url = (cfg['url'] as string) || ((cfg['baseURL'] as string) ? (cfg['baseURL'] as string) + (cfg['url'] as string) : '/auth/login-ctv');
-                    const status = resp['status'] as number;
-                    const statusText = (resp['statusText'] as string) || '';
-                    console.log(`${method} ${url} ${status} (${statusText})`);
-                } else {
-                    console.error('Login failed:', original);
-                }
-            } catch (e) {
-                console.error('Login failed (could not parse error):', original);
+                sessionStorage.setItem('login:userPhone', userPhone);
+                sessionStorage.setItem('login:userPassword', userPassword);
+            } catch (err) {
+                console.warn('Unable to write credentials to sessionStorage', err);
             }
-        } finally {
             setLoading(false);
-            toast.error('Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.', {
-                position: "top-center",
-                closeOnClick: true,
-                toastId: 'login-error',
-                style: {
-                    width: '100%',
-                    maxWidth: '420px',
-                    textAlign: 'center',
-                },
-            });
+            router.push('/login/authentication');
+        } else {
+            setLoading(false);
+            toastNotification.error('Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.');
         }
-    };
+    }
 
+    // Render UI
     return (
         <>
-
             <div className={`min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4 sm:p-6
                         transition-colors duration-300`}>
                 <ToastContainer
-                    theme={isDark ? 'dark' : 'light'}
                 />
                 {/* Background Image with Overlay */}
                 <div className="fixed inset-0 -z-20">
@@ -196,21 +164,6 @@ export default function LoginPage() {
                 </div>
                 {/* Gradient Overlay - Different for dark/light mode */}
                 <div className={`fixed inset-0 -z-20 transition-colors duration-300 bg-gradient-to-br from-blue-900/95 via-slate-900/90 to-slate-800/95`} />
-                {/* Theme Toggle Button - Only visible on mobile */}
-                {isMobile && (
-                    <button
-                        onClick={toggleTheme}
-                        className="fixed top-4 right-4 z-50 p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg
-                        transition-all duration-300 hover:bg-white/20 hover:scale-110"
-                        aria-label="Toggle theme"
-                    >
-                        {isDark ? (
-                            <Sun className="w-5 h-5 text-yellow-300" />
-                        ) : (
-                            <Moon className="w-5 h-5 text-white" />
-                        )}
-                    </button>
-                )}
                 <div className="flex flex-col justify-center items-center w-full max-w-6xl">
                     {/* Login Form */}
                     <motion.div
@@ -231,65 +184,60 @@ export default function LoginPage() {
                                             {/* Header */}
                                             <div className="text-center space-y-2 sm:space-y-1 mb-2">
                                                 <h1 className={`${isMobile ? 'text-sm' : isTablet ? 'text-xl' : isDesktop ? 'text-lg lg:text-2xl' : 'text-xl lg:text-2xl'}
-                                      font-bold tracking-tighter transition-colors duration-300 text-blue-900
-                                      `}>
+                                                                font-bold tracking-tighter transition-colors duration-300 text-blue-900`}>
                                                     Cộng Tác Viên Bất Động Sản Windland
                                                 </h1>
                                             </div>
                                             <div className="text-center space-y-2">
                                                 <h1 className={`${isMobile ? 'text-3xl' : isTablet ? 'text-3xl' : isDesktop ? 'text-2xl sm:text-3xl' : 'text-2xl sm:text-3xl'}
-                                        font-bold tracking-tighter transition-colors duration-300 text-blue-900
-                                      `}>
+                                        font-bold tracking-tighter transition-colors duration-300 text-blue-900`}>
                                                     Đăng Nhập
                                                 </h1>
                                             </div>
                                             <form onSubmit={handleButtonLogin} className="space-y-4 sm:space-y-5 w-full">
                                                 {/* Smartphone Input */}
                                                 <div className="space-y-2">
-                                                    <label htmlFor="phone" className={`block text-sm font-semibold transition-colors duration-300 text-gray-700
-                                                          `}>
+                                                    <label htmlFor="userPhone" className={`block text-sm font-semibold transition-colors duration-300 text-gray-700`}>
                                                         Số điện thoại
                                                     </label>
                                                     <div className="relative">
                                                         <Smartphone className={`absolute ${isMobile ? 'left-3' : 'left-4'} top-1/2 transform -translate-y-1/2
-                              text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
+                                                                text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
                                                         <Input
-                                                            id="phone"
+                                                            id="userPhone"
                                                             type="tel"
-                                                            value={phone}
-                                                            onChange={(e) => setPhone(e.target.value)}
+                                                            value={userPhone}
+                                                            onChange={(e) => setUserPhone(e.target.value)}
                                                             placeholder="Nhập số điện thoại"
-                                                            className={`${isMobile ? 'pl-10' : 'pl-14'} py-3 ${isMobile ? 'text-base' : 'text-lg'} rounded-xl
-                                        border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 bg-slate-50/50 hover:bg-slate-50
-                                        `}
+                                                            className={`${isMobile ? 'pl-10' : 'pl-14'} py-3 ${isMobile ? 'text-base' : 'text-lg'} rounded-xl pr-11 h-12
+                                                            border-slate-200  bg-slate-50/50 hover:bg-slate-50 text-black`}
                                                             required
                                                         />
                                                     </div>
                                                 </div>
                                                 {/* Password Input */}
                                                 <div className="space-y-2">
-                                                    <label htmlFor="password" className={`block text-sm font-semibold transition-colors duration-300 text-gray-700
-                            }`}>
+                                                    <label htmlFor="userPassword" className={`block text-sm font-semibold transition-colors duration-300 text-gray-700`}>
                                                         Mật khẩu
                                                     </label>
                                                     <div className="relative">
                                                         <LockKeyhole className={`absolute ${isMobile ? 'left-3' : 'left-4'} top-1/2 transform -translate-y-1/2
                                                     text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
                                                         <Input
-                                                            id="password"
+                                                            id="userPassword"
                                                             type={showPassword ? 'text' : 'password'}
-                                                            value={password}
-                                                            onChange={(e) => setPassword(e.target.value)}
+                                                            value={userPassword}
+                                                            onChange={(e) => setUserPassword(e.target.value)}
                                                             placeholder="Nhập mật khẩu"
-                                                            className={`${isMobile ? 'pl-10 pr-10' : 'pl-14 pr-12'} py-3 ${isMobile ? 'text-base' : 'text-lg'} rounded-xl
-                                        border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 bg-slate-50/50 hover:bg-slate-50`}
+                                                            className={`${isMobile ? 'pl-10 pr-10' : 'pl-14 pr-12'} py-3 ${isMobile ? 'text-base' : 'text-lg'} rounded-xl pr-11 h-12
+                                                            border-slate-200  bg-slate-50/50 hover:bg-slate-50 text-black`}
                                                             required
                                                         />
                                                         <button
                                                             type="button"
                                                             onClick={() => setShowPassword(!showPassword)}
                                                             className={`absolute ${isMobile ? 'right-3' : 'right-4'} top-1/2 transform -translate-y-1/2
-                                          transition-colors duration-300 text-gray-400 hover:text-gray-600 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`}
+                                                                    transition-colors duration-300 text-gray-400 hover:text-gray-600 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`}
                                                         >
                                                             {showPassword ? <EyeOff size={isMobile ? 16 : 20} /> : <Eye size={isMobile ? 16 : 20} />}
                                                         </button>
@@ -316,7 +264,7 @@ export default function LoginPage() {
                                                         className="text-blue-900 hover:text-blue-700 transition-colors duration-200 hover:underline"
                                                         onClick={(e) => {
                                                             e.preventDefault();
-                                                            console.log("Forgot password clicked");
+                                                            console.log("Forgot userPassword clicked");
                                                         }}
                                                     >
                                                         Quên mật khẩu?
@@ -327,11 +275,18 @@ export default function LoginPage() {
                                                     type="submit"
                                                     disabled={loading}
                                                     className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800
-                                      text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300
-                                      hover:scale-[1.02] active:scale-[0.98] py-3 text-base sm:text-lg"
+                                                            text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300
+                                                                hover:scale-[1.02] active:scale-[0.98] py-3 text-base sm:text-lg flex items-center justify-center"
                                                     size="lg"
                                                 >
-                                                    {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                                                    {loading ? (
+                                                        'Đang đăng nhập...'
+                                                    ) : (
+                                                        <>
+                                                            <span>Đăng nhập</span>
+                                                            <ArrowRight className="ml-3 w-4 h-4" />
+                                                        </>
+                                                    )}
                                                 </Button>
                                                 {/* Divider */}
                                                 <div className="relative my-8">
@@ -358,6 +313,14 @@ export default function LoginPage() {
                                                     </a>
                                                 </div>
                                             </form>
+                                            <div className="mt-8 relative overflow-hidden h-48 -mx-4 sm:-mx-6 rounded-2xl">
+                                                <ImageWithFallback
+                                                    src={LoginCTVPortalFallBackground.src}
+                                                    alt="City skyline"
+                                                    className="w-full h-full object-cover opacity-30"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-gray-50 to-transparent" />
+                                            </div>
                                         </CardContent>
                                     </Card>
                                 </div>
@@ -377,15 +340,16 @@ export default function LoginPage() {
                                 </div>
                             </div>
                         </div>
+                        {/* Background Image */}
                     </motion.div>
                     {/* Centered footer under the login form */}
                     <div className="w-full flex justify-center mt-4 sm:mt-6">
                         <p className={`text-center text-xs sm:text-sm transition-colors duration-300 text-gray-300`}>
-                            © 2025 Bất Động Sản Windland. All rights reserved.
+                            © 2025 Bất Động Sản Windland. Tất cả quyền được bảo lưu.
                         </p>
                     </div>
                 </div>
-            </div>
+            </div >
         </>
     );
 }
