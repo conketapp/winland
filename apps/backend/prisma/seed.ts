@@ -90,12 +90,19 @@ async function main() {
   });
   console.log('✅ Project:', project.name);
 
-  // 4. Buildings & Floors
+  // 4. Buildings & Floors - FIXED: Using upsert instead of create
   console.log('\n🏢 Creating Buildings...');
   const buildings = [];
   for (let i = 1; i <= 2; i++) {
-    const building = await prisma.building.create({
-      data: {
+    const building = await prisma.building.upsert({
+      where: {
+        projectId_code: {
+          projectId: project.id,
+          code: `A${i}`,
+        },
+      },
+      update: {},
+      create: {
         projectId: project.id,
         code: `A${i}`,
         name: `Tòa A${i}`,
@@ -104,10 +111,17 @@ async function main() {
     });
     buildings.push(building);
 
-    // Create floors
+    // Create floors - FIXED: Using upsert for floors as well
     for (let f = 5; f <= 10; f++) {
-      await prisma.floor.create({
-        data: {
+      await prisma.floor.upsert({
+        where: {
+          buildingId_number: {
+            buildingId: building.id,
+            number: f,
+          },
+        },
+        update: {},
+        create: {
           buildingId: building.id,
           number: f,
         },
@@ -116,16 +130,25 @@ async function main() {
   }
   console.log('✅ Created 2 Buildings');
 
-  // 5. Units
+  // 5. Units - FIXED: Using upsert for units
   console.log('\n🏘️  Creating Units...');
   let unitCount = 0;
   for (const building of buildings) {
-    const floors = await prisma.floor.findMany({ where: { buildingId: building.id } });
+    const floors = await prisma.floor.findMany({
+      where: { buildingId: building.id },
+      orderBy: { number: 'asc' }
+    });
+
     for (const floor of floors) {
       for (let u = 1; u <= 3; u++) {
         const code = `${building.code}-${floor.number}${u.toString().padStart(2, '0')}`;
-        await prisma.unit.create({
-          data: {
+        await prisma.unit.upsert({
+          where: {
+              projectId: project.id,
+              code: code,
+          },
+          update: {},
+          create: {
             projectId: project.id,
             buildingId: building.id,
             floorId: floor.id,
@@ -171,7 +194,9 @@ async function main() {
   console.log(`   - Units: ${unitCount}`);
   console.log('\n🔐 Login:');
   console.log('   Admin: admin@batdongsan.com / admin123');
-  console.log('   CTV 1: ctv1@batdongsan.com / ctv123\n');
+  console.log('   CTV 1: ctv1@batdongsan.com / ctv123');
+  console.log('   CTV 2: ctv2@batdongsan.com / ctv123');
+  console.log('   CTV 3: ctv3@batdongsan.com / ctv123\n');
 }
 
 main()
