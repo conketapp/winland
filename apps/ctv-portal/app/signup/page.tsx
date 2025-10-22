@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * 🔑 LOGIN PAGE (CTV Portal)
+ * 🔑 SIGN-UP PAGE (CTV Portal)
  * CTV authentication with userPhone/userPassword
  * @author Windland Team
  * @route /
@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Smartphone, LockKeyhole, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Smartphone, LockKeyhole, Eye, EyeOff, ArrowRight, UserRound, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,7 +23,7 @@ import { toastNotification } from '@/app/utils/toastNotification';
 import Image from 'next/image'
 import LoginCTVPortalImage from "@/assets/images/login_ctvportal.png"
 import LoginCTVPortalBackground from "@/assets/images/login_ctvportal_background.jpg"
-import LoginCTVPortalFallBackground from "@/assets/images/before_login_ctv_background.jpg"
+
 
 // Device detection hook
 const useDeviceDetect = () => {
@@ -98,12 +98,14 @@ const useTheme = () => {
 };
 
 
-export default function LoginPage() {
+export default function SignUpPage() {
     const router = useRouter();
+    const [userName, setUserName] = useState(''); //Nguyen Van A
+    const [userEmail, setUserEmail] = useState(''); //
     const [userPhone, setUserPhone] = useState(''); //0912345671
     const [userPassword, setUserPassword] = useState(''); //ctv123
     const [loading, setLoading] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const { isMobile, isTablet, isDesktop } = useDeviceDetect();
     const { theme, isDark } = useTheme();
@@ -128,7 +130,7 @@ export default function LoginPage() {
         }
     }, [theme, isMobile, isDark]);
 
-    const handleButtonLogin = async (e: React.FormEvent) => {
+    const handleButtonSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         console.log('Login with:', { userPhone, userPassword });
@@ -191,10 +193,10 @@ export default function LoginPage() {
                                             <div className="text-center space-y-2">
                                                 <h1 className={`${isMobile ? 'text-3xl' : isTablet ? 'text-3xl' : isDesktop ? 'text-2xl sm:text-3xl' : 'text-2xl sm:text-3xl'}
                                         font-bold tracking-tighter transition-colors duration-300 text-blue-900`}>
-                                                    Đăng Nhập
+                                                    Đăng Ký Tài Khoản
                                                 </h1>
                                             </div>
-                                            <form onSubmit={handleButtonLogin} className="space-y-4 sm:space-y-5 w-full">
+                                            <form onSubmit={handleButtonSignUp} className="space-y-4 sm:space-y-5 w-full">
                                                 {/* Smartphone Input */}
                                                 <div className="space-y-2">
                                                     <label htmlFor="userPhone" className={`block text-sm font-semibold transition-colors duration-300 text-gray-700`}>
@@ -209,6 +211,46 @@ export default function LoginPage() {
                                                             value={userPhone}
                                                             onChange={(e) => setUserPhone(e.target.value)}
                                                             placeholder="Nhập số điện thoại"
+                                                            className={`${isMobile ? 'pl-10' : 'pl-14'} py-3 ${isMobile ? 'text-base' : 'text-lg'} rounded-xl pr-11 h-12
+                                                            border-slate-200  bg-slate-50/50 hover:bg-slate-50 text-black`}
+                                                            required
+                                                        />
+                                                    </div>
+                                                </div>
+                                                {/* Fullname Input */}
+                                                <div className="space-y-2">
+                                                    <label htmlFor="userName" className={`block text-sm font-semibold transition-colors duration-300 text-gray-700`}>
+                                                        Họ và tên
+                                                    </label>
+                                                    <div className="relative">
+                                                        <UserRound className={`absolute ${isMobile ? 'left-3' : 'left-4'} top-1/2 transform -translate-y-1/2
+                                                                text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
+                                                        <Input
+                                                            id="userName"
+                                                            type="text"
+                                                            value={userName}
+                                                            onChange={(e) => setUserName(e.target.value)}
+                                                            placeholder="Nhập họ và tên"
+                                                            className={`${isMobile ? 'pl-10' : 'pl-14'} py-3 ${isMobile ? 'text-base' : 'text-lg'} rounded-xl pr-11 h-12
+                                                            border-slate-200  bg-slate-50/50 hover:bg-slate-50 text-black`}
+                                                            required
+                                                        />
+                                                    </div>
+                                                </div>
+                                                {/* Email Input */}
+                                                <div className="space-y-2">
+                                                    <label htmlFor="userEmail" className={`block text-sm font-semibold transition-colors duration-300 text-gray-700`}>
+                                                        Email
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Mail className={`absolute ${isMobile ? 'left-3' : 'left-4'} top-1/2 transform -translate-y-1/2
+                                                                text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
+                                                        <Input
+                                                            id="userEmail"
+                                                            type="text"
+                                                            value={userEmail}
+                                                            onChange={(e) => setUserEmail(e.target.value)}
+                                                            placeholder="Nhập email"
                                                             className={`${isMobile ? 'pl-10' : 'pl-14'} py-3 ${isMobile ? 'text-base' : 'text-lg'} rounded-xl pr-11 h-12
                                                             border-slate-200  bg-slate-50/50 hover:bg-slate-50 text-black`}
                                                             required
@@ -243,34 +285,39 @@ export default function LoginPage() {
                                                         </button>
                                                     </div>
                                                 </div>
-                                                {/* Remember Me & Forgot Password */}
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center space-x-2">
-                                                        <Checkbox
-                                                            id="remember"
-                                                            checked={rememberMe}
-                                                            onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                                                            className="rounded border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                                                        />
-                                                        <Label
-                                                            htmlFor="remember"
-                                                            className="text-slate-600 cursor-pointer select-none"
-                                                        >
-                                                            Ghi nhớ đăng nhập
-                                                        </Label>
-                                                    </div>
-                                                    <a
-                                                        href="#"
-                                                        className="text-blue-900 hover:text-blue-700 transition-colors duration-200 hover:underline"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            console.log("Forgot userPassword clicked");
-                                                        }}
-                                                    >
-                                                        Quên mật khẩu?
-                                                    </a>
+                                                {/* Rule setting password */}
+                                                <div className="text-sm text-gray-500">
+                                                    Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường.
                                                 </div>
-                                                {/* Login Button */}
+                                                {/* Confirm Password Input */}
+                                                <div className="space-y-2">
+                                                    <label htmlFor="userPassword" className={`block text-sm font-semibold transition-colors duration-300 text-gray-700`}>
+                                                        Nhập lại mật khẩu
+                                                    </label>
+                                                    <div className="relative">
+                                                        <LockKeyhole className={`absolute ${isMobile ? 'left-3' : 'left-4'} top-1/2 transform -translate-y-1/2
+                                                    text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
+                                                        <Input
+                                                            id="userPassword"
+                                                            type={showPassword ? 'text' : 'password'}
+                                                            value={confirmPassword}
+                                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                                            placeholder="Nhập mật khẩu"
+                                                            className={`${isMobile ? 'pl-10 pr-10' : 'pl-14 pr-12'} py-3 ${isMobile ? 'text-base' : 'text-lg'} rounded-xl pr-11 h-12
+                                                            border-slate-200  bg-slate-50/50 hover:bg-slate-50 text-black`}
+                                                            required
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowPassword(!showPassword)}
+                                                            className={`absolute ${isMobile ? 'right-3' : 'right-4'} top-1/2 transform -translate-y-1/2
+                                                                    transition-colors duration-300 text-gray-400 hover:text-gray-600 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`}
+                                                        >
+                                                            {showPassword ? <EyeOff size={isMobile ? 16 : 20} /> : <Eye size={isMobile ? 16 : 20} />}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                {/* Sign-up Button */}
                                                 <Button
                                                     type="submit"
                                                     disabled={loading}
@@ -280,10 +327,10 @@ export default function LoginPage() {
                                                     size="lg"
                                                 >
                                                     {loading ? (
-                                                        'Đang đăng nhập...'
+                                                        'Đang đăng ký...'
                                                     ) : (
                                                         <>
-                                                            <span>Đăng nhập</span>
+                                                            <span>Đăng ký</span>
                                                             <ArrowRight className="ml-3 w-4 h-4" />
                                                         </>
                                                     )}
@@ -295,7 +342,7 @@ export default function LoginPage() {
                                                     </div>
                                                     <div className="relative flex justify-center">
                                                         <span className="px-4 bg-white text-slate-500">
-                                                            Chưa có tài khoản?
+                                                            Đã có tài khoản?
                                                         </span>
                                                     </div>
                                                 </div>
@@ -306,22 +353,14 @@ export default function LoginPage() {
                                                         className="text-blue-600 hover:text-blue-700 transition-colors duration-200 hover:underline"
                                                         onClick={(e) => {
                                                             e.preventDefault();
-                                                            router.replace('/signup');
+                                                            router.replace('/login');
                                                             console.log("Sign up clicked");
                                                         }}
                                                     >
-                                                        Đăng ký tài khoản
+                                                        Đăng nhập tại đây
                                                     </a>
                                                 </div>
                                             </form>
-                                            <div className="mt-8 relative overflow-hidden h-48 -mx-4 sm:-mx-6 rounded-2xl">
-                                                <ImageWithFallback
-                                                    src={LoginCTVPortalFallBackground.src}
-                                                    alt="City skyline"
-                                                    className="w-full h-full object-cover opacity-30"
-                                                />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-gray-50 to-transparent" />
-                                            </div>
                                         </CardContent>
                                     </Card>
                                 </div>
