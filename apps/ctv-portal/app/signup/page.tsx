@@ -302,7 +302,7 @@ export default function SignUpPage() {
                                                             type={showPassword ? 'text' : 'password'}
                                                             value={confirmPassword}
                                                             onChange={(e) => setConfirmPassword(e.target.value)}
-                                                            placeholder="Nhập mật khẩu"
+                                                            placeholder="Nhập lại mật khẩu"
                                                             className={`${isMobile ? 'pl-10 pr-10' : 'pl-14 pr-12'} py-3 ${isMobile ? 'text-base' : 'text-lg'} rounded-xl pr-11 h-12
                                                             border-slate-200  bg-slate-50/50 hover:bg-slate-50 text-black`}
                                                             required

@@ -100,8 +100,8 @@ const useTheme = () => {
 
 export default function LoginPage() {
     const router = useRouter();
-    const [userPhone, setUserPhone] = useState(''); //0912345671
-    const [userPassword, setUserPassword] = useState(''); //ctv123
+    const [userPhone, setUserPhone] = useState(''); //0912345673
+    const [userPassword, setUserPassword] = useState(''); //ctv456
     const [loading, setLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -195,7 +195,7 @@ export default function LoginPage() {
                                                 </h1>
                                             </div>
                                             <form onSubmit={handleButtonLogin} className="space-y-4 sm:space-y-5 w-full">
-                                                {/* Smartphone Input */}
+                                                {/* Phone number Input */}
                                                 <div className="space-y-2">
                                                     <label htmlFor="userPhone" className={`block text-sm font-semibold transition-colors duration-300 text-gray-700`}>
                                                         Số điện thoại
@@ -264,6 +264,7 @@ export default function LoginPage() {
                                                         className="text-blue-900 hover:text-blue-700 transition-colors duration-200 hover:underline"
                                                         onClick={(e) => {
                                                             e.preventDefault();
+                                                            router.push('/login/forget-pass');
                                                             console.log("Forgot userPassword clicked");
                                                         }}
                                                     >
