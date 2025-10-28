@@ -3,7 +3,7 @@
 /**
  * 🔑 FORGET PASS PAGE (CTV Portal)
  * CTV authentication with userPhone/newPassword
- * @author Windland Team
+ * @author Winland Team
  * @route /
  * @features Auto-fill credentials, JWT auth, Real API integration
  * @data 21-10-2025
@@ -260,7 +260,7 @@ export default function OTPPage() {
                                             <div className="text-center space-y-2 sm:space-y-1 mb-2">
                                                 <h1 className={`${isMobile ? 'text-sm' : isTablet ? 'text-xl' : isDesktop ? 'text-lg lg:text-2xl' : 'text-xl lg:text-2xl'}
                                                                 font-bold tracking-tighter transition-colors duration-300 text-blue-900`}>
-                                                    Cộng Tác Viên Bất Động Sản Windland
+                                                    Cộng Tác Viên Bất Động Sản Winland
                                                 </h1>
                                             </div>
                                             <div className="text-center space-y-2">
@@ -470,7 +470,7 @@ export default function OTPPage() {
                     {/* Centered footer under the login form */}
                     <div className="w-full flex justify-center mt-4 sm:mt-6">
                         <p className={`text-center text-xs sm:text-sm transition-colors duration-300 text-gray-300`}>
-                            © 2025 Bất Động Sản Windland. Tất cả quyền được bảo lưu.
+                            © 2025 Bất Động Sản Winland. Tất cả quyền được bảo lưu.
                         </p>
                     </div>
                 </div>

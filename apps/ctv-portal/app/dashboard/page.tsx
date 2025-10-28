@@ -1,7 +1,7 @@
 /**
  * 🔑 DASHBOARD PAGE (CTV Portal)
  *
- * @author Windland Team
+ * @author Winland Team
  * @route /
  * @features Auto Dark Mode, JWT Auth (mock), Sales Chart, Responsive Full HD
  * @date 28-10-2025
@@ -22,17 +22,11 @@ import {
     LogOut,
     Sun,
     Moon,
+    TrendingUp,
+    AlertTriangle,
 } from "lucide-react";
-import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    Tooltip,
-    ResponsiveContainer,
-    CartesianGrid,
-} from "recharts";
 import { motion } from "framer-motion";
+import { formatCurrency } from '@/lib/utils';
 
 export default function DashboardScreen(): JSX.Element {
     const router = useRouter();
@@ -74,17 +68,52 @@ export default function DashboardScreen(): JSX.Element {
         }
     };
 
-    const chartData = [
-        { name: "1", sales: 5 },
-        { name: "2", sales: 8 },
-        { name: "3", sales: 4 },
-        { name: "4", sales: 10 },
-        { name: "5", sales: 7 },
-        { name: "6", sales: 12 },
-        { name: "7", sales: 9 },
+    const mockUser = {
+        fullName: 'Tran Quang A',
+        level: 'Sales Manager',
+        totalDeals: 24,
+        totalRevenue: 125000000,
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+    };
+
+    const mockStats = {
+        reservations: 5,
+        bookings: 10,
+        deposits: 8,
+    };
+
+    const mockUrgentReservations = [
+        {
+            id: 1,
+            unitCode: 'A1-1201',
+            customerName: 'Nguyễn Văn A',
+            expiryTime: '2 giờ',
+            phone: '0901234567',
+        },
+        {
+            id: 2,
+            unitCode: 'B2-0803',
+            customerName: 'Trần Thị B',
+            expiryTime: '4 giờ',
+            phone: '0901234568',
+        },
+        {
+            id: 3,
+            unitCode: 'C2-0802',
+            customerName: 'Trần Hoàng C',
+            expiryTime: '4 giờ',
+            phone: '0901234569',
+        },
+        {
+            id: 4,
+            unitCode: 'B4-0103',
+            customerName: 'Nguyễn Thị D',
+            expiryTime: '4 giờ',
+            phone: '0901234570',
+        },
     ];
 
-    const bookings = [
+    const mockbookings = [
         { id: 1, title: "Booking căn hộ LK1-01", time: "06:00 – 07:00 Thứ 2 12/02/2024" },
         { id: 2, title: "Booking căn hộ LK1-02", time: "08:00 – 09:00 Thứ 3 13/02/2024" },
         { id: 3, title: "Booking căn hộ LK1-03", time: "10:00 – 11:00 Thứ 4 14/02/2024" },
@@ -111,7 +140,7 @@ export default function DashboardScreen(): JSX.Element {
                 <div className="max-w-[1200px] mx-auto px-6 py-6 flex items-center justify-between">
                     {/* Left side - can add logo or title here */}
                     <div className="flex items-center">
-                        <h1 className="text-xl font-semibold">Cộng Tác Viên Bất Động Sản Windland</h1>
+                        <h1 className="text-xl font-semibold">Cộng Tác Viên Bất Động Sản Winland</h1>
                     </div>
 
                     {/* Right side - Toggle Dark Mode & Logout */}
@@ -146,7 +175,7 @@ export default function DashboardScreen(): JSX.Element {
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-[#C6A052]/80 to-[#C6A052]/50 flex items-center justify-center">
                                 <img
-                                    src={userData?.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"}
+                                    src={userData?.avatar || mockUser?.avatar}
                                     alt="User Avatar"
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
@@ -159,13 +188,13 @@ export default function DashboardScreen(): JSX.Element {
                             </div>
                             <div>
                                 <p className="text-sm opacity-70 mb-1">{getGreeting()}</p>
-                                <p className="text-lg font-semibold">{userData?.name || "Trần Quang A"}</p>
-                                <p className="text-sm opacity-80">{userData?.role || "Sales Manager"}</p>
+                                <p className="text-lg font-semibold">{userData?.name || mockUser?.fullName}</p>
+                                <p className="text-sm opacity-80">{userData?.role || mockUser?.level}</p>
                             </div>
                         </div>
                     </motion.section>
 
-                    {/* Tổng số cọc */}
+                    {/* Tổng số giao dịch */}
                     <motion.section
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -174,8 +203,8 @@ export default function DashboardScreen(): JSX.Element {
                             }`}
                     >
                         <div>
-                            <p className="text-slate-400 text-sm">Tổng số căn hộ đã thực hiện cọc</p>
-                            <h2 className="text-4xl font-bold mt-1">10</h2>
+                            <p className="text-slate-400 text-sm">Tổng số giao dịch đã thực hiện</p>
+                            <h2 className="text-4xl font-bold mt-1">{mockUser?.totalDeals}</h2>
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="flex items-center text-green-500 text-sm font-medium">
@@ -186,73 +215,142 @@ export default function DashboardScreen(): JSX.Element {
                         </div>
                     </motion.section>
 
+                    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-2">
+
+                        {/* Tổng số doanh số */}
+                        <motion.section
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${darkMode ? "bg-[#1B2342]" : "bg-white"
+                                }`}
+                        >
+                            <div>
+                                <p className="text-slate-400 text-sm">Tổng số doanh thu</p>
+                                <h2 className="text-4xl font-bold mt-1">{formatCurrency(mockUser?.totalRevenue)}</h2>
+                            </div>
+                        </motion.section>
+
+                        {/* Tổng số booking */}
+                        <motion.section
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${darkMode ? "bg-[#1B2342]" : "bg-white"
+                                }`}
+                        >
+                            <div>
+                                <p className="text-slate-400 text-sm">Tổng số booking</p>
+                                <h2 className="text-4xl font-bold mt-1">{mockStats?.bookings}</h2>
+                            </div>
+                        </motion.section>
+
+                        {/* Tổng số booking */}
+                        <motion.section
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${darkMode ? "bg-[#1B2342]" : "bg-white"
+                                }`}
+                        >
+                            <div>
+                                <p className="text-slate-400 text-sm">Tổng số giữ chỗ</p>
+                                <h2 className="text-4xl font-bold mt-1">{mockStats?.reservations}</h2>
+                            </div>
+                        </motion.section>
+
+                        {/* Tổng số đã cọc */}
+                        <motion.section
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${darkMode ? "bg-[#1B2342]" : "bg-white"
+                                }`}
+                        >
+                            <div>
+                                <p className="text-slate-400 text-sm">Tổng số hợp đồng đã cọc</p>
+                                <h2 className="text-4xl font-bold mt-1">{mockStats?.deposits}</h2>
+                            </div>
+                        </motion.section>
+                    </div>
+
+                    {/* Emergency list */}
+                    <motion.section
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
+                        className="mt-10"
+                    >
+                        <div className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 ${darkMode ? "bg-[#1B2342]" : "bg-white"}`}>
+                            <h3 className="text-lg font-semibold mb-2">Giữ chỗ sắp hết hạn</h3>
+                            <p className="text-slate-400 text-sm">Cần xử lý gấp</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                {mockUrgentReservations.map((urgentRevervation, index) => (
+                                    <motion.div
+                                        key={urgentRevervation.id}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+                                        className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${darkMode ? "bg-[#1B2342]" : "bg-white"
+                                            }`}
+                                    >
+                                        <div
+                                            className={`w-14 h-14 rounded-xl flex items-center justify-center ${darkMode ? "bg-red-900/30" : "bg-red-50"
+                                                }`}
+                                        >
+                                            <AlertTriangle className="w-6 h-6 text-red-600" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate">{urgentRevervation.unitCode}</p>
+                                            <p className="text-xs opacity-70 mt-1">{urgentRevervation.expiryTime}</p>
+                                            <p className="text-xs opacity-70 mt-1">{urgentRevervation.customerName}</p>
+                                            <p className="text-xs opacity-70 mt-1">{urgentRevervation.phone}</p>
+                                        </div>
+                                        <button className="text-[#cc1427] text-sm font-medium hover:underline">
+                                            Xem chi tiết
+                                        </button>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </div>
+                    </motion.section>
+
                     {/* Booking list */}
                     <motion.section
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.3 }}
-                        className="mt-10">
-                        <h3 className="text-lg font-semibold mb-4">Danh sách Booking</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                            {bookings.map((b, index) => (
-                                <motion.div
-                                    key={b.id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
-                                    className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${darkMode ? "bg-[#1B2342]" : "bg-white"
-                                        }`}
-                                >
-                                    <div
-                                        className={`w-14 h-14 rounded-xl flex items-center justify-center ${darkMode ? "bg-green-900/30" : "bg-green-50"
+                        className="mt-10"
+                    >
+                        <div className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 ${darkMode ? "bg-[#1B2342]" : "bg-white"}`}>
+                            <h3 className="text-lg font-semibold mb-2">Danh sách Booking</h3>
+                            <p className="text-slate-400 text-sm">Tổng số căn hộ đã thực hiện cọc</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                {mockbookings.map((b, index) => (
+                                    <motion.div
+                                        key={b.id}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+                                        className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${darkMode ? "bg-[#1B2342]" : "bg-white"
                                             }`}
                                     >
-                                        <Calendar className="w-6 h-6 text-green-600" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate">{b.title}</p>
-                                        <p className="text-xs opacity-70 mt-1">{b.time}</p>
-                                    </div>
-                                    <button className="text-[#1224c4] text-sm font-medium hover:underline">
-                                        Xem chi tiết
-                                    </button>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </motion.section>
-
-                    {/* Biểu đồ doanh số */}
-                    <motion.section
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.4 }}
-                        className="mt-10">
-                        <h3 className="text-lg font-semibold mb-4">Doanh số theo tháng</h3>
-                        <div
-                            className={`rounded-3xl p-6 shadow-md ${darkMode ? "bg-[#1B2342]" : "bg-white"
-                                }`}
-                        >
-                            <ResponsiveContainer width="100%" height={300}>
-                                <LineChart data={chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "#2C3559" : "#eee"} />
-                                    <XAxis dataKey="name" stroke={darkMode ? "#ddd" : "#555"} />
-                                    <YAxis stroke={darkMode ? "#ddd" : "#555"} />
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: darkMode ? "#1B2342" : "#fff",
-                                            color: darkMode ? "#fff" : "#000",
-                                            borderRadius: "8px",
-                                        }}
-                                    />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="sales"
-                                        stroke="#1224c4"
-                                        strokeWidth={3}
-                                        dot={{ r: 5 }}
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
+                                        <div
+                                            className={`w-14 h-14 rounded-xl flex items-center justify-center ${darkMode ? "bg-green-900/30" : "bg-green-50"
+                                                }`}
+                                        >
+                                            <Calendar className="w-6 h-6 text-green-600" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate">{b.title}</p>
+                                            <p className="text-xs opacity-70 mt-1">{b.time}</p>
+                                        </div>
+                                        <button className="text-[#1224c4] text-sm font-medium hover:underline">
+                                            Xem chi tiết
+                                        </button>
+                                    </motion.div>
+                                ))}
+                            </div>
                         </div>
                     </motion.section>
                 </div>
@@ -263,17 +361,18 @@ export default function DashboardScreen(): JSX.Element {
                 className={`text-center text-sm py-4 ${darkMode ? "bg-[#10182F] text-slate-400" : "bg-white text-slate-500 border-t"
                     }`}
             >
-                © 2025 <span className="font-semibold">Bất Động Sản Windland</span>. Tất cả quyền được bảo lưu.
+                © 2025 <span className="font-semibold">Bất Động Sản Winland</span>. Tất cả quyền được bảo lưu.
             </footer>
 
             {/* 🔹 Bottom navigation */}
             <nav className={`${darkMode ? "bg-[#10182F]" : "bg-white border-t"} sticky bottom-0`}>
-                <div className="max-w-[1200px] mx-auto px-6">
-                    <div className="grid grid-cols-5 py-3">
+                <div className="max-w-[1300px] mx-auto px-6">
+                    <div className="grid grid-cols-6 py-3">
                         {[
                             { id: "home", label: "Trang chủ", icon: Home },
                             { id: "cart", label: "Giỏ hàng", icon: ShoppingCart },
                             { id: "map", label: "Quy hoạch", icon: Map },
+                            { id: "deal", label: "Giao dịch", icon: TrendingUp },
                             { id: "notif", label: "Thông báo", icon: Bell },
                             { id: "user", label: "Cá nhân", icon: User },
                         ].map((item) => {
@@ -286,11 +385,11 @@ export default function DashboardScreen(): JSX.Element {
                                     className="flex flex-col items-center justify-center gap-1"
                                 >
                                     <Icon
-                                        className={`w-6 h-6 ${active ? "text-[#1224c4]" : darkMode ? "text-slate-400" : "text-slate-500"
+                                        className={`w-4 h-4 sm:w-7 sm:h-7 ${active ? "text-[#1224c4]" : darkMode ? "text-slate-400" : "text-slate-500"
                                             }`}
                                     />
                                     <span
-                                        className={`text-[13px] ${active ? "text-[#1224c4] font-medium" : "opacity-70"
+                                        className={`text-[11px] sm:text-[13px] ${active ? "text-[#1224c4] font-medium" : "opacity-70"
                                             }`}
                                     >
                                         {item.label}
