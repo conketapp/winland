@@ -27,10 +27,12 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatCurrency } from '@/lib/utils';
+import { AnimatedBottomNavigation } from '@/components/AnimatedBottomNavigation';
+import { useNavigation } from '@/hooks/useNavigation';
 
 export default function DashboardScreen(): JSX.Element {
+    const { activeNav, setActiveNav } = useNavigation();
     const router = useRouter();
-    const [activeNav, setActiveNav] = useState("home");
     const [darkMode, setDarkMode] = useState(false);
     const [token, setToken] = useState<string | null>(null);
     const [userData, setUserData] = useState<any>(null);
@@ -364,42 +366,12 @@ export default function DashboardScreen(): JSX.Element {
                 © 2025 <span className="font-semibold">Bất Động Sản Winland</span>. Tất cả quyền được bảo lưu.
             </footer>
 
-            {/* 🔹 Bottom navigation */}
-            <nav className={`${darkMode ? "bg-[#10182F]" : "bg-white border-t"} sticky bottom-0`}>
-                <div className="max-w-[1300px] mx-auto px-6">
-                    <div className="grid grid-cols-6 py-3">
-                        {[
-                            { id: "home", label: "Trang chủ", icon: Home },
-                            { id: "cart", label: "Giỏ hàng", icon: ShoppingCart },
-                            { id: "map", label: "Quy hoạch", icon: Map },
-                            { id: "deal", label: "Giao dịch", icon: TrendingUp },
-                            { id: "notif", label: "Thông báo", icon: Bell },
-                            { id: "user", label: "Cá nhân", icon: User },
-                        ].map((item) => {
-                            const active = activeNav === item.id;
-                            const Icon = item.icon;
-                            return (
-                                <button
-                                    key={item.id}
-                                    onClick={() => setActiveNav(item.id)}
-                                    className="flex flex-col items-center justify-center gap-1"
-                                >
-                                    <Icon
-                                        className={`w-4 h-4 sm:w-7 sm:h-7 ${active ? "text-[#1224c4]" : darkMode ? "text-slate-400" : "text-slate-500"
-                                            }`}
-                                    />
-                                    <span
-                                        className={`text-[11px] sm:text-[13px] ${active ? "text-[#1224c4] font-medium" : "opacity-70"
-                                            }`}
-                                    >
-                                        {item.label}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            </nav>
+            {/* Bottom navigation */}
+            <AnimatedBottomNavigation
+                activeNav={activeNav}
+                setActiveNav={setActiveNav}
+                darkMode={darkMode}
+            />
         </div>
     );
 }
