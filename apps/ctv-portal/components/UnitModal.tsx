@@ -47,7 +47,7 @@ export default function UnitModal({ unit, onClose }: UnitModalProps) {
                 <div className="relative bg-gradient-to-r from-indigo-500 to-blue-500 p-4 text-white">
                     <h3 className="font-bold text-lg">{unit.code}</h3>
                     <p className="text-sm">
-                        Block {unit.code.slice(0, 3)} · Tầng {Math.floor(Math.random() * 15) + 1}
+                        Block {unit.code.slice(0, 3)} · Tầng {unit.floor}
                     </p>
                     <button
                         onClick={onClose}
