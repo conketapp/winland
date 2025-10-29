@@ -87,7 +87,7 @@ export default function DashboardScreen(): JSX.Element {
                 className={`rounded-b-3xl shadow-md ${darkMode ? "bg-[#10182F]" : "bg-[#041b40] text-white"
                     }`}
             >
-                <div className="max-w-[1200px] mx-auto px-6 py-6 flex items-center justify-between">
+                <div className="max-w-[1500px] mx-auto px-6 py-6 flex items-center justify-between">
                     {/* Left side - can add logo or title here */}
                     <div className="flex items-center">
                         <h1 className="text-xl font-semibold">Cộng Tác Viên Bất Động Sản Winland</h1>
