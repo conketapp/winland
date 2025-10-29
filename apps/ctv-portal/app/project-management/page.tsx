@@ -1,5 +1,5 @@
 /**
- * 🔑 DASHBOARD PAGE (CTV Portal)
+ * 🔑 PROJECT MANAGMENT PAGE (CTV Portal)
  *
  * @author Winland Team
  * @route /
@@ -22,6 +22,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { AnimatedBottomNavigation } from "@/components/AnimatedBottomNavigation";
 import { useNavigation } from "@/hooks/useNavigation";
+import UnitModal from "@/components/UnitModal";
+import { formatCurrency } from "@/lib/utils";
+
 
 /* ----------------------------- TYPES ----------------------------- */
 type UnitStatus = "available" | "reserved" | "sold" | "booking" | "deposit";
@@ -30,10 +33,16 @@ type Unit = {
     id: string;
     code: string;
     area: string;
-    price: string;
+    price: number;
     numRoom: number;
     numWC: number;
     status: UnitStatus;
+    commission: number;
+    view: string;
+    direction?: string;
+    customerName?: string;
+    reservedUntil?: string;
+    image: string;
 };
 
 type Block = {
@@ -44,10 +53,31 @@ type Block = {
 
 // Price and area templates
 const areas = ["120m2", "150m2", "185m2", "210m2"];
-const prices = ["6,200 tỷ", "7,850 tỷ", "8,532 tỷ", "9,100 tỷ", "10,250 tỷ"];
+const direction = ["Đông", "Tây", "Nam", "Bắc", "Đông Nam", "Tây Nam", "Đông Bắc", "Tây Bắc"];
+const view = ["City view", "River view", "Park view", "Pool view", "Lake view", "Golf view","Skyline view",];
+const prices = [6200000000, 7850000000, 8532000000, 9100000000, 10250000000, 5500000000];
 const numRooms = [2, 3, 4, 5];
 const numWCs = [1, 2, 3];
 const getRandom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+// Generate apartment images
+const generateUnitImage = (index: number): string => {
+    const apartmentImages = [
+        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", // Modern living room
+        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", // Luxury apartment
+        "https://images.unsplash.com/photo-1560448075-bb485b067938?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", // Contemporary interior
+        "https://images.unsplash.com/photo-1560449752-c4b8b5c6b9c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", // Modern kitchen
+        "https://images.unsplash.com/photo-1560448204-61dc36dc98c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", // Elegant bedroom
+        "https://images.unsplash.com/photo-1560448075-cbc16bb4af8e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", // Spacious living area
+        "https://images.unsplash.com/photo-1560449752-c4b8b5c6b9c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", // Modern bathroom
+        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", // Cozy apartment
+        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", // Premium unit
+        "https://images.unsplash.com/photo-1560448075-bb485b067938?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", // Designer interior
+    ];
+
+    return apartmentImages[index % apartmentImages.length];
+};
+
 /* ----------------------------- MOCK DATA ----------------------------- */
 // Generate mock data
 export const blocks: Block[] = Array.from({ length: 10 }, (_, i) => {
@@ -64,6 +94,10 @@ export const blocks: Block[] = Array.from({ length: 10 }, (_, i) => {
             numRoom: getRandom(numRooms),
             numWC: getRandom(numWCs),
             status: getRandom(statuses),
+            commission: Math.floor(Math.random() * 50000000) + 25000000,
+            direction: getRandom(direction),
+            view: getRandom(view),
+            image: generateUnitImage(j)
         };
     });
 
@@ -110,6 +144,7 @@ export default function DashboardScreen(): JSX.Element {
     const [token, setToken] = useState<string | null>(null);
     const [userData, setUserData] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState("");
+    const [selectedUnit, setSelectedUnit] = useState<any>(null);
 
     // Detect system theme
     useEffect(() => {
@@ -320,6 +355,7 @@ export default function DashboardScreen(): JSX.Element {
                                                     initial="hidden"
                                                     animate="visible"
                                                     whileHover="hover"
+                                                    onClick={() => unit.status === "available" && setSelectedUnit(unit)}
                                                 >
                                                     <div
                                                         className={`rounded-xl shadow-sm text-white p-3 flex flex-col items-center justify-center gap-2 min-h-[88px] ${status.bgClass}`}
@@ -327,9 +363,17 @@ export default function DashboardScreen(): JSX.Element {
                                                         <div className="text-sm font-semibold">{unit.code}</div>
                                                         <div className="grid grid-cols-2 gap-1 w-full text-center">
                                                             <div className="text-xs opacity-90">{unit.area}</div>
-                                                            <div className="text-xs opacity-90">{unit.price}</div>
+                                                            <div className="text-xs opacity-90">{formatCurrency(unit.price)}</div>
                                                             <div className="text-xs opacity-90">PN: {unit.numRoom}</div>
                                                             <div className="text-xs opacity-90">WC: {unit.numWC}</div>
+                                                        </div>
+                                                        {/* 🔹 Badge hiển thị trạng thái */}
+                                                        <div className="absolute top-2 right-2">
+                                                            <span
+                                                                className={`text-[10px] px-2 py-0.5 rounded-full bg-white/25 backdrop-blur-sm`}
+                                                            >
+                                                                {status.label}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </motion.article>
@@ -358,6 +402,12 @@ export default function DashboardScreen(): JSX.Element {
                 setActiveNav={setActiveNav}
                 darkMode={darkMode}
             />
+            {selectedUnit && (
+                <UnitModal
+                    unit={selectedUnit}
+                    onClose={() => setSelectedUnit(null)}
+                />
+            )}
         </div>
     );
 }
