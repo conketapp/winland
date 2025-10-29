@@ -6,12 +6,43 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    notation: 'compact',
-    maximumFractionDigits: 0,
-  }).format(amount);
+  if (amount === 0) return '0 ₫';
+
+  const absAmount = Math.abs(amount);
+  let formattedValue: string;
+  let unit: string = '';
+
+  if (absAmount >= 1_000_000_000) {
+    // Tỷ (billion)
+    const billions = absAmount / 1_000_000_000;
+    formattedValue = billions % 1 === 0
+      ? billions.toString()
+      : billions.toFixed(1).replace(/\.0$/, '');
+    unit = ' tỷ VND';
+  } else if (absAmount >= 1_000_000) {
+    // Triệu (million)
+    const millions = absAmount / 1_000_000;
+    formattedValue = millions % 1 === 0
+      ? millions.toString()
+      : millions.toFixed(1).replace(/\.0$/, '');
+    unit = ' triệu VND';
+  } else if (absAmount >= 1_000) {
+    // Ngàn (thousand)
+    const thousands = absAmount / 1_000;
+    formattedValue = thousands % 1 === 0
+      ? thousands.toString()
+      : thousands.toFixed(1).replace(/\.0$/, '');
+    unit = ' nghìn VND';
+  } else {
+    // Đồng
+    formattedValue = absAmount.toString();
+    unit = ' ₫';
+  }
+
+  // Add sign for negative amounts
+  const sign = amount < 0 ? '-' : '';
+
+  return `${sign}${formattedValue}${unit}`;
 }
 
 export function formatDate(date: string | Date): string {
