@@ -46,7 +46,9 @@ type Unit = {
     direction?: string;
     customerName?: string;
     reservedUntil?: string;
-    image: string;
+    image: string[];
+    information: string;
+    legalDocument?: string;
 };
 
 type Block = {
@@ -62,24 +64,30 @@ const view = ["City view", "River view", "Park view", "Pool view", "Lake view", 
 const prices = [6200000000, 7850000000, 8532000000, 9100000000, 10250000000, 5500000000];
 const numRooms = [2, 3, 4, 5];
 const numWCs = [1, 2, 3];
+const information = ["Căn hộ thiết kế hiện đại với không gian mở, ban công rộng và ánh sáng tự nhiên chan hòa. Vị trí thuận tiện gần khu tiện ích, trường học và trung tâm thương mại.",
+    "Căn hộ nằm trong khu dân cư yên tĩnh, có view sông thoáng mát, phù hợp cho gia đình nhỏ. Nội thất được hoàn thiện cao cấp, phòng khách thông với ban công giúp tận dụng tối đa ánh sáng tự nhiên.",
+    "Căn hộ nổi bật với thiết kế sang trọng, có sân vườn riêng và không gian sinh hoạt ngoài trời. Phù hợp với gia đình đa thế hệ, kết nối tiện ích nội khu như hồ bơi, công viên, khu thể thao.",
+]
 const getRandom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
-// Generate apartment images
-const generateUnitImage = (index: number): string => {
+// Generate apartment images (3-5 images per unit)
+const generateUnitImage = (index: number): string[] => {
     const apartmentImages = [
         "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1560449752-c4b8b5c6b9c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1560449752-c4b8b5c6b9c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1560448204-61dc36dc98c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1560448075-cbc16bb4af8e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1560449752-c4b8b5c6b9c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1560448075-bb485b067938?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1560448075-bb485b067938?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
     ];
 
-    return apartmentImages[index % apartmentImages.length];
+    // Generate 3-5 images randomly
+    const imageCount = Math.floor(Math.random() * 3) + 3; // Random number between 3-5
+    const startIndex = index % (apartmentImages.length - imageCount + 1);
+
+    return apartmentImages.slice(startIndex, startIndex + imageCount);
 };
 
 /* ----------------------------- MOCK DATA ----------------------------- */
@@ -106,7 +114,8 @@ export const blocks: Block[] = Array.from({ length: 4 }, (_, i) => {
             floor: floor,
             direction: getRandom(direction),
             view: getRandom(view),
-            image: generateUnitImage(j)
+            image: generateUnitImage(j),
+            information: getRandom(information),
         };
     });
 
