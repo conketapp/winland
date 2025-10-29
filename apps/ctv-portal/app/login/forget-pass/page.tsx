@@ -205,7 +205,7 @@ export default function OTPPage() {
                                                 <div className="text-center">
                                                     <a
                                                         href="#"
-                                                        className="font-bold text-black-600 hover:text-black-700 transition-colors duration-200 hover:underline inline-flex items-center justify-center"
+                                                        className="font-bold text-gray-600 hover:text-black-700 transition-colors duration-200 hover:underline inline-flex items-center justify-center py-3"
                                                         onClick={(e) => {
                                                             e.preventDefault();
                                                             try {

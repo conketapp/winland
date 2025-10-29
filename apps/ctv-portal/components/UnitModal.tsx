@@ -97,22 +97,22 @@ export default function UnitModal({ unit, onClose }: UnitModalProps) {
                         <div className="bg-white rounded-3xl p-6 shadow-md hover:shadow-xl transition text-center">
                             <Bed className="mx-auto text-blue-500 mb-1" />
                             <p className="text-xs text-gray-500">Phòng ngủ</p>
-                            <p className="font-semibold text-lg text-gray-500">{unit.numRoom}</p>
+                            <p className="font-semibold text-lg text-black-500">{unit.numRoom}</p>
                         </div>
                         <div className="bg-white rounded-3xl p-6 shadow-md hover:shadow-xl transition text-center">
                             <Bath className="mx-auto text-purple-500 mb-1" />
                             <p className="text-xs text-gray-500">Phòng tắm</p>
-                            <p className="font-semibold text-lg text-gray-500">{unit.numWC}</p>
+                            <p className="font-semibold text-lg text-black-500">{unit.numWC}</p>
                         </div>
                         <div className="bg-white rounded-3xl p-6 shadow-md hover:shadow-xl transition text-center">
                             <Maximize2 className="mx-auto text-green-500 mb-1" />
                             <p className="text-xs text-gray-500">Diện tích</p>
-                            <p className="font-semibold text-lg text-gray-500">{unit.area}</p>
+                            <p className="font-semibold text-lg text-black-500">{unit.area}</p>
                         </div>
                         <div className="bg-white rounded-3xl p-6 shadow-md hover:shadow-xl transition text-center">
                             <Compass className="mx-auto text-yellow-500 mb-1" />
                             <p className="text-xs text-gray-500">Hướng</p>
-                            <p className="font-semibold text-lg text-gray-500">{unit.direction}</p>
+                            <p className="font-semibold text-lg text-black-500">{unit.direction}</p>
                         </div>
                     </div>
 
