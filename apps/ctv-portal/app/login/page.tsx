@@ -20,83 +20,12 @@ import { motion } from 'framer-motion';
 import { ToastContainer } from 'react-toastify';
 import { ImageWithFallback } from "@/components/ui/imagewithfallback";
 import { toastNotification } from '@/app/utils/toastNotification';
+import { useDeviceDetect } from '@/hooks/useDeviceDetect';
+import { useTheme } from '@/hooks/useTheme';
 import Image from 'next/image'
 import LoginCTVPortalImage from "@/assets/images/login_ctvportal.png"
 import LoginCTVPortalBackground from "@/assets/images/login_ctvportal_background.jpg"
 import LoginCTVPortalFallBackground from "@/assets/images/before_login_ctv_background.jpg"
-
-// Device detection hook
-const useDeviceDetect = () => {
-    const [deviceInfo, setDeviceInfo] = useState({
-        isMobile: false,
-        isTablet: false,
-        isDesktop: false,
-        width: 1024,
-    });
-
-    useEffect(() => {
-        const handleResize = () => {
-            const width = window.innerWidth;
-            setDeviceInfo({
-                isMobile: width < 768,
-                isTablet: width >= 768 && width < 1024,
-                isDesktop: width >= 1024,
-                width,
-            });
-        };
-
-        // Initial check
-        handleResize();
-
-        // Add event listener
-        window.addEventListener('resize', handleResize);
-
-        // Cleanup
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    return deviceInfo;
-};
-
-// Theme hook for dark/light mode
-const useTheme = () => {
-    const [theme, setTheme] = useState<'light' | 'dark'>('light');
-    const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>('light');
-
-    useEffect(() => {
-        // Check system preference
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        setSystemTheme(mediaQuery.matches ? 'dark' : 'light');
-
-        // Check for saved theme preference
-        const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-        if (savedTheme) {
-            setTheme(savedTheme);
-        } else {
-            setTheme(mediaQuery.matches ? 'dark' : 'light');
-        }
-
-        // Listen for system theme changes
-        const handleChange = (e: MediaQueryListEvent) => {
-            setSystemTheme(e.matches ? 'dark' : 'dark');
-            if (!localStorage.getItem('theme')) {
-                setTheme(e.matches ? 'light' : 'dark');
-            }
-        };
-
-        mediaQuery.addEventListener('change', handleChange);
-        return () => mediaQuery.removeEventListener('change', handleChange);
-    }, []);
-
-    const toggleTheme = () => {
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-    };
-
-    return { theme, systemTheme, toggleTheme, isDark: theme === 'dark' };
-};
-
 
 export default function LoginPage() {
     const router = useRouter();
@@ -105,28 +34,23 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const { isMobile, isTablet, isDesktop } = useDeviceDetect();
-    const { theme, isDark } = useTheme();
 
-    // Update theme-color meta tag
+    // Use the optimized hooks
+    const deviceInfo = useDeviceDetect();
+    const { isDark } = useTheme();
+
+    // Update theme-color meta tag based on device type
     useEffect(() => {
         const themeColorMeta = document.querySelector('meta[name="theme-color"]');
         if (themeColorMeta) {
             // Set status bar color based on theme and device
-            if (isMobile) {
+            if (deviceInfo.isMobile) {
                 themeColorMeta.setAttribute('content', isDark ? '#0f172a' : '#3b82f6');
             } else {
                 themeColorMeta.setAttribute('content', isDark ? '#1e293b' : '#3b82f6');
             }
         }
-
-        // Update body class for dark mode
-        if (isDark) {
-            document.body.classList.add('dark');
-        } else {
-            document.body.classList.remove('dark');
-        }
-    }, [theme, isMobile, isDark]);
+    }, [isDark, deviceInfo.isMobile]);
 
     const handleButtonLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -148,13 +72,49 @@ export default function LoginPage() {
         }
     }
 
+    // Helper function to get responsive classes based on device type
+    const getResponsiveClasses = () => {
+        if (deviceInfo.isMobile) {
+            return {
+                containerPadding: 'px-6 py-8',
+                titleSize: 'text-sm',
+                subtitleSize: 'text-3xl',
+                iconSize: 'w-4 h-4',
+                inputPadding: 'pl-10',
+                buttonIconSize: 'w-4 h-4',
+                eyeIconSize: 16,
+            };
+        } else if (deviceInfo.isTablet) {
+            return {
+                containerPadding: 'w-3/5 px-8 py-10',
+                titleSize: 'text-xl',
+                subtitleSize: 'text-3xl',
+                iconSize: 'w-5 h-5',
+                inputPadding: 'pl-14',
+                buttonIconSize: 'w-5 h-5',
+                eyeIconSize: 20,
+            };
+        } else {
+            return {
+                containerPadding: 'lg:w-1/2 lg:px-10 lg:py-20',
+                titleSize: 'text-lg lg:text-2xl',
+                subtitleSize: 'text-2xl sm:text-3xl',
+                iconSize: 'w-5 h-5',
+                inputPadding: 'pl-14',
+                buttonIconSize: 'w-5 h-5',
+                eyeIconSize: 20,
+            };
+        }
+    };
+
+    const responsiveClasses = getResponsiveClasses();
+
     // Render UI
     return (
         <>
             <div className={`min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4 sm:p-6
                         transition-colors duration-300`}>
-                <ToastContainer
-                />
+                <ToastContainer />
                 {/* Background Image with Overlay */}
                 <div className="fixed inset-0 -z-20">
                     <div
@@ -177,19 +137,19 @@ export default function LoginPage() {
                             {/* Responsive Layout: Different for mobile, tablet, and desktop */}
                             <div className="flex flex-col md:flex-row md:justify-between">
                                 {/* Form Section - Different widths for different devices */}
-                                <div className={`w-full ${isMobile ? 'px-6 py-8' : isTablet ? 'w-3/5 px-8 py-10' : isDesktop ? 'lg:w-1/2 lg:px-10 lg:py-20' : 'lg:w-1/2 lg:px-10 lg:py-20'}`}>
+                                <div className={`w-full ${responsiveClasses.containerPadding}`}>
                                     {/* Header - Adjusted for different devices */}
                                     <Card className={`p-4 sm:p-6 rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 w-full bg-white dark:bg-white hover:bg-white/95`}>
                                         <CardContent className="pt-4 sm:pt-8 space-y-4 w-full transition-all duration-300 bg-white dark:bg-white hover:bg-white/95">
                                             {/* Header */}
                                             <div className="text-center space-y-2 sm:space-y-1 mb-2">
-                                                <h1 className={`${isMobile ? 'text-sm' : isTablet ? 'text-xl' : isDesktop ? 'text-lg lg:text-2xl' : 'text-xl lg:text-2xl'}
+                                                <h1 className={`${responsiveClasses.titleSize}
                                                                 font-bold tracking-tighter transition-colors duration-300 text-blue-900`}>
                                                     Cộng Tác Viên Bất Động Sản Winland
                                                 </h1>
                                             </div>
                                             <div className="text-center space-y-2">
-                                                <h1 className={`${isMobile ? 'text-3xl' : isTablet ? 'text-3xl' : isDesktop ? 'text-2xl sm:text-3xl' : 'text-2xl sm:text-3xl'}
+                                                <h1 className={`${responsiveClasses.subtitleSize}
                                         font-bold tracking-tighter transition-colors duration-300 text-blue-900`}>
                                                     Đăng Nhập
                                                 </h1>
@@ -201,15 +161,15 @@ export default function LoginPage() {
                                                         Số điện thoại
                                                     </label>
                                                     <div className="relative">
-                                                        <Smartphone className={`absolute ${isMobile ? 'left-3' : 'left-4'} top-1/2 transform -translate-y-1/2
-                                                                text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
+                                                        <Smartphone className={`absolute left-3 top-1/2 transform -translate-y-1/2
+                                                                text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${responsiveClasses.iconSize}`} />
                                                         <Input
                                                             id="userPhone"
                                                             type="tel"
                                                             value={userPhone}
                                                             onChange={(e) => setUserPhone(e.target.value)}
                                                             placeholder="Nhập số điện thoại"
-                                                            className={`${isMobile ? 'pl-10' : 'pl-14'} py-3 ${isMobile ? 'text-base' : 'text-lg'} rounded-xl pr-11 h-12
+                                                            className={`${responsiveClasses.inputPadding} py-3 text-base rounded-xl pr-11 h-12
                                                             border-slate-200  bg-slate-50/50 hover:bg-slate-50 text-black`}
                                                             required
                                                         />
@@ -221,25 +181,25 @@ export default function LoginPage() {
                                                         Mật khẩu
                                                     </label>
                                                     <div className="relative">
-                                                        <LockKeyhole className={`absolute ${isMobile ? 'left-3' : 'left-4'} top-1/2 transform -translate-y-1/2
-                                                    text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
+                                                        <LockKeyhole className={`absolute left-3 top-1/2 transform -translate-y-1/2
+                                                    text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${responsiveClasses.iconSize}`} />
                                                         <Input
                                                             id="userPassword"
                                                             type={showPassword ? 'text' : 'password'}
                                                             value={userPassword}
                                                             onChange={(e) => setUserPassword(e.target.value)}
                                                             placeholder="Nhập mật khẩu"
-                                                            className={`${isMobile ? 'pl-10 pr-10' : 'pl-14 pr-12'} py-3 ${isMobile ? 'text-base' : 'text-lg'} rounded-xl pr-11 h-12
+                                                            className={`${responsiveClasses.inputPadding} pr-12 py-3 text-base rounded-xl pr-11 h-12
                                                             border-slate-200  bg-slate-50/50 hover:bg-slate-50 text-black`}
                                                             required
                                                         />
                                                         <button
                                                             type="button"
                                                             onClick={() => setShowPassword(!showPassword)}
-                                                            className={`absolute ${isMobile ? 'right-3' : 'right-4'} top-1/2 transform -translate-y-1/2
-                                                                    transition-colors duration-300 text-gray-400 hover:text-gray-600 ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`}
+                                                            className={`absolute right-3 top-1/2 transform -translate-y-1/2
+                                                                    transition-colors duration-300 text-gray-400 hover:text-gray-600 ${responsiveClasses.iconSize}`}
                                                         >
-                                                            {showPassword ? <EyeOff size={isMobile ? 16 : 20} /> : <Eye size={isMobile ? 16 : 20} />}
+                                                            {showPassword ? <EyeOff size={responsiveClasses.eyeIconSize} /> : <Eye size={responsiveClasses.eyeIconSize} />}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -285,7 +245,7 @@ export default function LoginPage() {
                                                     ) : (
                                                         <>
                                                             <span>Đăng nhập</span>
-                                                            <ArrowRight className="ml-3 w-4 h-4" />
+                                                            <ArrowRight className={`ml-3 ${responsiveClasses.buttonIconSize}`} />
                                                         </>
                                                     )}
                                                 </Button>
@@ -327,13 +287,13 @@ export default function LoginPage() {
                                     </Card>
                                 </div>
                                 {/* Image Section - Different display for different devices */}
-                                <div className={`${isMobile ? 'hidden' : isTablet ? 'w-2/5 flex items-center justify-center p-6' : isDesktop ? 'hidden lg:block lg:w-1/2' : 'hidden lg:block lg:w-1/2'}`}>
-                                    <div className={`illu-wrap ${isTablet ? 'py-6' : 'py-12 lg:py-20'} px-4 h-full flex items-center justify-center`}>
+                                <div className={`${deviceInfo.isMobile ? 'hidden' : deviceInfo.isTablet ? 'w-2/5 flex items-center justify-center p-6' : 'hidden lg:block lg:w-1/2'}`}>
+                                    <div className={`illu-wrap ${deviceInfo.isTablet ? 'py-6' : 'py-12 lg:py-20'} px-4 h-full flex items-center justify-center`}>
                                         <Image
                                             src={LoginCTVPortalImage}
                                             alt="Login CTV Portal Image"
-                                            width={isTablet ? 400 : 600}
-                                            height={isTablet ? 400 : 600}
+                                            width={deviceInfo.isTablet ? 400 : 600}
+                                            height={deviceInfo.isTablet ? 400 : 600}
                                             className="max-w-full h-auto object-contain"
                                             blurDataURL="data:..."
                                             placeholder="blur"
