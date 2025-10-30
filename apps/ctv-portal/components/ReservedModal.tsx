@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from "@/lib/utils";
 import { toastNotification } from '@/app/utils/toastNotification';
+import { useDeviceDetect } from "@/hooks/useDeviceDetect";
+import { getModalResponsiveClasses } from "@/app/utils/responsive";
 
 type UnitModalProps = {
     unit: any;
@@ -18,6 +20,9 @@ type UnitModalProps = {
 
 export default function ReservedModal({ unit, onClose }: UnitModalProps) {
     if (!unit) return null;
+
+    const deviceInfo = useDeviceDetect();
+    const responsive = getModalResponsiveClasses(deviceInfo);
 
     // Use the image array from unit data (3-5 images)
     const unitImages = unit.image;
@@ -128,7 +133,7 @@ export default function ReservedModal({ unit, onClose }: UnitModalProps) {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 transition={{ duration: 0.25 }}
-                className="bg-white w-full max-w-md max-h-[900px] rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+                className={`bg-white w-full ${responsive.containerMaxWidth} ${responsive.containerMaxHeight} rounded-3xl shadow-2xl overflow-hidden flex flex-col`}
             >
                 {/* Header */}
                 <div className="relative bg-gradient-to-r from-yellow-500 to-yellow-700 p-4 text-white">

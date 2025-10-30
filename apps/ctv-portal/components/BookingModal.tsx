@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from "@/lib/utils";
 import { toastNotification } from '@/app/utils/toastNotification';
+import { useDeviceDetect } from "@/hooks/useDeviceDetect";
+import { getModalResponsiveClasses } from "@/app/utils/responsive";
 
 type UnitModalProps = {
     unit: any;
@@ -17,6 +19,9 @@ type UnitModalProps = {
 
 export default function BookingModal({ unit, onClose }: UnitModalProps) {
     if (!unit) return null;
+
+    const deviceInfo = useDeviceDetect();
+    const responsive = getModalResponsiveClasses(deviceInfo);
 
     // Use the image array from unit data (3-5 images)
     const unitImages = unit.image;
@@ -142,11 +147,11 @@ export default function BookingModal({ unit, onClose }: UnitModalProps) {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 transition={{ duration: 0.25 }}
-                className="bg-white w-full max-w-md max-h-[900px] rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+                className={`bg-white w-full ${responsive.containerMaxWidth} ${responsive.containerMaxHeight} rounded-3xl shadow-2xl overflow-hidden flex flex-col`}
             >
                 {/* Header */}
                 <div className="relative bg-gradient-to-r from-blue-500 to-blue-700 p-4 text-white">
-                    <h3 className="font-bold text-lg">{unit.code}</h3>
+                    <h3 className={`font-bold ${responsive.titleSize}`}>{unit.code}</h3>
                     <p className="text-sm">
                         Block {unit.code.slice(0, 3)} · Tầng {unit.floor}
                     </p>
@@ -161,17 +166,17 @@ export default function BookingModal({ unit, onClose }: UnitModalProps) {
                 <div className="flex-1 overflow-y-auto">
                     {/* Deposit Receipt Section */}
                     <div className="px-4 pt-4 pb-0">
-                        <h3 className="font-bold text-lg text-black-800">Booking</h3>
+                        <h3 className={`font-bold ${responsive.titleSize} text-black-800`}>Booking</h3>
                     </div>
                     {/* Body */}
                     <div className="px-2 pb-3 space-y-3">
                         <div className="bg-white rounded-2xl boder p-4 shadow-sm hover:shadow-xl transition ">
                             {/* Image section */}
-                            <div className="relative p-1">
+                            <div className={`relative ${responsive.imageContainerPadding}`}>
                                 <img
                                     src={unitImages[currentImageIndex]}
                                     alt={`${unit.code} - Image ${currentImageIndex + 1}`}
-                                    className="w-full h-45 rounded-xl object-cover mb-3"
+                                    className={`w-full ${responsive.imageHeight} rounded-xl object-cover mb-3`}
                                 />
                                 <div className="absolute inset-y-0 left-0 flex items-center px-3">
                                     <button
