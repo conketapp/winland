@@ -54,7 +54,14 @@ export default function BookingModal({ unit, onClose }: UnitModalProps) {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        const updatedForm = { ...BookingForm, [name]: value };
+        
+        // Filter numeric-only inputs for phone
+        let filteredValue = value;
+        if (name === 'phone') {
+            filteredValue = value.replace(/\D/g, ''); // Remove all non-digit characters
+        }
+        
+        const updatedForm = { ...BookingForm, [name]: filteredValue };
         setForm(updatedForm);
 
         // Validate time range when start or end time changes
@@ -75,15 +82,12 @@ export default function BookingModal({ unit, onClose }: UnitModalProps) {
 
         // Validate phone number in real-time
         if (name === 'phone') {
-            if (value.trim() === '') {
+            if (filteredValue.trim() === '') {
                 setPhoneError('');
             } else {
-                // Remove all non-digit characters to check length
-                const cleanPhone = value.replace(/\D/g, '');
-
-                if (cleanPhone.length > 11) {
+                if (filteredValue.length > 11) {
                     setPhoneError('Số điện thoại không hợp lệ, độ dài số tối đa là 11 chữ số');
-                } else if (!isValidVietnamesePhone(value)) {
+                } else if (!isValidVietnamesePhone(filteredValue)) {
                     setPhoneError('Số điện thoại không hợp lệ. Vui lòng nhập số di động (03x, 05x, 07x, 08x, 09x) hoặc số cố định (02x)');
                 } else {
                     setPhoneError('');

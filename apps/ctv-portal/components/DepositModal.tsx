@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from "@/lib/utils";
+import { toastNotification } from '@/app/utils/toastNotification';
 
 type UnitModalProps = {
     unit: any;
@@ -36,19 +37,23 @@ export default function DepositModal({ unit, onClose }: UnitModalProps) {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setForm({ ...form, [name]: value });
+        
+        // Filter numeric-only inputs for phone and CCCD
+        let filteredValue = value;
+        if (name === 'phone' || name === 'id') {
+            filteredValue = value.replace(/\D/g, ''); // Remove all non-digit characters
+        }
+        
+        setForm({ ...form, [name]: filteredValue });
 
         // Validate phone number in real-time
         if (name === 'phone') {
-            if (value.trim() === '') {
+            if (filteredValue.trim() === '') {
                 setPhoneError('');
             } else {
-                // Remove all non-digit characters to check length
-                const cleanPhone = value.replace(/\D/g, '');
-
-                if (cleanPhone.length > 11) {
+                if (filteredValue.length > 11) {
                     setPhoneError('Số điện thoại không hợp lệ, độ dài số tối đa là 11 chữ số');
-                } else if (!isValidVietnamesePhone(value)) {
+                } else if (!isValidVietnamesePhone(filteredValue)) {
                     setPhoneError('Số điện thoại không hợp lệ. Vui lòng nhập số di động (03x, 05x, 07x, 08x, 09x) hoặc số cố định (02x)');
                 } else {
                     setPhoneError('');
@@ -58,16 +63,11 @@ export default function DepositModal({ unit, onClose }: UnitModalProps) {
 
         // Validate CCCD number in real-time
         if (name === 'id') {
-            if (value.trim() === '') {
+            if (filteredValue.trim() === '') {
                 setCccdError('');
             } else {
-                // Remove all non-digit characters to check length
-                const cleanCccd = value.replace(/\D/g, '');
-
-                if (cleanCccd.length !== 12) {
+                if (filteredValue.length !== 12) {
                     setCccdError('Số CCCD phải có đúng 12 chữ số');
-                } if (cleanCccd.length > 12) {
-                    setCccdError('Số CCCD sai, Số CCCD chỉ có 12 chữ số. Vui lòng kiểm tra lại.');
                 } else {
                     setCccdError('');
                 }
@@ -363,6 +363,10 @@ export default function DepositModal({ unit, onClose }: UnitModalProps) {
                         {/* Submit Button */}
                         <button
                             disabled={!isFormValid()}
+                            onClick={() => {
+                                toastNotification.success("Đặt cọc đã được xác nhận thành công!");
+                                onClose();
+                            }}
                             className={`w-full py-3.5 rounded-xl font-semibold text-white text-base transition ${isFormValid()
                                 ? "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
                                 : "bg-gray-300 cursor-not-allowed"
