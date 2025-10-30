@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-    X, ChevronLeft, ChevronRight, BadgeAlert, CheckSquare, Square, Calendar,
+    X, ChevronLeft, ChevronRight, BadgeAlert, ArrowLeft,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -12,12 +12,13 @@ import { toastNotification } from '@/app/utils/toastNotification';
 import { useDeviceDetect } from "@/hooks/useDeviceDetect";
 import { getModalResponsiveClasses } from "@/app/utils/responsive";
 
-type UnitModalProps = {
+type BookingModalProps = {
     unit: any;
     onClose: () => void;
+    onBack?: () => void;
 };
 
-export default function BookingModal({ unit, onClose }: UnitModalProps) {
+export default function BookingModal({ unit, onClose, onBack }: BookingModalProps) {
     if (!unit) return null;
 
     const deviceInfo = useDeviceDetect();
@@ -59,13 +60,13 @@ export default function BookingModal({ unit, onClose }: UnitModalProps) {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        
+
         // Filter numeric-only inputs for phone
         let filteredValue = value;
         if (name === 'phone') {
             filteredValue = value.replace(/\D/g, ''); // Remove all non-digit characters
         }
-        
+
         const updatedForm = { ...BookingForm, [name]: filteredValue };
         setForm(updatedForm);
 
@@ -151,26 +152,41 @@ export default function BookingModal({ unit, onClose }: UnitModalProps) {
             >
                 {/* Header */}
                 <div className="relative bg-gradient-to-r from-blue-500 to-blue-700 p-4 text-white">
-                    <h3 className={`font-bold ${responsive.titleSize}`}>{unit.code}</h3>
-                    <p className="text-sm">
-                        Block {unit.code.slice(0, 3)} · Tầng {unit.floor}
-                    </p>
+                    {/* Close button on the right */}
                     <button
                         onClick={onClose}
-                        className="absolute top-3 right-3 bg-white/20 p-1.5 rounded-full hover:bg-white/30"
+                        className="absolute top-3 right-3 bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
                     >
-                        <X size={18} />
+                        <X size={deviceInfo.isMobile ? 16 : 18} />
                     </button>
+
+                    {/* Back button on the left */}
+                    {onBack && (
+                        <button
+                            onClick={onBack}
+                            className="absolute top-3 left-3 bg-white/20 px-3 py-2 rounded-full hover:bg-white/30 transition-colors flex items-center gap-1"
+                        >
+                            <ArrowLeft size={deviceInfo.isMobile ? 16 : 18} />
+                        </button>
+                    )}
+
+                    {/* Title centered */}
+                    <div className={`text-center ${deviceInfo.isMobile ? 'px-16' : 'px-12'}`}>
+                        <h3 className={`font-bold ${responsive.titleSize}`}>{unit.code}</h3>
+                        <p className={`${responsive.subtitleSize} opacity-90`}>
+                            Block {unit.code.slice(0, 3)} · Tầng {unit.floor}
+                        </p>
+                    </div>
                 </div>
                 {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto bg-gray-100">
                     {/* Deposit Receipt Section */}
                     <div className="px-4 pt-4 pb-0">
                         <h3 className={`font-bold ${responsive.titleSize} text-black-800`}>Booking</h3>
                     </div>
                     {/* Body */}
                     <div className="px-2 pb-3 space-y-3">
-                        <div className="bg-white rounded-2xl boder p-4 shadow-sm hover:shadow-xl transition ">
+                        <div className="bg-white rounded-2xl boder p-2 shadow-sm hover:shadow-xl transition ">
                             {/* Image section */}
                             <div className={`relative ${responsive.imageContainerPadding}`}>
                                 <img

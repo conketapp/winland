@@ -2,23 +2,24 @@
 
 import { useState } from "react";
 import {
-    X, ChevronLeft, ChevronRight, BadgeAlert, CheckSquare, Square,
+    X, ChevronLeft, ChevronRight, BadgeAlert, ArrowLeft, CheckSquare, Square,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from "@/lib/utils";
 import { toastNotification } from '@/app/utils/toastNotification';
 import { useDeviceDetect } from "@/hooks/useDeviceDetect";
 import { getModalResponsiveClasses } from "@/app/utils/responsive";
 
-type UnitModalProps = {
+type ReservedModalProps = {
     unit: any;
     onClose: () => void;
+    onBack?: () => void;
 };
 
-export default function ReservedModal({ unit, onClose }: UnitModalProps) {
+export default function ReservedModal({ unit, onClose, onBack }: ReservedModalProps) {
     if (!unit) return null;
 
     const deviceInfo = useDeviceDetect();
@@ -137,19 +138,37 @@ export default function ReservedModal({ unit, onClose }: UnitModalProps) {
             >
                 {/* Header */}
                 <div className="relative bg-gradient-to-r from-yellow-500 to-yellow-700 p-4 text-white">
-                    <h3 className="font-bold text-lg">{unit.code}</h3>
-                    <p className="text-sm">
-                        Block {unit.code.slice(0, 3)} · Tầng {unit.floor}
-                    </p>
+                    {/* Close button on the right */}
                     <button
                         onClick={onClose}
-                        className="absolute top-3 right-3 bg-white/20 p-1.5 rounded-full hover:bg-white/30"
+                        className="absolute top-3 right-3 bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
                     >
-                        <X size={18} />
+                        <X size={deviceInfo.isMobile ? 16 : 18} />
                     </button>
+
+                    {/* Back button on the left */}
+                    {onBack && (
+                        <button
+                            onClick={onBack}
+                            className="absolute top-3 left-3 bg-white/20 px-3 py-2 rounded-full hover:bg-white/30 transition-colors flex items-center gap-1"
+                        >
+                            <ArrowLeft size={deviceInfo.isMobile ? 16 : 18} />
+                            <span className={`${responsive.buttonTextSize} font-medium ${deviceInfo.isMobile ? 'hidden' : ''}`}>
+                                Quay lại
+                            </span>
+                        </button>
+                    )}
+
+                    {/* Title centered */}
+                    <div className={`text-center ${deviceInfo.isMobile ? 'px-16' : 'px-12'}`}>
+                        <h3 className={`font-bold ${responsive.titleSize}`}>{unit.code}</h3>
+                        <p className={`${responsive.subtitleSize} opacity-90`}>
+                            Block {unit.code.slice(0, 3)} · Tầng {unit.floor}
+                        </p>
+                    </div>
                 </div>
                 {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto bg-gray-100">
                     {/* Deposit Receipt Section */}
                     <div className="px-4 pt-4 pb-0">
                         <h3 className="font-bold text-lg text-black-800">Phiếu giữ chỗ</h3>
@@ -157,7 +176,7 @@ export default function ReservedModal({ unit, onClose }: UnitModalProps) {
                     </div>
                     {/* Body */}
                     <div className="px-2 pb-3 space-y-3">
-                        <div className="bg-white rounded-2xl boder p-4 shadow-sm hover:shadow-xl transition ">
+                        <div className="bg-white rounded-2xl boder p-2 shadow-sm hover:shadow-xl transition ">
                             {/* Image section */}
                             <div className="relative p-1">
                                 <img

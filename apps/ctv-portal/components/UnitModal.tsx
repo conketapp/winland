@@ -62,7 +62,7 @@ export default function UnitModal({ unit, onClose, onDeposit, onReserved, onBook
                 </div>
 
                 {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto bg-gray-100">
                     {/* Image section */}
                     <div className={`relative ${responsive.imageContainerPadding}`}>
                         <img

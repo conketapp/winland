@@ -506,6 +506,10 @@ export default function DashboardScreen(): JSX.Element {
                         setSelectedUnit(null);
                         setShowDepositModal(false);
                     }}
+                    onBack={() => {
+                        setShowDepositModal(false);
+                        // This will show the UnitModal again since showDepositModal becomes false
+                    }}
                 />
             )}
             {selectedUnit && showReservedModal && (
@@ -515,6 +519,10 @@ export default function DashboardScreen(): JSX.Element {
                         setSelectedUnit(null);
                         setShowReservedModal(false);
                     }}
+                    onBack={() => {
+                        setShowReservedModal(false);
+                        // This will show the UnitModal again since showReservedModal becomes false
+                    }}
                 />
             )}
             {selectedUnit && showBookingModal && (
@@ -523,6 +531,10 @@ export default function DashboardScreen(): JSX.Element {
                     onClose={() => {
                         setSelectedUnit(null);
                         setShowBookingModal(false);
+                    }}
+                    onBack={() => {
+                        setShowBookingModal(false);
+                        // This will show the UnitModal again since showBookingModal becomes false
                     }}
                 />
             )}
