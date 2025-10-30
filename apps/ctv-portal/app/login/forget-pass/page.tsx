@@ -90,7 +90,7 @@ export default function OTPPage() {
         e.preventDefault();
         setIsLoading(true);
         console.log('Login with:', { userPhone });
-        if (userPhone === '0912345673') {
+        if (userPhone === '0912345678') {
             console.log('Reset password successful');
             try {
                 sessionStorage.setItem('login:userPhone', userPhone);
