@@ -26,6 +26,7 @@ import { useDeviceDetect } from "@/hooks/useDeviceDetect";
 import { useTheme } from "@/hooks/useTheme";
 import UnitModal from "@/components/UnitModal";
 import DepositModal from "@/components/DepositModal";
+import ReservedModal from "@/components/ReservedModal";
 import { formatCurrency } from "@/lib/utils";
 import { toastNotification } from '@/app/utils/toastNotification';
 import { ToastContainer } from 'react-toastify';
@@ -44,6 +45,7 @@ type Unit = {
     status: UnitStatus;
     commission: number;
     depositMoney?: number;
+    reservedMoney?: number;
     floor: number;
     view: string;
     direction?: string;
@@ -122,6 +124,7 @@ export const blocks: Block[] = Array.from({ length: 4 }, (_, i) => {
             image: generateUnitImage(j),
             information: getRandom(information),
             depositMoney: price * 0.01,
+            reservedMoney: 10000000,
         };
     });
 
@@ -171,6 +174,7 @@ export default function DashboardScreen(): JSX.Element {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedUnit, setSelectedUnit] = useState<any>(null);
     const [showDepositModal, setShowDepositModal] = useState(false);
+    const [showReservedModal, setShowReservedModal] = useState(false);
 
     // Mock JWT login
     useEffect(() => {
@@ -478,12 +482,15 @@ export default function DashboardScreen(): JSX.Element {
                 setActiveNav={setActiveNav}
                 darkMode={isDark}
             />
-            {selectedUnit && !showDepositModal && (
+            {selectedUnit && !showDepositModal && !showReservedModal && (
                 <UnitModal
                     unit={selectedUnit}
                     onClose={() => setSelectedUnit(null)}
                     onDeposit={() => {
                         setShowDepositModal(true);
+                    }}
+                    onReserved={() => {
+                        setShowReservedModal(true);
                     }}
                 />
             )}
@@ -493,6 +500,15 @@ export default function DashboardScreen(): JSX.Element {
                     onClose={() => {
                         setSelectedUnit(null);
                         setShowDepositModal(false);
+                    }}
+                />
+            )}
+            {selectedUnit && showReservedModal && (
+                <ReservedModal
+                    unit={selectedUnit}
+                    onClose={() => {
+                        setSelectedUnit(null);
+                        setShowReservedModal(false);
                     }}
                 />
             )}
