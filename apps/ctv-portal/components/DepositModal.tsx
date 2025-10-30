@@ -300,7 +300,7 @@ export default function DepositModal({ unit, onClose }: UnitModalProps) {
                                     <div>
                                         <label className="text-gray-700">Số CCCD <span className="text-red-500">*</span></label>
                                         <Input
-                                            type="text"
+                                            type="tel"
                                             name="id"
                                             required
                                             value={form.id}

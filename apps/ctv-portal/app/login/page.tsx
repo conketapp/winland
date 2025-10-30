@@ -22,6 +22,7 @@ import { ImageWithFallback } from "@/components/ui/imagewithfallback";
 import { toastNotification } from '@/app/utils/toastNotification';
 import { useDeviceDetect } from '@/hooks/useDeviceDetect';
 import { useTheme } from '@/hooks/useTheme';
+import { getResponsiveClasses } from '@/app/utils/responsive';
 import Image from 'next/image'
 import LoginCTVPortalImage from "@/assets/images/login_ctvportal.png"
 import LoginCTVPortalBackground from "@/assets/images/login_ctvportal_background.jpg"
@@ -29,7 +30,7 @@ import LoginCTVPortalFallBackground from "@/assets/images/before_login_ctv_backg
 
 export default function LoginPage() {
     const router = useRouter();
-    const [userPhone, setUserPhone] = useState(''); //0912345673
+    const [userPhone, setUserPhone] = useState(''); //0912345678
     const [userPassword, setUserPassword] = useState(''); //ctv456
     const [loading, setLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
@@ -38,6 +39,7 @@ export default function LoginPage() {
     // Use the optimized hooks
     const deviceInfo = useDeviceDetect();
     const { isDark } = useTheme();
+    const responsive = getResponsiveClasses(deviceInfo);
 
     // Update theme-color meta tag based on device type
     useEffect(() => {
@@ -56,7 +58,7 @@ export default function LoginPage() {
         e.preventDefault();
         setLoading(true);
         console.log('Login with:', { userPhone, userPassword });
-        if (userPhone === '0912345673' && userPassword === 'ctv456') {
+        if (userPhone === '0912345678' && userPassword === 'ctv456') {
             console.log('Login successful');
             try {
                 sessionStorage.setItem('login:userPhone', userPhone);
@@ -71,43 +73,6 @@ export default function LoginPage() {
             toastNotification.error('Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.');
         }
     }
-
-    // Helper function to get responsive classes based on device type
-    const getResponsiveClasses = () => {
-        if (deviceInfo.isMobile) {
-            return {
-                containerPadding: 'px-6 py-8',
-                titleSize: 'text-sm',
-                subtitleSize: 'text-3xl',
-                iconSize: 'w-4 h-4',
-                inputPadding: 'pl-10',
-                buttonIconSize: 'w-4 h-4',
-                eyeIconSize: 16,
-            };
-        } else if (deviceInfo.isTablet) {
-            return {
-                containerPadding: 'w-3/5 px-8 py-10',
-                titleSize: 'text-xl',
-                subtitleSize: 'text-3xl',
-                iconSize: 'w-5 h-5',
-                inputPadding: 'pl-14',
-                buttonIconSize: 'w-5 h-5',
-                eyeIconSize: 20,
-            };
-        } else {
-            return {
-                containerPadding: 'lg:w-1/2 lg:px-10 lg:py-20',
-                titleSize: 'text-lg lg:text-2xl',
-                subtitleSize: 'text-2xl sm:text-3xl',
-                iconSize: 'w-5 h-5',
-                inputPadding: 'pl-14',
-                buttonIconSize: 'w-5 h-5',
-                eyeIconSize: 20,
-            };
-        }
-    };
-
-    const responsiveClasses = getResponsiveClasses();
 
     // Render UI
     return (
@@ -137,19 +102,19 @@ export default function LoginPage() {
                             {/* Responsive Layout: Different for mobile, tablet, and desktop */}
                             <div className="flex flex-col md:flex-row md:justify-between">
                                 {/* Form Section - Different widths for different devices */}
-                                <div className={`w-full ${responsiveClasses.containerPadding}`}>
+                                <div className={`w-full ${responsive.containerPadding}`}>
                                     {/* Header - Adjusted for different devices */}
                                     <Card className={`p-4 sm:p-6 rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 w-full bg-white dark:bg-white hover:bg-white/95`}>
                                         <CardContent className="pt-4 sm:pt-8 space-y-4 w-full transition-all duration-300 bg-white dark:bg-white hover:bg-white/95">
                                             {/* Header */}
                                             <div className="text-center space-y-2 sm:space-y-1 mb-2">
-                                                <h1 className={`${responsiveClasses.titleSize}
+                                                <h1 className={`${responsive.titleSize}
                                                                 font-bold tracking-tighter transition-colors duration-300 text-blue-900`}>
                                                     Cộng Tác Viên Bất Động Sản Winland
                                                 </h1>
                                             </div>
                                             <div className="text-center space-y-2">
-                                                <h1 className={`${responsiveClasses.subtitleSize}
+                                                <h1 className={`${responsive.subtitleSize}
                                         font-bold tracking-tighter transition-colors duration-300 text-blue-900`}>
                                                     Đăng Nhập
                                                 </h1>
@@ -162,14 +127,14 @@ export default function LoginPage() {
                                                     </label>
                                                     <div className="relative">
                                                         <Smartphone className={`absolute left-3 top-1/2 transform -translate-y-1/2
-                                                                text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${responsiveClasses.iconSize}`} />
+                                                                text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${responsive.iconSize}`} />
                                                         <Input
                                                             id="userPhone"
                                                             type="tel"
                                                             value={userPhone}
                                                             onChange={(e) => setUserPhone(e.target.value)}
                                                             placeholder="Nhập số điện thoại"
-                                                            className={`${responsiveClasses.inputPadding} py-3 text-base rounded-xl pr-11 h-12
+                                                            className={`${responsive.inputPadding} text-base rounded-xl pr-11 h-12
                                                             border-slate-200  bg-slate-50/50 hover:bg-slate-50 text-black`}
                                                             required
                                                         />
@@ -182,14 +147,14 @@ export default function LoginPage() {
                                                     </label>
                                                     <div className="relative">
                                                         <LockKeyhole className={`absolute left-3 top-1/2 transform -translate-y-1/2
-                                                    text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${responsiveClasses.iconSize}`} />
+                                                    text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200 ${responsive.iconSize}`} />
                                                         <Input
                                                             id="userPassword"
                                                             type={showPassword ? 'text' : 'password'}
                                                             value={userPassword}
                                                             onChange={(e) => setUserPassword(e.target.value)}
                                                             placeholder="Nhập mật khẩu"
-                                                            className={`${responsiveClasses.inputPadding} pr-12 py-3 text-base rounded-xl pr-11 h-12
+                                                            className={`${responsive.inputPadding} pr-12 text-base rounded-xl h-12
                                                             border-slate-200  bg-slate-50/50 hover:bg-slate-50 text-black`}
                                                             required
                                                         />
@@ -197,9 +162,9 @@ export default function LoginPage() {
                                                             type="button"
                                                             onClick={() => setShowPassword(!showPassword)}
                                                             className={`absolute right-3 top-1/2 transform -translate-y-1/2
-                                                                    transition-colors duration-300 text-gray-400 hover:text-gray-600 ${responsiveClasses.iconSize}`}
+                                                                    transition-colors duration-300 text-gray-400 hover:text-gray-600 ${responsive.iconSize}`}
                                                         >
-                                                            {showPassword ? <EyeOff size={responsiveClasses.eyeIconSize} /> : <Eye size={responsiveClasses.eyeIconSize} />}
+                                                            {showPassword ? <EyeOff size={responsive.eyeIconSize} /> : <Eye size={responsive.eyeIconSize} />}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -235,9 +200,9 @@ export default function LoginPage() {
                                                 <Button
                                                     type="submit"
                                                     disabled={loading}
-                                                    className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800
+                                                    className={`w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800
                                                             text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300
-                                                                hover:scale-[1.02] active:scale-[0.98] py-3 text-base sm:text-lg flex items-center justify-center"
+                                                                hover:scale-[1.02] active:scale-[0.98] ${responsive.buttonPadding} text-base sm:text-lg flex items-center justify-center`}
                                                     size="lg"
                                                 >
                                                     {loading ? (
@@ -245,7 +210,7 @@ export default function LoginPage() {
                                                     ) : (
                                                         <>
                                                             <span>Đăng nhập</span>
-                                                            <ArrowRight className={`ml-3 ${responsiveClasses.buttonIconSize}`} />
+                                                            <ArrowRight className={`ml-3 ${responsive.buttonIconSize}`} />
                                                         </>
                                                     )}
                                                 </Button>
@@ -292,8 +257,8 @@ export default function LoginPage() {
                                         <Image
                                             src={LoginCTVPortalImage}
                                             alt="Login CTV Portal Image"
-                                            width={deviceInfo.isTablet ? 400 : 600}
-                                            height={deviceInfo.isTablet ? 400 : 600}
+                                            width={responsive.imageWidth}
+                                            height={responsive.imageHeight}
                                             className="max-w-full h-auto object-contain"
                                             blurDataURL="data:..."
                                             placeholder="blur"
@@ -307,7 +272,7 @@ export default function LoginPage() {
                     {/* Centered footer under the login form */}
                     <div className="w-full flex justify-center mt-4 sm:mt-6">
                         <p className={`text-center text-xs sm:text-sm transition-colors duration-300 text-gray-300`}>
-                            © 2025 Bất Động Sản Winland. Tất cả quyền được bảo lưu.
+                            © 2025 <span className="font-semibold">Bất Động Sản Winland</span>. Tất cả quyền được bảo lưu.
                         </p>
                     </div>
                 </div>

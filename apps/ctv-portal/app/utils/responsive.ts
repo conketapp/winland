@@ -4,11 +4,12 @@ export function getResponsiveClasses(deviceInfo: DeviceInfo) {
     if (deviceInfo.isMobile) {
         return {
             // Login page classes
-            containerPadding: 'px-6 py-8',
-            titleSize: 'text-sm',
-            subtitleSize: 'text-3xl',
+            containerPadding: 'px-4 py-6',
+            titleSize: 'text-2xl',
+            subtitleSize: 'text-base',
             iconSize: 'w-4 h-4',
-            inputPadding: 'pl-10',
+            inputPadding: 'py-2.5 px-3 pl-10',
+            buttonPadding: 'py-2.5 px-4',
             buttonIconSize: 'w-4 h-4',
             eyeIconSize: 16,
             imageWidth: 300,
@@ -28,11 +29,12 @@ export function getResponsiveClasses(deviceInfo: DeviceInfo) {
     } else if (deviceInfo.isTablet) {
         return {
             // Login page classes
-            containerPadding: 'w-3/5 px-8 py-10',
-            titleSize: 'text-xl',
-            subtitleSize: 'text-3xl',
+            containerPadding: 'px-6 py-8',
+            titleSize: 'text-3xl',
+            subtitleSize: 'text-lg',
             iconSize: 'w-5 h-5',
-            inputPadding: 'pl-14',
+            inputPadding: 'py-3 px-4 pl-12',
+            buttonPadding: 'py-3 px-6',
             buttonIconSize: 'w-5 h-5',
             eyeIconSize: 20,
             imageWidth: 400,
@@ -52,11 +54,12 @@ export function getResponsiveClasses(deviceInfo: DeviceInfo) {
     } else {
         return {
             // Login page classes
-            containerPadding: 'lg:w-1/2 lg:px-10 lg:py-20',
-            titleSize: 'text-lg lg:text-2xl',
-            subtitleSize: 'text-2xl sm:text-3xl',
+            containerPadding: 'px-8 py-12',
+            titleSize: 'text-4xl',
+            subtitleSize: 'text-xl',
             iconSize: 'w-5 h-5',
-            inputPadding: 'pl-14',
+            inputPadding: 'py-3 px-4 pl-12',
+            buttonPadding: 'py-3 px-6',
             buttonIconSize: 'w-5 h-5',
             eyeIconSize: 20,
             imageWidth: 600,

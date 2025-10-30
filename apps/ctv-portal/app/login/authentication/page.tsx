@@ -341,7 +341,7 @@ export default function OTPPage() {
                     {/* Centered footer under the login form */}
                     <div className="w-full flex justify-center mt-4 sm:mt-6">
                         <p className={`text-center text-xs sm:text-sm transition-colors duration-300 text-gray-300`}>
-                            © 2025 Bất Động Sản Winland. Tất cả quyền được bảo lưu.
+                            © 2025 <span className="font-semibold">Bất Động Sản Winland</span>. Tất cả quyền được bảo lưu.
                         </p>
                     </div>
                 </div>
