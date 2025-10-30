@@ -25,6 +25,7 @@ import { useNavigation } from "@/hooks/useNavigation";
 import { useDeviceDetect } from "@/hooks/useDeviceDetect";
 import { useTheme } from "@/hooks/useTheme";
 import UnitModal from "@/components/UnitModal";
+import DepositModal from "@/components/DepositModal";
 import { formatCurrency } from "@/lib/utils";
 import { toastNotification } from '@/app/utils/toastNotification';
 import { ToastContainer } from 'react-toastify';
@@ -34,6 +35,7 @@ type UnitStatus = "available" | "reserved" | "sold" | "booking" | "deposit";
 const statuses: UnitStatus[] = ["available", "reserved", "sold", "booking", "deposit"];
 type Unit = {
     id: string;
+    project?: string;
     code: string;
     area: string;
     price: number;
@@ -41,6 +43,7 @@ type Unit = {
     numWC: number;
     status: UnitStatus;
     commission: number;
+    depositMoney?: number;
     floor: number;
     view: string;
     direction?: string;
@@ -102,11 +105,13 @@ export const blocks: Block[] = Array.from({ length: 4 }, (_, i) => {
         const unitOnFloor = (j % 5) + 1; // Unit number on floor (1-5)
         const floorUnit = String(floor).padStart(2, "0") + String(unitOnFloor).padStart(2, "0");
         const id = `${blockName.toLowerCase()}-${floorUnit}`;
+        const price = getRandom(prices);
         return {
             id,
+            project: "Lê Văn Thiêm Luxury",
             code: `${blockName}-${floorUnit}`,
             area: getRandom(areas),
-            price: getRandom(prices),
+            price: price,
             numRoom: getRandom(numRooms),
             numWC: getRandom(numWCs),
             status: getRandom(statuses),
@@ -116,6 +121,7 @@ export const blocks: Block[] = Array.from({ length: 4 }, (_, i) => {
             view: getRandom(view),
             image: generateUnitImage(j),
             information: getRandom(information),
+            depositMoney: price * 0.01,
         };
     });
 
@@ -164,6 +170,7 @@ export default function DashboardScreen(): JSX.Element {
     const [userData, setUserData] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedUnit, setSelectedUnit] = useState<any>(null);
+    const [showDepositModal, setShowDepositModal] = useState(false);
 
     // Mock JWT login
     useEffect(() => {
@@ -382,7 +389,7 @@ export default function DashboardScreen(): JSX.Element {
                             <div>
                                 <div className="flex items-center gap-4 mb-4">
                                     <div>
-                                        <p className="text-lg font-semibold mb-1">Dự Án: Lê Văn Thiêm Luxury</p>
+                                        <p className="text-lg font-semibold mb-1">Dự Án: {blocks[0]?.units[0]?.project || "Chưa có dự án này"}</p>
                                         <p className="text-sm opacity-80">Danh sách các block: {blocks.map(block => block.name).join(', ')}</p>
                                     </div>
                                 </div>
@@ -471,10 +478,22 @@ export default function DashboardScreen(): JSX.Element {
                 setActiveNav={setActiveNav}
                 darkMode={isDark}
             />
-            {selectedUnit && (
+            {selectedUnit && !showDepositModal && (
                 <UnitModal
                     unit={selectedUnit}
                     onClose={() => setSelectedUnit(null)}
+                    onDeposit={() => {
+                        setShowDepositModal(true);
+                    }}
+                />
+            )}
+            {selectedUnit && showDepositModal && (
+                <DepositModal
+                    unit={selectedUnit}
+                    onClose={() => {
+                        setSelectedUnit(null);
+                        setShowDepositModal(false);
+                    }}
                 />
             )}
             <ToastContainer />
