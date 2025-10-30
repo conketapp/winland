@@ -27,6 +27,7 @@ import { useTheme } from "@/hooks/useTheme";
 import UnitModal from "@/components/UnitModal";
 import DepositModal from "@/components/DepositModal";
 import ReservedModal from "@/components/ReservedModal";
+import BookingModal from "@/components/BookingModal";
 import { formatCurrency } from "@/lib/utils";
 import { toastNotification } from '@/app/utils/toastNotification';
 import { ToastContainer } from 'react-toastify';
@@ -175,6 +176,7 @@ export default function DashboardScreen(): JSX.Element {
     const [selectedUnit, setSelectedUnit] = useState<any>(null);
     const [showDepositModal, setShowDepositModal] = useState(false);
     const [showReservedModal, setShowReservedModal] = useState(false);
+    const [showBookingModal, setShowBookingModal] = useState(false);
 
     // Mock JWT login
     useEffect(() => {
@@ -482,7 +484,7 @@ export default function DashboardScreen(): JSX.Element {
                 setActiveNav={setActiveNav}
                 darkMode={isDark}
             />
-            {selectedUnit && !showDepositModal && !showReservedModal && (
+            {selectedUnit && !showDepositModal && !showReservedModal && !showBookingModal && (
                 <UnitModal
                     unit={selectedUnit}
                     onClose={() => setSelectedUnit(null)}
@@ -491,6 +493,9 @@ export default function DashboardScreen(): JSX.Element {
                     }}
                     onReserved={() => {
                         setShowReservedModal(true);
+                    }}
+                    onBooking={() => {
+                        setShowBookingModal(true);
                     }}
                 />
             )}
@@ -509,6 +514,15 @@ export default function DashboardScreen(): JSX.Element {
                     onClose={() => {
                         setSelectedUnit(null);
                         setShowReservedModal(false);
+                    }}
+                />
+            )}
+            {selectedUnit && showBookingModal && (
+                <BookingModal
+                    unit={selectedUnit}
+                    onClose={() => {
+                        setSelectedUnit(null);
+                        setShowBookingModal(false);
                     }}
                 />
             )}

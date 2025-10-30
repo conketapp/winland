@@ -15,9 +15,10 @@ type UnitModalProps = {
     onClose: () => void;
     onDeposit?: () => void;
     onReserved?: () => void;
+    onBooking?: () => void;
 };
 
-export default function UnitModal({ unit, onClose, onDeposit, onReserved }: UnitModalProps) {
+export default function UnitModal({ unit, onClose, onDeposit, onReserved, onBooking }: UnitModalProps) {
     if (!unit) return null;
 
     // Use the image array from unit data (3-5 images)
@@ -167,7 +168,9 @@ export default function UnitModal({ unit, onClose, onDeposit, onReserved }: Unit
                         </Button>
 
                         <div className="flex justify-between mt-2 gap-3">
-                            <Button variant="outline" className="flex-1 py-3 rounded-lg text-white font-semibold bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 hover:text-white transition-all">
+                            <Button variant="outline" className="flex-1 py-3 rounded-lg text-white font-semibold bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 hover:text-white transition-all"                                onClick={() => {
+                                    onBooking?.();
+                                }}>
                                 <SquareCheckBig className="w-5 h-5 mr-2" />
                                 Booking
                             </Button>
