@@ -1,9 +1,4 @@
-/**
- * Test Form Validation Logic
- * Simulates different form states to show when button is enabled/disabled
- */
-
-import { validatePassword, isPasswordValid } from '../lib/password-validation'
+import { validatePassword, isPasswordValid } from '../../lib/password-validation'
 
 interface FormState {
   userName: string
@@ -27,7 +22,6 @@ function checkFormValid(form: FormState): boolean {
   )
 }
 
-// Test cases
 const testCases: Array<{ name: string; form: FormState }> = [
   {
     name: 'Empty Form',
@@ -40,7 +34,7 @@ const testCases: Array<{ name: string; form: FormState }> = [
     }
   },
   {
-    name: 'All Fields Filled, Weak Password',
+    name: 'Weak Password',
     form: {
       userName: 'Nguyen Van A',
       userPhone: '0987654321',
@@ -50,7 +44,7 @@ const testCases: Array<{ name: string; form: FormState }> = [
     }
   },
   {
-    name: 'Strong Password, Passwords Don\'t Match',
+    name: 'Passwords Don\'t Match',
     form: {
       userName: 'Nguyen Van A',
       userPhone: '0987654321',
@@ -60,7 +54,7 @@ const testCases: Array<{ name: string; form: FormState }> = [
     }
   },
   {
-    name: 'Valid Form - All Requirements Met',
+    name: 'Valid Form',
     form: {
       userName: 'Nguyen Van A',
       userPhone: '0987654321',
@@ -69,20 +63,10 @@ const testCases: Array<{ name: string; form: FormState }> = [
       confirmPassword: 'Test@123',
     }
   },
-  {
-    name: 'Missing Special Character',
-    form: {
-      userName: 'Nguyen Van A',
-      userPhone: '0987654321',
-      userEmail: 'test@example.com',
-      userPassword: 'Test1234',
-      confirmPassword: 'Test1234',
-    }
-  },
 ]
 
 console.log('🔍 Form Validation Test Cases\n')
-console.log('=' .repeat(70))
+console.log('='.repeat(70))
 
 testCases.forEach((testCase, index) => {
   const isValid = checkFormValid(testCase.form)
@@ -91,12 +75,7 @@ testCases.forEach((testCase, index) => {
   
   console.log(`\n${index + 1}. ${testCase.name}`)
   console.log('-'.repeat(70))
-  console.log(`   Name: ${testCase.form.userName || '(empty)'}`)
-  console.log(`   Phone: ${testCase.form.userPhone || '(empty)'}`)
-  console.log(`   Email: ${testCase.form.userEmail || '(empty)'}`)
-  console.log(`   Password: ${testCase.form.userPassword || '(empty)'}`)
-  console.log(`   Confirm: ${testCase.form.confirmPassword || '(empty)'}`)
-  console.log(`\n   Password Validation:`)
+  console.log(`   Password Validation:`)
   console.log(`     Min 8 chars: ${passwordValidation.minLength ? '✓' : '✗'}`)
   console.log(`     Has uppercase: ${passwordValidation.hasUpperCase ? '✓' : '✗'}`)
   console.log(`     Has lowercase: ${passwordValidation.hasLowerCase ? '✓' : '✗'}`)

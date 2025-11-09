@@ -1,17 +1,17 @@
-import { PrismaClient } from '../lib/generated/prisma'
+import { PrismaClient } from '../../lib/generated/prisma'
 import * as fs from 'fs'
 import * as path from 'path'
 
 const prisma = new PrismaClient()
 
 async function diagnose() {
-  console.log('🔍 Running Diagnostics...\n')
+  console.log('🔍 Running System Diagnostics...\n')
   console.log('='.repeat(70))
   
   // Check 1: Prisma Client
   console.log('\n1️⃣ Checking Prisma Client...')
   try {
-    const clientPath = path.join(__dirname, '../lib/generated/prisma/index.d.ts')
+    const clientPath = path.join(__dirname, '../../lib/generated/prisma/index.d.ts')
     const exists = fs.existsSync(clientPath)
     console.log(`   Prisma client exists: ${exists ? '✅' : '❌'}`)
     
@@ -21,7 +21,7 @@ async function diagnose() {
       console.log(`   Has totalDeals field: ${hasTotalDeals ? '✅' : '❌'}`)
     }
   } catch (error) {
-    console.log(`   ❌ Error checking client: ${error}`)
+    console.log(`   ❌ Error: ${error}`)
   }
   
   // Check 2: Database Connection
@@ -67,7 +67,7 @@ async function diagnose() {
   // Check 5: Schema
   console.log('\n5️⃣ Checking Schema File...')
   try {
-    const schemaPath = path.join(__dirname, '../prisma/schema.prisma')
+    const schemaPath = path.join(__dirname, '../../prisma/schema.prisma')
     const schema = fs.readFileSync(schemaPath, 'utf-8')
     const hasTotalDeals = schema.includes('totalDeals')
     console.log(`   Schema has totalDeals: ${hasTotalDeals ? '✅' : '❌'}`)

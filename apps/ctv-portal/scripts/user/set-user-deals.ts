@@ -1,14 +1,13 @@
-import { PrismaClient } from '../lib/generated/prisma'
+import { PrismaClient } from '../../lib/generated/prisma'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  // Get command line arguments
   const args = process.argv.slice(2)
   
   if (args.length < 2) {
-    console.log('❌ Usage: npx tsx scripts/set-user-deals.ts <phone> <totalDeals>')
-    console.log('   Example: npx tsx scripts/set-user-deals.ts 0912345678 25')
+    console.log('❌ Usage: npx tsx scripts/user/set-user-deals.ts <phone> <totalDeals>')
+    console.log('   Example: npx tsx scripts/user/set-user-deals.ts 0912345678 25')
     process.exit(1)
   }
 
@@ -22,17 +21,13 @@ async function main() {
 
   console.log(`🔄 Setting totalDeals for user ${phone}...\n`)
 
-  // Find user
-  const user = await prisma.user.findUnique({
-    where: { phone }
-  })
+  const user = await prisma.user.findUnique({ where: { phone } })
 
   if (!user) {
     console.log(`❌ User with phone ${phone} not found`)
     process.exit(1)
   }
 
-  // Update user
   const updatedUser = await prisma.user.update({
     where: { phone },
     data: { totalDeals }
