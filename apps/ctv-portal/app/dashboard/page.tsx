@@ -43,20 +43,46 @@ export default function DashboardScreen(): JSX.Element {
         setDarkMode(prefersDark);
     }, []);
 
-    // Mock JWT login
+    // Fetch user data from database
     useEffect(() => {
-        async function mockLogin() {
+        async function fetchUserData() {
             try {
-                const res = await fetch("/api/mock-login");
+                // Get user phone from sessionStorage
+                const userPhone = sessionStorage.getItem('login:userPhone');
+
+                if (!userPhone) {
+                    console.warn('No user phone found, redirecting to login');
+                    router.push('/login');
+                    return;
+                }
+
+                // Fetch user data from API
+                const res = await fetch('/api/user/me', {
+                    headers: {
+                        'x-user-phone': userPhone
+                    }
+                });
+
+                if (!res.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+
                 const data = await res.json();
-                setToken(data.token);
-                setUserData(data.user);
+
+                if (data.success && data.user) {
+                    setUserData(data.user);
+                    setToken('authenticated'); // Set a token flag
+                } else {
+                    console.error('Failed to get user data');
+                    router.push('/login');
+                }
             } catch (err) {
-                console.error("JWT Mock Login Failed:", err);
+                console.error("Failed to fetch user data:", err);
+                router.push('/login');
             }
         }
-        mockLogin();
-    }, []);
+        fetchUserData();
+    }, [router]);
 
     // Get greeting based on current time
     const getGreeting = () => {
@@ -190,7 +216,7 @@ export default function DashboardScreen(): JSX.Element {
                             </div>
                             <div>
                                 <p className="text-sm opacity-70 mb-1">{getGreeting()}</p>
-                                <p className="text-lg font-semibold">{userData?.name || mockUser?.fullName}</p>
+                                <p className="text-lg font-semibold">{userData?.fullName || mockUser?.fullName}</p>
                                 <p className="text-sm opacity-80">{userData?.role || mockUser?.level}</p>
                             </div>
                         </div>

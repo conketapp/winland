@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SessionStorage Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 10px;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .output {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success {
+            color: #10b981;
+        }
+        .error {
+            color: #ef4444;
+        }
+        .info {
+            color: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 SessionStorage Test - Login Flow</h1>
+        
+        <div>
+            <h3>Step 1: Simulate Login</h3>
+            <button onclick="simulateLogin()">Login (Store Data)</button>
+            <button onclick="checkStorage()">Check Storage</button>
+        </div>
+
+        <div>
+            <h3>Step 2: Simulate OTP Page (Old Behavior)</h3>
+            <button onclick="simulateOTPOld()">OTP - Remove All (❌ Bug)</button>
+        </div>
+
+        <div>
+            <h3>Step 3: Simulate OTP Page (New Behavior)</h3>
+            <button onclick="simulateOTPNew()">OTP - Keep Phone (✓ Fixed)</button>
+        </div>
+
+        <div>
+            <h3>Step 4: Simulate Dashboard</h3>
+            <button onclick="simulateDashboard()">Dashboard (Check Phone)</button>
+        </div>
+
+        <div>
+            <h3>Utilities</h3>
+            <button onclick="clearStorage()">Clear All Storage</button>
+            <button onclick="checkStorage()">Check Current Storage</button>
+        </div>
+
+        <div class="output" id="output">
+Click buttons above to test the login flow...
+        </div>
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            output.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function simulateLogin() {
+            log('📱 Simulating login...', 'info');
+            sessionStorage.setItem('login:userPhone', '0912345678');
+            sessionStorage.setItem('login:userId', 'test-uuid-123');
+            sessionStorage.setItem('login:userRole', 'CTV');
+            sessionStorage.setItem('login:userName', 'Test CTV User');
+            log('✅ Login successful! Data stored in sessionStorage', 'success');
+            checkStorage();
+        }
+
+        function simulateOTPOld() {
+            log('🔐 Simulating OTP page (OLD behavior)...', 'info');
+            log('❌ Removing login:userPhone (BUG!)', 'error');
+            log('❌ Removing login:userPassword', 'error');
+            sessionStorage.removeItem('login:userPhone');
+            sessionStorage.removeItem('login:userPassword');
+            log('⚠️  Phone removed! Dashboard will fail!', 'error');
+            checkStorage();
+        }
+
+        function simulateOTPNew() {
+            log('🔐 Simulating OTP page (NEW behavior)...', 'info');
+            log('✓ Keeping login:userPhone (FIXED!)', 'success');
+            log('✓ Removing login:userPassword (security)', 'success');
+            sessionStorage.removeItem('login:userPassword');
+            // Keep login:userPhone
+            log('✅ Phone kept! Dashboard will work!', 'success');
+            checkStorage();
+        }
+
+        function simulateDashboard() {
+            log('📊 Simulating dashboard load...', 'info');
+            const userPhone = sessionStorage.getItem('login:userPhone');
+            
+            if (userPhone) {
+                log(`✅ Found user phone: ${userPhone}`, 'success');
+                log('✅ Dashboard can fetch user data from API', 'success');
+                log(`✅ Will display: ${sessionStorage.getItem('login:userName')}`, 'success');
+            } else {
+                log('❌ No user phone found!', 'error');
+                log('❌ Redirecting to login...', 'error');
+            }
+        }
+
+        function checkStorage() {
+            log('📦 Current sessionStorage:', 'info');
+            const keys = ['login:userPhone', 'login:userId', 'login:userRole', 'login:userName'];
+            let hasData = false;
+            
+            keys.forEach(key => {
+                const value = sessionStorage.getItem(key);
+                if (value) {
+                    log(`  ${key}: ${value}`, 'success');
+                    hasData = true;
+                } else {
+                    log(`  ${key}: (not set)`, 'error');
+                }
+            });
+
+            if (!hasData) {
+                log('  (empty)', 'error');
+            }
+        }
+
+        function clearStorage() {
+            sessionStorage.clear();
+            log('🗑️  SessionStorage cleared', 'info');
+            output.innerHTML = 'SessionStorage cleared. Click buttons to test...\n';
+        }
+
+        // Initial check
+        log('🚀 SessionStorage Test Ready', 'success');
+        log('Click "Login" to start testing', 'info');
+    </script>
+</body>
+</html>

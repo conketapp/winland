@@ -81,13 +81,13 @@ export default function OTPPage() {
                     console.warn('Failed to log credentials on OTP page', logErr);
                 }
             }
-            // Clear temporary storage to avoid leaking credentials
-            sessionStorage.removeItem('login:userPhone');
+            // Keep userPhone in sessionStorage for dashboard use
+            // Only remove password for security
             sessionStorage.removeItem('login:userPassword');
         } catch (err) {
             console.warn('Unable to read credentials from sessionStorage', err);
         }
-    }, [userPhone, userPassword]);
+    }, []);
 
     // Handle input change and auto-focus
     const handleChange = (value: string, index: number) => {
