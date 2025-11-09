@@ -232,7 +232,7 @@ export default function DashboardScreen(): JSX.Element {
                     >
                         <div>
                             <p className="text-slate-400 text-sm">Tổng số giao dịch đã thực hiện</p>
-                            <h2 className="text-4xl font-bold mt-1">{mockUser?.totalDeals}</h2>
+                            <h2 className="text-4xl font-bold mt-1">{userData?.totalDeals ?? mockUser?.totalDeals}</h2>
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="flex items-center text-green-500 text-sm font-medium">

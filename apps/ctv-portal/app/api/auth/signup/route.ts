@@ -74,6 +74,9 @@ export async function POST(request: NextRequest) {
     // TODO: In production, use bcrypt to hash the password
     // const hashedPassword = await bcrypt.hash(userPassword, 10)
 
+    // Generate random totalDeals for new user (between 0 and 10)
+    const randomDeals = Math.floor(Math.random() * 11)
+
     // Create new user
     const newUser = await prisma.user.create({
       data: {
@@ -83,6 +86,7 @@ export async function POST(request: NextRequest) {
         fullName: userName,
         role: 'CTV',
         isActive: true,
+        totalDeals: randomDeals,
       }
     })
 
