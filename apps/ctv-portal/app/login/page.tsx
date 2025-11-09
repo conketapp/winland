@@ -57,20 +57,42 @@ export default function LoginPage() {
     const handleButtonLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        console.log('Login with:', { userPhone, userPassword });
-        if (userPhone === '0912345678' && userPassword === 'ctv456') {
-            console.log('Login successful');
-            try {
-                sessionStorage.setItem('login:userPhone', userPhone);
-                sessionStorage.setItem('login:userPassword', userPassword);
-            } catch (err) {
-                console.warn('Unable to write credentials to sessionStorage', err);
+
+        try {
+            // Call the API to check credentials from database
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userPhone, userPassword }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                console.log('Login successful:', data.user);
+
+                // Store user info in sessionStorage
+                try {
+                    sessionStorage.setItem('login:userPhone', userPhone);
+                    sessionStorage.setItem('login:userId', data.user.id);
+                    sessionStorage.setItem('login:userRole', data.user.role);
+                    sessionStorage.setItem('login:userName', data.user.fullName);
+                } catch (err) {
+                    console.warn('Unable to write credentials to sessionStorage', err);
+                }
+
+                toastNotification.success('Đăng nhập thành công!');
+                router.push('/login/authentication');
+            } else {
+                toastNotification.error(data.error || 'Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.');
             }
+        } catch (error) {
+            console.error('Login error:', error);
+            toastNotification.error('Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại.');
+        } finally {
             setLoading(false);
-            router.push('/login/authentication');
-        } else {
-            setLoading(false);
-            toastNotification.error('Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.');
         }
     }
 

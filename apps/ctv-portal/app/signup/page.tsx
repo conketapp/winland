@@ -20,6 +20,7 @@ import { toastNotification } from '@/app/utils/toastNotification';
 import { useDeviceDetect } from '@/hooks/useDeviceDetect';
 import { useTheme } from '@/hooks/useTheme';
 import { getResponsiveClasses } from '@/app/utils/responsive';
+import { validatePassword, isPasswordValid as checkPasswordValid } from '@/lib/password-validation';
 import Image from 'next/image'
 import LoginCTVPortalImage from "@/assets/images/login_ctvportal.png"
 import LoginCTVPortalBackground from "@/assets/images/login_ctvportal_background.jpg"
@@ -33,9 +34,42 @@ export default function SignUpPage() {
     const [loading, setLoading] = useState(false);
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [passwordValidation, setPasswordValidation] = useState({
+        minLength: false,
+        hasUpperCase: false,
+        hasLowerCase: false,
+        hasSpecialChar: false,
+    });
     const deviceInfo = useDeviceDetect();
     const { isDark } = useTheme();
     const responsive = getResponsiveClasses(deviceInfo);
+
+    // Check if form is valid
+    const isFormValid = () => {
+        return (
+            userName.trim() !== '' &&
+            userPhone.trim() !== '' &&
+            userEmail.trim() !== '' &&
+            userPassword !== '' &&
+            confirmPassword !== '' &&
+            checkPasswordValid(passwordValidation) &&
+            userPassword === confirmPassword
+        );
+    };
+
+    // Update password validation when password changes
+    useEffect(() => {
+        if (userPassword) {
+            setPasswordValidation(validatePassword(userPassword));
+        } else {
+            setPasswordValidation({
+                minLength: false,
+                hasUpperCase: false,
+                hasLowerCase: false,
+                hasSpecialChar: false,
+            });
+        }
+    }, [userPassword]);
 
     // Update theme-color meta tag
     useEffect(() => {
@@ -55,20 +89,55 @@ export default function SignUpPage() {
     const handleButtonSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        console.log('Login with:', { userPhone, userPassword });
-        if (userPhone === '0912345673' && userPassword === 'ctv456') {
-            console.log('Login successful');
-            try {
-                sessionStorage.setItem('login:userPhone', userPhone);
-                sessionStorage.setItem('login:userPassword', userPassword);
-            } catch (err) {
-                console.warn('Unable to write credentials to sessionStorage', err);
+
+        // Validate password strength
+        if (!checkPasswordValid(passwordValidation)) {
+            toastNotification.error('Mật khẩu không đáp ứng yêu cầu!');
+            setLoading(false);
+            return;
+        }
+
+        // Validate passwords match on client side
+        if (userPassword !== confirmPassword) {
+            toastNotification.error('Mật khẩu xác nhận không khớp!');
+            setLoading(false);
+            return;
+        }
+
+        try {
+            // Call the API to save user to database
+            const response = await fetch('/api/auth/signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userName,
+                    userEmail,
+                    userPhone,
+                    userPassword,
+                    confirmPassword
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                console.log('Signup successful:', data.user);
+                toastNotification.success(data.message || 'Đăng ký thành công!');
+
+                // Redirect to login page after successful signup
+                setTimeout(() => {
+                    router.push('/login');
+                }, 1500);
+            } else {
+                toastNotification.error(data.error || 'Đăng ký thất bại! Vui lòng thử lại.');
             }
+        } catch (error) {
+            console.error('Signup error:', error);
+            toastNotification.error('Đã xảy ra lỗi khi đăng ký. Vui lòng thử lại.');
+        } finally {
             setLoading(false);
-            router.push('/login/authentication');
-        } else {
-            setLoading(false);
-            toastNotification.error('Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.');
         }
     }
 
@@ -207,9 +276,39 @@ export default function SignUpPage() {
                                                         </button>
                                                     </div>
                                                 </div>
-                                                {/* Rule setting password */}
-                                                <div className="text-sm text-gray-500">
-                                                    Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường.
+                                                {/* Rule setting password with validation feedback */}
+                                                <div className="space-y-2 text-sm">
+                                                    <div className="font-medium text-gray-700">Yêu cầu mật khẩu:</div>
+                                                    <div className="space-y-1">
+                                                        <div className={`flex items-center gap-2 transition-colors duration-200 ${passwordValidation.minLength
+                                                            ? 'text-green-600'
+                                                            : userPassword ? 'text-red-500' : 'text-gray-500'
+                                                            }`}>
+                                                            <span className="text-lg">{passwordValidation.minLength ? '✓' : '○'}</span>
+                                                            <span>Ít nhất 8 ký tự</span>
+                                                        </div>
+                                                        <div className={`flex items-center gap-2 transition-colors duration-200 ${passwordValidation.hasUpperCase
+                                                            ? 'text-green-600'
+                                                            : userPassword ? 'text-red-500' : 'text-gray-500'
+                                                            }`}>
+                                                            <span className="text-lg">{passwordValidation.hasUpperCase ? '✓' : '○'}</span>
+                                                            <span>Có chữ hoa (A-Z)</span>
+                                                        </div>
+                                                        <div className={`flex items-center gap-2 transition-colors duration-200 ${passwordValidation.hasLowerCase
+                                                            ? 'text-green-600'
+                                                            : userPassword ? 'text-red-500' : 'text-gray-500'
+                                                            }`}>
+                                                            <span className="text-lg">{passwordValidation.hasLowerCase ? '✓' : '○'}</span>
+                                                            <span>Có chữ thường (a-z)</span>
+                                                        </div>
+                                                        <div className={`flex items-center gap-2 transition-colors duration-200 ${passwordValidation.hasSpecialChar
+                                                            ? 'text-green-600'
+                                                            : userPassword ? 'text-red-500' : 'text-gray-500'
+                                                            }`}>
+                                                            <span className="text-lg">{passwordValidation.hasSpecialChar ? '✓' : '○'}</span>
+                                                            <span>Có ký tự đặc biệt (!@#$%^&*...)</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                                 {/* Confirm Password Input */}
                                                 <div className="space-y-2">
@@ -238,14 +337,31 @@ export default function SignUpPage() {
                                                             {showPassword ? <EyeOff size={responsive.eyeIconSize} /> : <Eye size={responsive.eyeIconSize} />}
                                                         </button>
                                                     </div>
+                                                    {/* Password match feedback */}
+                                                    {confirmPassword && (
+                                                        <div className={`text-sm flex items-center gap-2 transition-colors duration-200 ${userPassword === confirmPassword
+                                                                ? 'text-green-600'
+                                                                : 'text-red-500'
+                                                            }`}>
+                                                            <span className="text-lg">
+                                                                {userPassword === confirmPassword ? '✓' : '✗'}
+                                                            </span>
+                                                            <span>
+                                                                {userPassword === confirmPassword
+                                                                    ? 'Mật khẩu khớp'
+                                                                    : 'Mật khẩu không khớp'}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 {/* Sign-up Button */}
                                                 <Button
                                                     type="submit"
-                                                    disabled={loading}
+                                                    disabled={loading || !isFormValid()}
                                                     className={`w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800
                                                             text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300
-                                                                hover:scale-[1.02] active:scale-[0.98] ${responsive.buttonPadding} text-base sm:text-lg flex items-center justify-center`}
+                                                                hover:scale-[1.02] active:scale-[0.98] ${responsive.buttonPadding} text-base sm:text-lg flex items-center justify-center
+                                                                disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
                                                     size="lg"
                                                 >
                                                     {loading ? (
