@@ -83,7 +83,7 @@ Nhập lại mật khẩu: Test123
 ✗ Button is DISABLED
 ```
 
-## Implementation Details
+## Implementation
 
 ### Form Validation Function
 ```typescript
@@ -116,3 +116,8 @@ const isFormValid = () => {
 3. **Better UX** - Real-time validation guides users
 4. **Reduced Errors** - Catches issues before API call
 5. **Professional Feel** - Polished, modern form experience
+
+## Testing
+```bash
+npm run script:test:form
+```

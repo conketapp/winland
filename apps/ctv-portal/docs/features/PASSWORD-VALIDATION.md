@@ -65,9 +65,21 @@ The backend also validates passwords in `/api/auth/signup/route.ts`:
 - Checks minimum length
 - Checks for uppercase letters
 - Checks for lowercase letters
+- Checks for special characters
 - Returns specific error messages
+
+## Accepted Special Characters
+```
+! @ # $ % ^ & * ( ) _ + - = [ ] { } ; ' : " \ | , . < > / ?
+```
 
 ## Files
 - `lib/password-validation.ts` - Validation utility functions
 - `app/signup/page.tsx` - Signup form with real-time validation
 - `app/api/auth/signup/route.ts` - Backend validation
+- `components/PasswordStrengthIndicator.tsx` - Reusable component
+
+## Testing
+```bash
+npm run script:test:password
+```
