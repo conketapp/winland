@@ -7,6 +7,7 @@ Complete documentation for the CTV Portal application.
 ### 🚀 Getting Started
 - [Quick Start Guide](#quick-start-guide)
 - [Project Overview](#project-overview)
+- [Database Summary](./DATABASE-SUMMARY.md) - Complete database structure
 
 ### 🔐 Authentication & Security
 - [Password Validation](./features/PASSWORD-VALIDATION.md) - Password requirements and validation
