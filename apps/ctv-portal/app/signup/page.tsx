@@ -21,6 +21,7 @@ import { useDeviceDetect } from '@/hooks/useDeviceDetect';
 import { useTheme } from '@/hooks/useTheme';
 import { getResponsiveClasses } from '@/app/utils/responsive';
 import { validatePassword, isPasswordValid as checkPasswordValid } from '@/lib/password-validation';
+import { isValidVietnamesePhone, getPhoneErrorMessage } from '@/lib/phone-validation';
 import Image from 'next/image'
 import LoginCTVPortalImage from "@/assets/images/login_ctvportal.png"
 import LoginCTVPortalBackground from "@/assets/images/login_ctvportal_background.jpg"
@@ -40,6 +41,7 @@ export default function SignUpPage() {
         hasLowerCase: false,
         hasSpecialChar: false,
     });
+    const [phoneError, setPhoneError] = useState('');
     const deviceInfo = useDeviceDetect();
     const { isDark } = useTheme();
     const responsive = getResponsiveClasses(deviceInfo);
@@ -49,6 +51,7 @@ export default function SignUpPage() {
         return (
             userName.trim() !== '' &&
             userPhone.trim() !== '' &&
+            isValidVietnamesePhone(userPhone) &&
             userEmail.trim() !== '' &&
             userPassword !== '' &&
             confirmPassword !== '' &&
@@ -56,6 +59,16 @@ export default function SignUpPage() {
             userPassword === confirmPassword
         );
     };
+
+    // Validate phone number in real-time
+    useEffect(() => {
+        if (userPhone) {
+            const errorMessage = getPhoneErrorMessage(userPhone);
+            setPhoneError(errorMessage || '');
+        } else {
+            setPhoneError('');
+        }
+    }, [userPhone]);
 
     // Update password validation when password changes
     useEffect(() => {
@@ -89,6 +102,13 @@ export default function SignUpPage() {
     const handleButtonSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+
+        // Validate phone number
+        if (!isValidVietnamesePhone(userPhone)) {
+            toastNotification.error('Số điện thoại không hợp lệ!');
+            setLoading(false);
+            return;
+        }
 
         // Validate password strength
         if (!checkPasswordValid(passwordValidation)) {
@@ -203,10 +223,23 @@ export default function SignUpPage() {
                                                             onChange={(e) => setUserPhone(e.target.value)}
                                                             placeholder="Nhập số điện thoại"
                                                             className={`${responsive.inputPadding} text-base rounded-xl pr-11 h-12
-                                                            border-slate-200  bg-slate-50/50 hover:bg-slate-50 text-black`}
+                                                            border-slate-200  bg-slate-50/50 hover:bg-slate-50 text-black ${phoneError ? 'border-red-500' : ''}`}
                                                             required
                                                         />
                                                     </div>
+                                                    {/* Phone validation feedback */}
+                                                    {phoneError && userPhone && (
+                                                        <div className="text-sm text-red-500 flex items-center gap-2 mt-1">
+                                                            <span>✗</span>
+                                                            <span>{phoneError}</span>
+                                                        </div>
+                                                    )}
+                                                    {!phoneError && userPhone && isValidVietnamesePhone(userPhone) && (
+                                                        <div className="text-sm text-green-600 flex items-center gap-2 mt-1">
+                                                            <span>✓</span>
+                                                            <span>Số điện thoại hợp lệ</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 {/* Fullname Input */}
                                                 <div className="space-y-2">
@@ -340,8 +373,8 @@ export default function SignUpPage() {
                                                     {/* Password match feedback */}
                                                     {confirmPassword && (
                                                         <div className={`text-sm flex items-center gap-2 transition-colors duration-200 ${userPassword === confirmPassword
-                                                                ? 'text-green-600'
-                                                                : 'text-red-500'
+                                                            ? 'text-green-600'
+                                                            : 'text-red-500'
                                                             }`}>
                                                             <span className="text-lg">
                                                                 {userPassword === confirmPassword ? '✓' : '✗'}

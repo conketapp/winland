@@ -40,6 +40,11 @@ const commands = {
         file: './test/test-form-validation.ts',
         example: 'npx tsx scripts/index.ts test:form'
     },
+    'test:phone': {
+        description: 'Test phone validation',
+        file: './test/test-phone-validation.ts',
+        example: 'npx tsx scripts/index.ts test:phone'
+    },
 
     // Diagnostics
     'diagnose': {

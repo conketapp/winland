@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 // Enhanced formatCurrency function with more options
 export function formatCurrency(
-  amount: number, 
+  amount: number,
   options: {
     style?: 'standard' | 'compact' | 'formal';
     showSymbol?: boolean;
@@ -81,7 +81,7 @@ export function formatCurrency(
 // Helper function to convert numbers to Vietnamese words
 function numberToVietnameseWords(num: number): string {
   if (num === 0) return 'không';
-  
+
   const units = ['', 'nghìn', 'triệu', 'tỷ', 'nghìn tỷ'];
   let result = '';
   let unitIndex = 0;
@@ -121,25 +121,25 @@ function convertThreeDigitsToWords(num: number): string {
 export const currency = {
   // Compact format (default behavior)
   compact: (amount: number) => formatCurrency(amount),
-  
+
   // Standard format with grouping
-  standard: (amount: number, locale: 'vi-VN' | 'en-US' = 'vi-VN') => 
+  standard: (amount: number, locale: 'vi-VN' | 'en-US' = 'vi-VN') =>
     formatCurrency(amount, { style: 'standard', locale }),
-  
+
   // Formal format with Vietnamese words
   formal: (amount: number) => formatCurrency(amount, { style: 'formal' }),
-  
+
   // Format with custom symbol
-  withSymbol: (amount: number, symbol: string) => 
+  withSymbol: (amount: number, symbol: string) =>
     formatCurrency(amount, { symbol }),
-  
+
   // Format for price ranges
   range: (min: number, max: number) => {
     const formattedMin = formatCurrency(min);
     const formattedMax = formatCurrency(max);
     return `${formattedMin} - ${formattedMax}`;
   },
-  
+
   // Format for tables (right-aligned)
   table: (amount: number) => formatCurrency(amount),
 };

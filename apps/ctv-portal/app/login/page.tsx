@@ -23,6 +23,7 @@ import { toastNotification } from '@/app/utils/toastNotification';
 import { useDeviceDetect } from '@/hooks/useDeviceDetect';
 import { useTheme } from '@/hooks/useTheme';
 import { getResponsiveClasses } from '@/app/utils/responsive';
+import { isValidVietnamesePhone, getPhoneErrorMessage } from '@/lib/phone-validation';
 import Image from 'next/image'
 import LoginCTVPortalImage from "@/assets/images/login_ctvportal.png"
 import LoginCTVPortalBackground from "@/assets/images/login_ctvportal_background.jpg"
@@ -35,11 +36,22 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [phoneError, setPhoneError] = useState('');
 
     // Use the optimized hooks
     const deviceInfo = useDeviceDetect();
     const { isDark } = useTheme();
     const responsive = getResponsiveClasses(deviceInfo);
+
+    // Validate phone number in real-time
+    useEffect(() => {
+        if (userPhone) {
+            const errorMessage = getPhoneErrorMessage(userPhone);
+            setPhoneError(errorMessage || '');
+        } else {
+            setPhoneError('');
+        }
+    }, [userPhone]);
 
     // Update theme-color meta tag based on device type
     useEffect(() => {

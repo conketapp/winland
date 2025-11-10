@@ -11,6 +11,7 @@
     "script:user:create": "tsx scripts/user/create-test-user.ts",
     "script:user:deals": "tsx scripts/user/update-user-deals.ts",
     "script:test:db": "tsx scripts/test/test-api-direct.ts",
+    "script:test:phone": "tsx scripts/test/test-phone-validation.ts",
     "script:diagnose": "tsx scripts/utils/diagnose-issue.ts",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",

@@ -134,6 +134,19 @@ Tests signup form validation logic.
 npx tsx scripts/index.ts test:form
 ```
 
+#### `test:phone` - Test Phone Validation
+Tests Vietnamese phone number validation.
+
+```bash
+npx tsx scripts/index.ts test:phone
+```
+
+**Tests:**
+- Mobile numbers (03x, 05x, 07x, 08x, 09x)
+- Landline numbers (02x)
+- Invalid formats
+- Formatted numbers
+
 ### Diagnostics
 
 #### `diagnose` - System Diagnostics
