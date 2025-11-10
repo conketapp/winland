@@ -12,36 +12,25 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
 import {
-    Home,
-    ShoppingCart,
-    Map,
-    Bell,
     User,
     Calendar,
     ArrowUpRight,
     LogOut,
     Sun,
     Moon,
-    TrendingUp,
     AlertTriangle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatCurrency } from '@/lib/utils';
 import { AnimatedBottomNavigation } from '@/components/AnimatedBottomNavigation';
 import { useNavigation } from '@/hooks/useNavigation';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function DashboardScreen(): JSX.Element {
     const { activeNav, setActiveNav } = useNavigation();
     const router = useRouter();
-    const [darkMode, setDarkMode] = useState(false);
-    const [token, setToken] = useState<string | null>(null);
+    const { isDark, toggleTheme } = useTheme();
     const [userData, setUserData] = useState<any>(null);
-
-    // Detect system theme
-    useEffect(() => {
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        setDarkMode(prefersDark);
-    }, []);
 
     // Fetch user data from database
     useEffect(() => {
@@ -71,7 +60,6 @@ export default function DashboardScreen(): JSX.Element {
 
                 if (data.success && data.user) {
                     setUserData(data.user);
-                    setToken('authenticated'); // Set a token flag
                 } else {
                     console.error('Failed to get user data');
                     router.push('/login');
@@ -97,7 +85,7 @@ export default function DashboardScreen(): JSX.Element {
     };
 
     const mockUser = {
-        fullName: 'Tran Quang A',
+        fullName: 'No name',
         level: 'Sales Manager',
         totalDeals: 24,
         totalRevenue: 125000000,
@@ -149,20 +137,18 @@ export default function DashboardScreen(): JSX.Element {
     ];
 
     const handleLogout = () => {
-        localStorage.removeItem("jwt_token");
-        setToken(null);
-        setUserData(null);
+        sessionStorage.removeItem("login:userPhone");
         router.push("/login");
     };
 
     return (
         <div
-            className={`min-h-screen flex flex-col transition-colors duration-500 ${darkMode ? "bg-[#0C1125] text-white" : "bg-gray-50 text-slate-900"
+            className={`min-h-screen flex flex-col transition-colors duration-500 ${isDark ? "bg-[#0C1125] text-white" : "bg-gray-50 text-slate-900"
                 }`}
         >
             {/* 🔹 Header */}
             <header
-                className={`rounded-b-3xl shadow-md ${darkMode ? "bg-[#10182F]" : "bg-[#041b40] text-white"
+                className={`rounded-b-3xl shadow-md ${isDark ? "bg-[#10182F]" : "bg-[#041b40] text-white"
                     }`}
             >
                 <div className="max-w-[1500px] mx-auto px-6 py-6 flex items-center justify-between">
@@ -174,10 +160,10 @@ export default function DashboardScreen(): JSX.Element {
                     {/* Right side - Toggle Dark Mode & Logout */}
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={() => setDarkMode(!darkMode)}
+                            onClick={toggleTheme}
                             className="flex items-center gap-2 px-4 py-2 rounded-md border border-white/10 hover:bg-white/10 transition"
                         >
-                            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                         </button>
                         <button
                             onClick={handleLogout}
@@ -197,7 +183,7 @@ export default function DashboardScreen(): JSX.Element {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
-                        className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${darkMode ? "bg-[#1B2342]" : "bg-white"
+                        className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${isDark ? "bg-[#1B2342]" : "bg-white"
                             }`}
                     >
                         <div className="flex items-center gap-4">
@@ -227,7 +213,7 @@ export default function DashboardScreen(): JSX.Element {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
-                        className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${darkMode ? "bg-[#1B2342]" : "bg-white"
+                        className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${isDark ? "bg-[#1B2342]" : "bg-white"
                             }`}
                     >
                         <div>
@@ -250,7 +236,7 @@ export default function DashboardScreen(): JSX.Element {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.2 }}
-                            className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${darkMode ? "bg-[#1B2342]" : "bg-white"
+                            className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${isDark ? "bg-[#1B2342]" : "bg-white"
                                 }`}
                         >
                             <div>
@@ -264,7 +250,7 @@ export default function DashboardScreen(): JSX.Element {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.2 }}
-                            className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${darkMode ? "bg-[#1B2342]" : "bg-white"
+                            className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${isDark ? "bg-[#1B2342]" : "bg-white"
                                 }`}
                         >
                             <div>
@@ -278,7 +264,7 @@ export default function DashboardScreen(): JSX.Element {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.2 }}
-                            className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${darkMode ? "bg-[#1B2342]" : "bg-white"
+                            className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${isDark ? "bg-[#1B2342]" : "bg-white"
                                 }`}
                         >
                             <div>
@@ -292,7 +278,7 @@ export default function DashboardScreen(): JSX.Element {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.2 }}
-                            className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${darkMode ? "bg-[#1B2342]" : "bg-white"
+                            className={`mt-6 rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 flex items-center justify-between ${isDark ? "bg-[#1B2342]" : "bg-white"
                                 }`}
                         >
                             <div>
@@ -309,7 +295,7 @@ export default function DashboardScreen(): JSX.Element {
                         transition={{ duration: 0.5, delay: 0.3 }}
                         className="mt-10"
                     >
-                        <div className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 ${darkMode ? "bg-[#1B2342]" : "bg-white"}`}>
+                        <div className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 ${isDark ? "bg-[#1B2342]" : "bg-white"}`}>
                             <h3 className="text-lg font-semibold mb-2">Giữ chỗ sắp hết hạn</h3>
                             <p className="text-slate-400 text-sm">Cần xử lý gấp</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -319,11 +305,11 @@ export default function DashboardScreen(): JSX.Element {
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
-                                        className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${darkMode ? "bg-[#1B2342]" : "bg-white"
+                                        className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${isDark ? "bg-[#1B2342]" : "bg-white"
                                             }`}
                                     >
                                         <div
-                                            className={`w-14 h-14 rounded-xl flex items-center justify-center ${darkMode ? "bg-red-900/30" : "bg-red-50"
+                                            className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-red-900/30" : "bg-red-50"
                                                 }`}
                                         >
                                             <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -350,7 +336,7 @@ export default function DashboardScreen(): JSX.Element {
                         transition={{ duration: 0.5, delay: 0.3 }}
                         className="mt-10"
                     >
-                        <div className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 ${darkMode ? "bg-[#1B2342]" : "bg-white"}`}>
+                        <div className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 ${isDark ? "bg-[#1B2342]" : "bg-white"}`}>
                             <h3 className="text-lg font-semibold mb-2">Danh sách Booking</h3>
                             <p className="text-slate-400 text-sm">Tổng số căn hộ đã thực hiện cọc</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -360,11 +346,11 @@ export default function DashboardScreen(): JSX.Element {
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
-                                        className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${darkMode ? "bg-[#1B2342]" : "bg-white"
+                                        className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${isDark ? "bg-[#1B2342]" : "bg-white"
                                             }`}
                                     >
                                         <div
-                                            className={`w-14 h-14 rounded-xl flex items-center justify-center ${darkMode ? "bg-green-900/30" : "bg-green-50"
+                                            className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-green-900/30" : "bg-green-50"
                                                 }`}
                                         >
                                             <Calendar className="w-6 h-6 text-green-600" />
@@ -386,7 +372,7 @@ export default function DashboardScreen(): JSX.Element {
 
             {/* 🔹 Footer */}
             <footer
-                className={`text-center text-sm py-4 ${darkMode ? "bg-[#10182F] text-slate-400" : "bg-white text-slate-500 border-t"
+                className={`text-center text-sm py-4 ${isDark ? "bg-[#10182F] text-slate-400" : "bg-white text-slate-500 border-t"
                     }`}
             >
                 © 2025 <span className="font-semibold">Bất Động Sản Winland</span>. Tất cả quyền được bảo lưu.
@@ -396,8 +382,9 @@ export default function DashboardScreen(): JSX.Element {
             <AnimatedBottomNavigation
                 activeNav={activeNav}
                 setActiveNav={setActiveNav}
-                darkMode={darkMode}
+                darkMode={isDark}
             />
         </div>
     );
 }
+

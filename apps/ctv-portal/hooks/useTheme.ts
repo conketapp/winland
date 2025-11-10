@@ -11,7 +11,7 @@ export interface ThemeInfo {
     effectiveTheme: 'light' | 'dark'; // The actual theme being applied
 }
 
-export function useTheme(initialTheme: ThemeType = 'system'): ThemeInfo & { toggleTheme: () => void; setTheme: (theme: ThemeType) => void } {
+export function useTheme(initialTheme: ThemeType = 'light'): ThemeInfo & { toggleTheme: () => void; setTheme: (theme: ThemeType) => void } {
     const [theme, setThemeState] = useState<ThemeType>(() => {
         // Get saved theme from localStorage or use initial theme
         if (typeof window !== 'undefined') {
