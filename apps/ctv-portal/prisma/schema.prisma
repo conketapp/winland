@@ -17,15 +17,21 @@ model User {
   avatar               String?
   role                 UserRole         @default(CTV)
   isActive             Boolean          @default(true) @map("is_active")
-  totalDeals           Int              @default(0) @map("total_deals")
   createdAt            DateTime         @default(now()) @map("created_at")
   updatedAt            DateTime         @updatedAt @map("updated_at")
+  totalDeals           Int              @default(0) @map("total_deals")
+  address              String?
+  gender               String?
+  birthday             DateTime?
+  cifNumber            String?          @map("cif_number")
+  sector               String?
+  workingPlace         String?          @map("working_place")
   auditLogs            AuditLog[]
   bookingApprovals     Booking[]        @relation("BookingApprover")
   bookings             Booking[]        @relation("CTVBookings")
   commissions          Commission[]
-  depositCancellations Deposit[]        @relation("DepositCanceller")
   depositApprovals     Deposit[]        @relation("DepositApprover")
+  depositCancellations Deposit[]        @relation("DepositCanceller")
   deposits             Deposit[]        @relation("CTVDeposits")
   paymentApprovals     PaymentRequest[] @relation("PaymentApprover")
   paymentRequests      PaymentRequest[]
@@ -144,10 +150,10 @@ model Unit {
   commissions    Commission[]
   deposits       Deposit[]
   reservations   Reservation[]
-  unitType       UnitType?     @relation(fields: [unitTypeId], references: [id])
-  floor          Floor         @relation(fields: [floorId], references: [id], onDelete: Cascade)
   building       Building      @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  floor          Floor         @relation(fields: [floorId], references: [id], onDelete: Cascade)
   project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  unitType       UnitType?     @relation(fields: [unitTypeId], references: [id])
 
   @@index([projectId])
   @@index([buildingId])
@@ -257,8 +263,8 @@ model Deposit {
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
   commissions       Commission?
-  canceller         User?             @relation("DepositCanceller", fields: [cancelledBy], references: [id])
   approver          User?             @relation("DepositApprover", fields: [approvedBy], references: [id])
+  canceller         User?             @relation("DepositCanceller", fields: [cancelledBy], references: [id])
   ctv               User              @relation("CTVDeposits", fields: [ctvId], references: [id], onDelete: Cascade)
   unit              Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
   paymentSchedules  PaymentSchedule[]
@@ -306,8 +312,8 @@ model Transaction {
   notes             String?
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
-  paymentSchedule   PaymentSchedule?  @relation(fields: [paymentScheduleId], references: [id])
   deposit           Deposit           @relation(fields: [depositId], references: [id], onDelete: Cascade)
+  paymentSchedule   PaymentSchedule?  @relation(fields: [paymentScheduleId], references: [id])
 
   @@index([depositId])
   @@index([paymentScheduleId])
@@ -326,8 +332,8 @@ model Commission {
   paidAt          DateTime?        @map("paid_at")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
-  deposit         Deposit          @relation(fields: [depositId], references: [id], onDelete: Cascade)
   ctv             User             @relation(fields: [ctvId], references: [id], onDelete: Cascade)
+  deposit         Deposit          @relation(fields: [depositId], references: [id], onDelete: Cascade)
   unit            Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
   paymentRequests PaymentRequest[]
 
@@ -354,8 +360,8 @@ model PaymentRequest {
   createdAt       DateTime             @default(now()) @map("created_at")
   updatedAt       DateTime             @updatedAt @map("updated_at")
   approver        User?                @relation("PaymentApprover", fields: [approvedBy], references: [id])
-  ctv             User                 @relation(fields: [ctvId], references: [id], onDelete: Cascade)
   commission      Commission           @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+  ctv             User                 @relation(fields: [ctvId], references: [id], onDelete: Cascade)
 
   @@index([commissionId])
   @@index([ctvId])

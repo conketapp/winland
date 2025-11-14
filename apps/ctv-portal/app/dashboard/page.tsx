@@ -58,12 +58,15 @@ export default function DashboardScreen(): JSX.Element {
 
                 const data = await res.json();
 
-                if (data.success && data.user) {
-                    setUserData(data.user);
-                } else {
-                    console.error('Failed to get user data');
+                // Check if data has error property (error response)
+                if (data.error) {
+                    console.error('Failed to get user data:', data.error);
                     router.push('/login');
+                    return;
                 }
+
+                // API now returns user object directly
+                setUserData(data);
             } catch (err) {
                 console.error("Failed to fetch user data:", err);
                 router.push('/login');
