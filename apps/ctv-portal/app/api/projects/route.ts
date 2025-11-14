@@ -16,6 +16,22 @@ export async function GET(request: NextRequest) {
                         floorsData: {
                             include: {
                                 units: {
+                                    include: {
+                                        reservations: {
+                                            where: {
+                                                status: 'ACTIVE'
+                                            },
+                                            take: 1
+                                        },
+                                        bookings: {
+                                            where: {
+                                                status: {
+                                                    in: ['PENDING_APPROVAL', 'CONFIRMED', 'PENDING_PAYMENT']
+                                                }
+                                            },
+                                            take: 1
+                                        }
+                                    },
                                     orderBy: {
                                         unitNumber: 'asc'
                                     }
@@ -26,6 +42,22 @@ export async function GET(request: NextRequest) {
                             }
                         },
                         units: {
+                            include: {
+                                reservations: {
+                                    where: {
+                                        status: 'ACTIVE'
+                                    },
+                                    take: 1
+                                },
+                                bookings: {
+                                    where: {
+                                        status: {
+                                            in: ['PENDING_APPROVAL', 'CONFIRMED', 'PENDING_PAYMENT']
+                                        }
+                                    },
+                                    take: 1
+                                }
+                            },
                             orderBy: {
                                 unitNumber: 'asc'
                             }

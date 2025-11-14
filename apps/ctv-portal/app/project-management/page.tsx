@@ -9,7 +9,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
     Home,
@@ -69,11 +69,20 @@ type Project = {
 };
 
 // Map database status to display status
-const mapDatabaseStatus = (dbStatus: string): UnitStatus => {
+const mapDatabaseStatus = (dbStatus: string, hasActiveBooking: boolean, hasActiveReservation: boolean): UnitStatus => {
     switch (dbStatus) {
         case 'AVAILABLE':
             return 'available';
         case 'RESERVED_BOOKING':
+            // If unit has active booking, show as booking
+            if (hasActiveBooking) {
+                return 'booking';
+            }
+            // If unit has active reservation, show as reserved
+            if (hasActiveReservation) {
+                return 'reserved';
+            }
+            // Default to reserved if status is RESERVED_BOOKING but no active records found
             return 'reserved';
         case 'DEPOSITED':
             return 'deposit';
@@ -132,20 +141,14 @@ export default function DashboardScreen(): JSX.Element {
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [autoRefresh, setAutoRefresh] = useState(true);
+    const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-    // Fetch projects from database
-    useEffect(() => {
-        const userPhone = sessionStorage.getItem('login:userPhone');
-        if (!userPhone) {
-            router.push('/login');
-            return;
-        }
-        fetchProjects();
-    }, [router]);
-
-    const fetchProjects = async () => {
+    const fetchProjects = useCallback(async (silent: boolean = false) => {
         try {
-            setIsLoading(true);
+            if (!silent) {
+                setIsLoading(true);
+            }
             const response = await fetch('/api/projects');
 
             if (response.ok) {
@@ -160,39 +163,72 @@ export default function DashboardScreen(): JSX.Element {
                         id: building.id,
                         name: building.name,
                         code: building.code,
-                        units: building.units.map((unit: any) => ({
-                            id: unit.id,
-                            projectId: project.id,
-                            projectName: project.name,
-                            code: unit.code,
-                            area: unit.area,
-                            price: unit.price,
-                            bedrooms: unit.bedrooms,
-                            bathrooms: unit.bathrooms,
-                            status: mapDatabaseStatus(unit.status),
-                            commissionRate: unit.commissionRate,
-                            floor: getFloorNumber(unit.unitNumber),
-                            view: unit.view,
-                            direction: unit.direction,
-                            images: unit.images,
-                            description: unit.description,
-                            unitNumber: unit.unitNumber,
-                            buildingName: building.name
-                        }))
+                        units: building.units.map((unit: any) => {
+                            const hasActiveBooking = unit.bookings && unit.bookings.length > 0;
+                            const hasActiveReservation = unit.reservations && unit.reservations.length > 0;
+
+                            return {
+                                id: unit.id,
+                                projectId: project.id,
+                                projectName: project.name,
+                                code: unit.code,
+                                area: unit.area,
+                                price: unit.price,
+                                bedrooms: unit.bedrooms,
+                                bathrooms: unit.bathrooms,
+                                status: mapDatabaseStatus(unit.status, hasActiveBooking, hasActiveReservation),
+                                commissionRate: unit.commissionRate,
+                                floor: getFloorNumber(unit.unitNumber),
+                                view: unit.view,
+                                direction: unit.direction,
+                                images: unit.images,
+                                description: unit.description,
+                                unitNumber: unit.unitNumber,
+                                buildingName: building.name
+                            };
+                        })
                     }))
                 }));
 
                 setProjects(transformedProjects);
+                setLastUpdate(new Date());
             } else {
-                toastNotification.error('Không thể tải danh sách dự án');
+                if (!silent) {
+                    toastNotification.error('Không thể tải danh sách dự án');
+                }
             }
         } catch (error) {
             console.error('Error fetching projects:', error);
-            toastNotification.error('Đã xảy ra lỗi khi tải dữ liệu');
+            if (!silent) {
+                toastNotification.error('Đã xảy ra lỗi khi tải dữ liệu');
+            }
         } finally {
-            setIsLoading(false);
+            if (!silent) {
+                setIsLoading(false);
+            }
         }
-    };
+    }, []);
+
+    // Fetch projects from database on mount
+    useEffect(() => {
+        const userPhone = sessionStorage.getItem('login:userPhone');
+        if (!userPhone) {
+            router.push('/login');
+            return;
+        }
+        fetchProjects();
+    }, [router, fetchProjects]);
+
+    // Auto-refresh every 10 seconds
+    useEffect(() => {
+        if (!autoRefresh) return;
+
+        const interval = setInterval(() => {
+            fetchProjects(true); // Silent refresh (no loading state)
+        }, 10000); // 10 seconds
+
+        return () => clearInterval(interval);
+    }, [autoRefresh, fetchProjects]);
 
     // Combine all units from all projects and buildings
     const allUnits = projects.flatMap(project =>
@@ -277,10 +313,35 @@ export default function DashboardScreen(): JSX.Element {
                     }`}
             >
                 <div className={`max-w-[1500px] mx-auto ${responsiveClasses.headerPadding} flex items-center justify-between`}>
-                    <h1 className={`${responsiveClasses.titleSize} font-semibold ${deviceInfo.isMobile ? "text-center" : ""}`}>
-                        {deviceInfo.isMobile ? "CTV Winland" : "Cộng Tác Viên Bất Động Sản Winland"}
-                    </h1>
+                    <div className="flex flex-col">
+                        <h1 className={`${responsiveClasses.titleSize} font-semibold ${deviceInfo.isMobile ? "text-center" : ""}`}>
+                            {deviceInfo.isMobile ? "CTV Winland" : "Cộng Tác Viên Bất Động Sản Winland"}
+                        </h1>
+                        {!deviceInfo.isMobile && (
+                            <div className="flex items-center gap-2 mt-1">
+                                <div className={`flex items-center gap-1 text-xs ${autoRefresh ? 'text-green-400' : 'text-gray-400'}`}>
+                                    <div className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+                                    <span>{autoRefresh ? 'Tự động cập nhật' : 'Đã tắt tự động cập nhật'}</span>
+                                </div>
+                                <span className="text-xs text-gray-400">•</span>
+                                <span className="text-xs text-gray-400">
+                                    Cập nhật lúc: {lastUpdate.toLocaleTimeString('vi-VN')}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                     <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setAutoRefresh(!autoRefresh)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-md border transition ${autoRefresh
+                                ? 'border-green-500/30 bg-green-500/10 text-green-400'
+                                : 'border-white/10 hover:bg-white/10'
+                                }`}
+                            title={autoRefresh ? 'Tắt tự động cập nhật' : 'Bật tự động cập nhật'}
+                        >
+                            <div className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                            {!deviceInfo.isMobile && <span className="text-sm">Auto</span>}
+                        </button>
                         <button
                             onClick={toggleTheme}
                             className="flex items-center gap-2 px-4 py-2 rounded-md border border-white/10 hover:bg-white/10 transition"
