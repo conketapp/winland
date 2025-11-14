@@ -16,7 +16,6 @@ import {
     Sun,
     Moon,
     LogOut,
-    LandPlot,
     Search,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -34,107 +33,63 @@ import { ToastContainer } from 'react-toastify';
 
 /* ----------------------------- TYPES ----------------------------- */
 type UnitStatus = "available" | "reserved" | "sold" | "booking" | "deposit";
-const statuses: UnitStatus[] = ["available", "reserved", "sold", "booking", "deposit"];
+
 type Unit = {
     id: string;
-    project?: string;
+    projectId: string;
+    projectName?: string;
     code: string;
-    area: string;
+    area: number;
     price: number;
-    numRoom: number;
-    numWC: number;
+    bedrooms: number | null;
+    bathrooms: number | null;
     status: UnitStatus;
-    commission: number;
-    depositMoney?: number;
-    reservedMoney?: number;
+    commissionRate: number | null;
     floor: number;
-    view: string;
-    direction?: string;
-    customerName?: string;
-    reservedUntil?: string;
-    image: string[];
-    information: string;
-    legalDocument?: string;
+    view: string | null;
+    direction: string | null;
+    images: string | null;
+    description: string | null;
+    unitNumber: string;
+    buildingName?: string;
 };
 
-type Block = {
+type Building = {
     id: string;
     name: string;
+    code: string;
     units: Unit[];
 };
 
-// Price and area templates
-const areas = ["120m2", "150m2", "185m2", "210m2", "100m2"];
-const direction = ["Đông", "Tây", "Nam", "Bắc", "Đông Nam", "Tây Nam", "Đông Bắc", "Tây Bắc"];
-const view = ["City view", "River view", "Park view", "Pool view", "Lake view", "Golf view", "Skyline view"];
-const prices = [6200000000, 7850000000, 8532000000, 9100000000, 10250000000, 5500000000];
-const numRooms = [2, 3, 4, 5];
-const numWCs = [1, 2, 3];
-const information = ["Căn hộ thiết kế hiện đại với không gian mở, ban công rộng và ánh sáng tự nhiên chan hòa. Vị trí thuận tiện gần khu tiện ích, trường học và trung tâm thương mại.",
-    "Căn hộ nằm trong khu dân cư yên tĩnh, có view sông thoáng mát, phù hợp cho gia đình nhỏ. Nội thất được hoàn thiện cao cấp, phòng khách thông với ban công giúp tận dụng tối đa ánh sáng tự nhiên.",
-    "Căn hộ nổi bật với thiết kế sang trọng, có sân vườn riêng và không gian sinh hoạt ngoài trời. Phù hợp với gia đình đa thế hệ, kết nối tiện ích nội khu như hồ bơi, công viên, khu thể thao.",
-]
-const getRandom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-
-// Generate apartment images (3-5 images per unit)
-const generateUnitImage = (index: number): string[] => {
-    const apartmentImages = [
-        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1560448204-61dc36dc98c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1560448075-cbc16bb4af8e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1560448075-bb485b067938?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-        "https://images.unsplash.com/photo-1560448075-bb485b067938?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-    ];
-
-    // Generate 3-5 images randomly
-    const imageCount = Math.floor(Math.random() * 3) + 3; // Random number between 3-5
-    const startIndex = index % (apartmentImages.length - imageCount + 1);
-
-    return apartmentImages.slice(startIndex, startIndex + imageCount);
+type Project = {
+    id: string;
+    name: string;
+    code: string;
+    buildings: Building[];
 };
 
-/* ----------------------------- MOCK DATA ----------------------------- */
-// Generate mock data
-export const blocks: Block[] = Array.from({ length: 4 }, (_, i) => {
-    const blockName = `LK${i + 1}`;
-    const numFloors = Math.floor(Math.random() * 3) + 6;
-    const numUnits = numFloors * 5; // 5 units per floor
+// Map database status to display status
+const mapDatabaseStatus = (dbStatus: string): UnitStatus => {
+    switch (dbStatus) {
+        case 'AVAILABLE':
+            return 'available';
+        case 'RESERVED_BOOKING':
+            return 'reserved';
+        case 'DEPOSITED':
+            return 'deposit';
+        case 'SOLD':
+            return 'sold';
+        default:
+            return 'available';
+    }
+};
 
-    const units: Unit[] = Array.from({ length: numUnits }, (_, j) => {
-        const floor = Math.floor(j / 5) + 5; // Sequential floors starting from 5
-        const unitOnFloor = (j % 5) + 1; // Unit number on floor (1-5)
-        const floorUnit = String(floor).padStart(2, "0") + String(unitOnFloor).padStart(2, "0");
-        const id = `${blockName.toLowerCase()}-${floorUnit}`;
-        const price = getRandom(prices);
-        return {
-            id,
-            project: "Lê Văn Thiêm Luxury",
-            code: `${blockName}-${floorUnit}`,
-            area: getRandom(areas),
-            price: price,
-            numRoom: getRandom(numRooms),
-            numWC: getRandom(numWCs),
-            status: getRandom(statuses),
-            commission: Math.floor(Math.random() * 50000000) + 25000000,
-            floor: floor,
-            direction: getRandom(direction),
-            view: getRandom(view),
-            image: generateUnitImage(j),
-            information: getRandom(information),
-            depositMoney: price * 0.01,
-            reservedMoney: 10000000,
-        };
-    });
-
-    return {
-        id: blockName.toLowerCase(),
-        name: blockName,
-        units,
-    };
-});
+// Helper to get floor number from unit
+const getFloorNumber = (unitNumber: string): number => {
+    // Extract floor from unit number (e.g., "0501" -> floor 5)
+    const floorStr = unitNumber.substring(0, 2);
+    return parseInt(floorStr) || 1;
+};
 
 const statusProperty: Record<UnitStatus, { dotColor: string; bgClass: string; label: string }> = {
     available: { dotColor: "bg-green-600", bgClass: "bg-green-600", label: "Đang mở bán" },
@@ -170,31 +125,79 @@ export default function DashboardScreen(): JSX.Element {
     const { activeNav, setActiveNav } = useNavigation();
     const deviceInfo = useDeviceDetect();
     const { isDark, toggleTheme } = useTheme();
-    const [token, setToken] = useState<string | null>(null);
-    const [userData, setUserData] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedUnit, setSelectedUnit] = useState<any>(null);
     const [showDepositModal, setShowDepositModal] = useState(false);
     const [showReservedModal, setShowReservedModal] = useState(false);
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Mock JWT login
+    // Fetch projects from database
     useEffect(() => {
-        async function mockLogin() {
-            try {
-                const res = await fetch("/api/mock-login");
-                const data = await res.json();
-                setToken(data.token);
-                setUserData(data.user);
-            } catch (err) {
-                console.error("JWT Mock Login Failed:", err);
-            }
+        const userPhone = sessionStorage.getItem('login:userPhone');
+        if (!userPhone) {
+            router.push('/login');
+            return;
         }
-        mockLogin();
-    }, []);
+        fetchProjects();
+    }, [router]);
 
-    // Combine all units into one array
-    const allUnits = blocks.flatMap((block) => block.units);
+    const fetchProjects = async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch('/api/projects');
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Transform database data to match component structure
+                const transformedProjects: Project[] = data.map((project: any) => ({
+                    id: project.id,
+                    name: project.name,
+                    code: project.code,
+                    buildings: project.buildings.map((building: any) => ({
+                        id: building.id,
+                        name: building.name,
+                        code: building.code,
+                        units: building.units.map((unit: any) => ({
+                            id: unit.id,
+                            projectId: project.id,
+                            projectName: project.name,
+                            code: unit.code,
+                            area: unit.area,
+                            price: unit.price,
+                            bedrooms: unit.bedrooms,
+                            bathrooms: unit.bathrooms,
+                            status: mapDatabaseStatus(unit.status),
+                            commissionRate: unit.commissionRate,
+                            floor: getFloorNumber(unit.unitNumber),
+                            view: unit.view,
+                            direction: unit.direction,
+                            images: unit.images,
+                            description: unit.description,
+                            unitNumber: unit.unitNumber,
+                            buildingName: building.name
+                        }))
+                    }))
+                }));
+
+                setProjects(transformedProjects);
+            } else {
+                toastNotification.error('Không thể tải danh sách dự án');
+            }
+        } catch (error) {
+            console.error('Error fetching projects:', error);
+            toastNotification.error('Đã xảy ra lỗi khi tải dữ liệu');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Combine all units from all projects and buildings
+    const allUnits = projects.flatMap(project =>
+        project.buildings.flatMap(building => building.units)
+    );
 
     // Filter by search input
     const filteredUnits = allUnits.filter((unit) =>
@@ -210,9 +213,7 @@ export default function DashboardScreen(): JSX.Element {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem("jwt_token");
-        setToken(null);
-        setUserData(null);
+        sessionStorage.removeItem("login:userPhone");
         router.push("/login");
     };
 
@@ -385,86 +386,105 @@ export default function DashboardScreen(): JSX.Element {
 
                     {/* Project Map */}
                     <section>
-                        <motion.section
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.1 }}
-                            className={`rounded-3xl ${responsiveClasses.cardPadding} shadow-md hover:shadow-xl transition ${isDark ? "bg-[#1B2342]" : "bg-white"
-                                }`}
-                        >
-                            <div>
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div>
-                                        <p className="text-lg font-semibold mb-1">Dự Án: {blocks[0]?.units[0]?.project || "Chưa có dự án này"}</p>
-                                        <p className="text-sm opacity-80">Danh sách các block: {blocks.map(block => block.name).join(', ')}</p>
-                                    </div>
-                                </div>
-                                <div className={`flex ${responsiveClasses.legendFlex} items-center gap-4 text-sm`}>
-                                    <LegendItem color="bg-green-600" label="Đang mở bán" isDark={isDark} />
-                                    <LegendItem color="bg-yellow-600" label="Đang có đặt chỗ" isDark={isDark} />
-                                    <LegendItem color="bg-blue-600" label="Đang có booking" isDark={isDark} />
-                                    <LegendItem color="bg-purple-600" label="Đã cọc tiền" isDark={isDark} />
-                                    <LegendItem color="bg-red-600" label="Đã bán" isDark={isDark} />
+                        {isLoading ? (
+                            <div className="flex items-center justify-center h-64">
+                                <div className="text-center">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                    <p className={isDark ? "text-slate-300" : "text-slate-600"}>Đang tải dữ liệu...</p>
                                 </div>
                             </div>
-                        </motion.section>
-
-                        <AnimatePresence>
-                            {blocks.map((block) => (
-                                <section key={block.id} className="space-y-4 mb-7 mt-8">
-                                    <div className="w-full flex justify-center">
-                                        <div
-                                            className={`${isDark ? "bg-[#1B2342]" : "bg-white/70"
-                                                } ${deviceInfo.isMobile ? "text-lg" : "text-2xl"} backdrop-blur-sm rounded-xl px-40 py-3 text-center font-medium shadow-sm max-w-[1000px]`}
+                        ) : projects.length === 0 ? (
+                            <div className={`rounded-3xl ${responsiveClasses.cardPadding} shadow-md text-center py-12 ${isDark ? "bg-[#1B2342]" : "bg-white"}`}>
+                                <p className="text-lg mb-2">Chưa có dự án nào</p>
+                                <p className="text-sm opacity-70">Vui lòng liên hệ quản trị viên để thêm dự án</p>
+                            </div>
+                        ) : (
+                            <>
+                                {projects.map((project) => (
+                                    <div key={project.id} className="mb-12">
+                                        <motion.section
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.5, delay: 0.1 }}
+                                            className={`rounded-3xl ${responsiveClasses.cardPadding} shadow-md hover:shadow-xl transition ${isDark ? "bg-[#1B2342]" : "bg-white"
+                                                }`}
                                         >
-                                            {block.name}
-                                        </div>
-                                    </div>
+                                            <div>
+                                                <div className="flex items-center gap-4 mb-4">
+                                                    <div>
+                                                        <p className="text-lg font-semibold mb-1">Dự Án: {project.name}</p>
+                                                        <p className="text-sm opacity-80">
+                                                            Danh sách các tòa: {project.buildings.map(b => b.name).join(', ')}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className={`flex ${responsiveClasses.legendFlex} items-center gap-4 text-sm`}>
+                                                    <LegendItem color="bg-green-600" label="Đang mở bán" isDark={isDark} />
+                                                    <LegendItem color="bg-yellow-600" label="Đang có đặt chỗ" isDark={isDark} />
+                                                    <LegendItem color="bg-blue-600" label="Đang có booking" isDark={isDark} />
+                                                    <LegendItem color="bg-purple-600" label="Đã cọc tiền" isDark={isDark} />
+                                                    <LegendItem color="bg-red-600" label="Đã bán" isDark={isDark} />
+                                                </div>
+                                            </div>
+                                        </motion.section>
 
-                                    <motion.div
-                                        initial="hidden"
-                                        animate="visible"
-                                        variants={containerVariants}
-                                        className={`grid ${responsiveClasses.gridCols} gap-4`}
-                                    >
-                                        {block.units.map((unit) => {
-                                            const status = statusProperty[unit.status];
-                                            return (
-                                                <motion.article
-                                                    key={unit.id}
-                                                    className="relative"
-                                                    variants={cardVariants}
-                                                    initial="hidden"
-                                                    animate="visible"
-                                                    whileHover="hover"
-                                                    onClick={() => handleUnitClick(unit)}
-                                                >
-                                                    <div
-                                                        className={`${deviceInfo.isMobile ? "w-50%" : "w-auto"} rounded-xl shadow-sm text-white ${responsiveClasses.cardPadding} ${responsiveClasses.cardShape} flex flex-col items-center justify-center gap-2 min-h-[88px] ${status.bgClass}`}
-                                                    >
-                                                        <div className={`${deviceInfo.isMobile ? "text-lg" : "text-2xl"} font-semibold`}>{unit.code}</div>
-                                                        {/* 🔹 Badge hiển thị trạng thái */}
-                                                        <div className="w-full flex justify-center">
-                                                            <span
-                                                                className={`text-[10px] px-2 py-0.5 rounded-full bg-white/25 backdrop-blur-sm`}
-                                                            >
-                                                                {status.label}
-                                                            </span>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-1 w-full text-center">
-                                                            <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>{unit.area}</div>
-                                                            <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>{formatCurrency(unit.price)}</div>
-                                                            <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>PN: {unit.numRoom}</div>
-                                                            <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>WC: {unit.numWC}</div>
+                                        <AnimatePresence>
+                                            {project.buildings.map((building) => (
+                                                <section key={building.id} className="space-y-4 mb-7 mt-8">
+                                                    <div className="w-full flex justify-center">
+                                                        <div
+                                                            className={`${isDark ? "bg-[#1B2342]" : "bg-white/70"
+                                                                } ${deviceInfo.isMobile ? "text-lg" : "text-2xl"} backdrop-blur-sm rounded-xl px-40 py-3 text-center font-medium shadow-sm max-w-[1000px]`}
+                                                        >
+                                                            {building.name}
                                                         </div>
                                                     </div>
-                                                </motion.article>
-                                            );
-                                        })}
-                                    </motion.div>
-                                </section>
-                            ))}
-                        </AnimatePresence>
+
+                                                    <motion.div
+                                                        initial="hidden"
+                                                        animate="visible"
+                                                        variants={containerVariants}
+                                                        className={`grid ${responsiveClasses.gridCols} gap-4`}
+                                                    >
+                                                        {building.units.map((unit) => {
+                                                            const status = statusProperty[unit.status];
+                                                            return (
+                                                                <motion.article
+                                                                    key={unit.id}
+                                                                    className="relative"
+                                                                    variants={cardVariants}
+                                                                    initial="hidden"
+                                                                    animate="visible"
+                                                                    whileHover="hover"
+                                                                    onClick={() => handleUnitClick(unit)}
+                                                                >
+                                                                    <div
+                                                                        className={`${deviceInfo.isMobile ? "w-50%" : "w-auto"} rounded-xl shadow-sm text-white ${responsiveClasses.cardPadding} ${responsiveClasses.cardShape} flex flex-col items-center justify-center gap-2 min-h-[88px] ${status.bgClass} cursor-pointer`}
+                                                                    >
+                                                                        <div className={`${deviceInfo.isMobile ? "text-lg" : "text-2xl"} font-semibold`}>{unit.code}</div>
+                                                                        <div className="w-full flex justify-center">
+                                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full bg-white/25 backdrop-blur-sm`}>
+                                                                                {status.label}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="grid grid-cols-2 gap-1 w-full text-center">
+                                                                            <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>{unit.area}m²</div>
+                                                                            <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>{formatCurrency(unit.price)}</div>
+                                                                            <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>PN: {unit.bedrooms || 0}</div>
+                                                                            <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>WC: {unit.bathrooms || 0}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                </motion.article>
+                                                            );
+                                                        })}
+                                                    </motion.div>
+                                                </section>
+                                            ))}
+                                        </AnimatePresence>
+                                    </div>
+                                ))}
+                            </>
+                        )}
                     </section>
                 </div>
             </main>

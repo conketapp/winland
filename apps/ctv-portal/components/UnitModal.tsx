@@ -26,8 +26,24 @@ export default function UnitModal({ unit, onClose, onDeposit, onReserved, onBook
     const deviceInfo = useDeviceDetect();
     const responsive = getModalResponsiveClasses(deviceInfo);
 
-    // Use the image array from unit data (3-5 images)
-    const unitImages = unit.image;
+    // Parse images from database (stored as JSON string) or use default
+    const defaultImages = [
+        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1560448204-61dc36dc98c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+    ];
+    
+    let unitImages = defaultImages;
+    try {
+        if (unit.images && typeof unit.images === 'string') {
+            unitImages = JSON.parse(unit.images);
+        } else if (unit.image && Array.isArray(unit.image)) {
+            unitImages = unit.image;
+        }
+    } catch (e) {
+        console.error('Error parsing unit images:', e);
+    }
+    
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
     const nextImage = () => {
@@ -113,17 +129,17 @@ export default function UnitModal({ unit, onClose, onDeposit, onReserved, onBook
                             <div className="bg-white rounded-3xl shadow-md hover:shadow-xl transition text-center">
                                 <Bed className={`mx-auto text-blue-500 mb-1 ${responsive.iconSize}`} />
                                 <p className="text-xs text-gray-500">Phòng ngủ</p>
-                                <p className={`font-semibold ${responsive.subtitleSize} text-black-500`}>{unit.numRoom}</p>
+                                <p className={`font-semibold ${responsive.subtitleSize} text-black-500`}>{unit.bedrooms || unit.numRoom || 0}</p>
                             </div>
                             <div className="bg-white rounded-3xl shadow-md hover:shadow-xl transition text-center">
                                 <Bath className={`mx-auto text-purple-500 mb-1 ${responsive.iconSize}`} />
                                 <p className="text-xs text-gray-500">Phòng tắm</p>
-                                <p className={`font-semibold ${responsive.subtitleSize} text-black-500`}>{unit.numWC}</p>
+                                <p className={`font-semibold ${responsive.subtitleSize} text-black-500`}>{unit.bathrooms || unit.numWC || 0}</p>
                             </div>
                             <div className="bg-white rounded-3xl shadow-md hover:shadow-xl transition text-center">
                                 <Maximize2 className={`mx-auto text-green-500 mb-1 ${responsive.iconSize}`} />
                                 <p className="text-xs text-gray-500">Diện tích</p>
-                                <p className={`font-semibold ${responsive.subtitleSize} text-black-500`}>{unit.area}</p>
+                                <p className={`font-semibold ${responsive.subtitleSize} text-black-500`}>{unit.area}m²</p>
                             </div>
                             <div className="bg-white rounded-3xl shadow-md hover:shadow-xl transition text-center">
                                 <Compass className={`mx-auto text-yellow-500 mb-1 ${responsive.iconSize}`} />
@@ -140,7 +156,7 @@ export default function UnitModal({ unit, onClose, onDeposit, onReserved, onBook
                         <div className="flex items-center gap-2 bg-white rounded-3xl shadow-md hover:shadow-xl transition">
                             <div>
                                 <p className="text-lg font-semibold">Thông tin căn hộ</p>
-                                <p className="text-sm opacity-80 py-2">{unit.information}</p>
+                                <p className="text-sm opacity-80 py-2">{unit.description || unit.information || 'Thông tin chi tiết đang được cập nhật'}</p>
                             </div>
                         </div>
 
@@ -159,10 +175,12 @@ export default function UnitModal({ unit, onClose, onDeposit, onReserved, onBook
                         <div className="bg-gradient-to-r from-blue-400 to-purple-500 text-white rounded-xl p-4 flex justify-between items-center">
                             <div>
                                 <p className="text-xs opacity-80">Hoa hồng CTV</p>
-                                <p className={`font-semibold ${responsive.priceTextSize}`}>{formatCurrency(unit.commission)}</p>
+                                <p className={`font-semibold ${responsive.priceTextSize}`}>
+                                    {formatCurrency(unit.commission || (unit.price * (unit.commissionRate || 2) / 100))}
+                                </p>
                             </div>
                             <Badge className={`bg-white/20 ${responsive.badgeTextSize}`}>
-                                ≈ {((unit.commission / unit.price) * 100).toFixed(2)}% giá bán
+                                ≈ {(unit.commissionRate || ((unit.commission / unit.price) * 100) || 2).toFixed(2)}% giá bán
                             </Badge>
                         </div>
 

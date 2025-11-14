@@ -1,0 +1,53 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { PrismaClient } from '@/lib/generated/prisma'
+
+const prisma = new PrismaClient()
+
+export async function GET(request: NextRequest) {
+    try {
+        // Get all projects with their buildings, floors, and units
+        const projects = await prisma.project.findMany({
+            where: {
+                status: 'OPEN' // Only show open projects
+            },
+            include: {
+                buildings: {
+                    include: {
+                        floorsData: {
+                            include: {
+                                units: {
+                                    orderBy: {
+                                        unitNumber: 'asc'
+                                    }
+                                }
+                            },
+                            orderBy: {
+                                number: 'asc'
+                            }
+                        },
+                        units: {
+                            orderBy: {
+                                unitNumber: 'asc'
+                            }
+                        }
+                    },
+                    orderBy: {
+                        code: 'asc'
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        })
+
+        return NextResponse.json(projects)
+
+    } catch (error) {
+        console.error('Get projects error:', error)
+        return NextResponse.json(
+            { error: 'Đã xảy ra lỗi khi lấy danh sách dự án' },
+            { status: 500 }
+        )
+    }
+}

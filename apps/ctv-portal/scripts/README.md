@@ -1,269 +1,152 @@
-# CTV Portal Scripts
+# Database Seed Scripts
 
-Utility scripts for managing users, testing, and diagnostics.
+## Overview
+This directory contains scripts to populate the database with mock data for testing and development.
 
-## 📁 Structure
+## Available Scripts
 
-```
-scripts/
-├── index.ts                    # Main CLI entry point
-├── user/                       # User management scripts
-│   ├── create-test-user.ts    # Create/update test user
-│   ├── update-user-deals.ts   # Update all users with random deals
-│   └── set-user-deals.ts      # Set deals for specific user
-├── test/                       # Testing scripts
-│   ├── test-api-direct.ts     # Test database connection
-│   ├── test-password-validation.ts
-│   └── test-form-validation.ts
-├── utils/                      # Utility scripts
-│   └── diagnose-issue.ts      # System diagnostics
-└── README.md                   # This file
-```
+### 1. `seed-project.js` - Generate "Lê Văn Thiêm Luxury" Project
 
-## 🚀 Quick Start
+Generates a complete real estate project with:
+- **1 Project**: Lê Văn Thiêm Luxury
+- **4 Buildings**: LK1, LK2, LK3, LK4
+- **10 Floors per building**: Floors 5-14
+- **5 Units per floor**: Total 200 units
+- **Random data**: Prices, areas, bedrooms, bathrooms, views, directions, statuses
 
-### Using the CLI (Recommended)
-
+#### Usage:
 ```bash
-# Show all available commands
-npx tsx scripts/index.ts help
-
-# Create test user
-npx tsx scripts/index.ts user:create
-
-# Update all users with random deals
-npx tsx scripts/index.ts user:deals
-
-# Set deals for specific user
-npx tsx scripts/index.ts user:set-deals 0912345678 25
-
-# Test database connection
-npx tsx scripts/index.ts test:db
-
-# Test password validation
-npx tsx scripts/index.ts test:password
-
-# Run diagnostics
-npx tsx scripts/index.ts diagnose
+cd apps/ctv-portal
+node scripts/seed-project.js
 ```
 
-### Direct Script Execution
-
-```bash
-# User Management
-npx tsx scripts/user/create-test-user.ts
-npx tsx scripts/user/update-user-deals.ts
-npx tsx scripts/user/set-user-deals.ts 0912345678 25
-
-# Testing
-npx tsx scripts/test/test-api-direct.ts
-npx tsx scripts/test/test-password-validation.ts
-npx tsx scripts/test/test-form-validation.ts
-
-# Diagnostics
-npx tsx scripts/utils/diagnose-issue.ts
+#### What it creates:
+```
+Project: Lê Văn Thiêm Luxury (LVT-LUXURY)
+├── Building: Tòa LK1
+│   ├── Floor 5
+│   │   ├── Unit LK1-0501 (120m², 3BR, 2WC, 6.2B VND)
+│   │   ├── Unit LK1-0502 (150m², 4BR, 3WC, 7.8B VND)
+│   │   └── ... (5 units per floor)
+│   ├── Floor 6
+│   └── ... (10 floors total)
+├── Building: Tòa LK2
+├── Building: Tòa LK3
+└── Building: Tòa LK4
 ```
 
-## 📚 Script Details
+#### Data Generated:
+- **Areas**: 100m², 120m², 150m², 185m², 210m²
+- **Prices**: 5.5B - 10.25B VND
+- **Bedrooms**: 2-5
+- **Bathrooms**: 1-3
+- **Directions**: Đông, Tây, Nam, Bắc, Đông Nam, Tây Nam, Đông Bắc, Tây Bắc
+- **Views**: City view, River view, Park view, Pool view, Lake view, Golf view, Skyline view
+- **Statuses**: AVAILABLE, RESERVED_BOOKING, DEPOSITED, SOLD
+- **Images**: 3-5 apartment images per unit
+- **Commission Rate**: 2%
 
-### User Management
+#### Notes:
+- If project already exists, it will be deleted and recreated
+- Uses existing user as creator (or creates admin user if none exists)
+- Project status is set to "OPEN" so it appears in the app
 
-#### `user:create` - Create Test User
-Creates or updates the default test user.
+## Testing the Data
 
-**Credentials:**
-- Phone: `0912345678`
-- Password: `Test@123`
-- Total Deals: `25`
+After running the seed script:
 
-```bash
-npx tsx scripts/index.ts user:create
+1. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
+
+2. **Login to the app**:
+   - Go to http://localhost:3000/login
+   - Login with your credentials
+
+3. **View the project**:
+   - Navigate to "Quản lý dự án" (Project Management)
+   - You should see "Lê Văn Thiêm Luxury" with 4 buildings
+   - Each building shows 50 units (10 floors × 5 units)
+
+4. **Test features**:
+   - Search for units (e.g., "LK1-0501")
+   - Click on available units to see details
+   - Try booking, reservation, and deposit modals
+   - Check different unit statuses (color-coded)
+
+## Cleanup
+
+To remove the generated data:
+
+```sql
+-- Connect to your database and run:
+DELETE FROM units WHERE project_id IN (SELECT id FROM projects WHERE code = 'LVT-LUXURY');
+DELETE FROM floors WHERE building_id IN (SELECT id FROM buildings WHERE project_id IN (SELECT id FROM projects WHERE code = 'LVT-LUXURY'));
+DELETE FROM buildings WHERE project_id IN (SELECT id FROM projects WHERE code = 'LVT-LUXURY');
+DELETE FROM projects WHERE code = 'LVT-LUXURY';
 ```
 
-#### `user:deals` - Update All Users
-Updates all users with random totalDeals (5-50).
+Or simply run the seed script again (it will delete and recreate).
 
-```bash
-npx tsx scripts/index.ts user:deals
+## Troubleshooting
+
+### Error: "Cannot find module '../lib/generated/prisma'"
+**Solution**: Run `npx prisma generate` first
+
+### Error: "No user found"
+**Solution**: The script will create an admin user automatically
+
+### Error: "Project already exists"
+**Solution**: The script will delete and recreate automatically
+
+### No data showing in app
+**Solution**: 
+1. Check project status is "OPEN"
+2. Verify you're logged in
+3. Check browser console for errors
+4. Verify API endpoint `/api/projects` returns data
+
+## Database Schema
+
+The seed script creates data following this structure:
+
+```
+projects
+├── id (UUID)
+├── name: "Lê Văn Thiêm Luxury"
+├── code: "LVT-LUXURY"
+├── status: "OPEN"
+└── ...
+
+buildings
+├── id (UUID)
+├── project_id (FK)
+├── code: "LK1", "LK2", etc.
+└── ...
+
+floors
+├── id (UUID)
+├── building_id (FK)
+├── number: 5-14
+└── ...
+
+units
+├── id (UUID)
+├── project_id (FK)
+├── building_id (FK)
+├── floor_id (FK)
+├── code: "LK1-0501", etc.
+├── status: AVAILABLE | RESERVED_BOOKING | DEPOSITED | SOLD
+└── ...
 ```
 
-#### `user:set-deals` - Set User Deals
-Sets totalDeals for a specific user.
+## Future Enhancements
 
-```bash
-npx tsx scripts/index.ts user:set-deals <phone> <deals>
-# Example:
-npx tsx scripts/index.ts user:set-deals 0912345678 30
-```
-
-### Testing
-
-#### `test:db` - Test Database
-Tests Prisma client and database connection.
-
-```bash
-npx tsx scripts/index.ts test:db
-```
-
-**Output:**
-```json
-{
-  "fullName": "Test CTV User",
-  "totalDeals": 25,
-  ...
-}
-```
-
-#### `test:password` - Test Password Validation
-Tests password validation rules.
-
-```bash
-npx tsx scripts/index.ts test:password
-```
-
-**Tests:**
-- Minimum 8 characters
-- Uppercase letters
-- Lowercase letters
-- Special characters
-
-#### `test:form` - Test Form Validation
-Tests signup form validation logic.
-
-```bash
-npx tsx scripts/index.ts test:form
-```
-
-#### `test:phone` - Test Phone Validation
-Tests Vietnamese phone number validation.
-
-```bash
-npx tsx scripts/index.ts test:phone
-```
-
-**Tests:**
-- Mobile numbers (03x, 05x, 07x, 08x, 09x)
-- Landline numbers (02x)
-- Invalid formats
-- Formatted numbers
-
-### Diagnostics
-
-#### `diagnose` - System Diagnostics
-Runs comprehensive system checks.
-
-```bash
-npx tsx scripts/index.ts diagnose
-```
-
-**Checks:**
-- ✅ Prisma client exists
-- ✅ Database connection
-- ✅ User count
-- ✅ Test user data
-- ✅ Schema file
-- ✅ Environment variables
-
-## 🔧 Common Tasks
-
-### Setup New Environment
-
-```bash
-# 1. Create test user
-npx tsx scripts/index.ts user:create
-
-# 2. Test database connection
-npx tsx scripts/index.ts test:db
-
-# 3. Run diagnostics
-npx tsx scripts/index.ts diagnose
-```
-
-### Troubleshooting
-
-```bash
-# Run diagnostics first
-npx tsx scripts/index.ts diagnose
-
-# If database issues, test connection
-npx tsx scripts/index.ts test:db
-
-# If user issues, recreate test user
-npx tsx scripts/index.ts user:create
-```
-
-### Development Workflow
-
-```bash
-# After schema changes
-npx prisma db push
-npx prisma generate
-
-# Verify changes
-npx tsx scripts/index.ts test:db
-
-# Update test data
-npx tsx scripts/index.ts user:create
-```
-
-## 📝 Adding New Scripts
-
-1. Create script in appropriate folder (`user/`, `test/`, `utils/`)
-2. Add command to `index.ts`
-3. Update this README
-
-Example:
-
-```typescript
-// scripts/user/my-script.ts
-import { PrismaClient } from '../../lib/generated/prisma'
-
-const prisma = new PrismaClient()
-
-async function main() {
-  // Your code here
-}
-
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect())
-```
-
-## 🐛 Debugging
-
-### Script Fails to Run
-
-```bash
-# Check if tsx is installed
-npm list tsx
-
-# Install if missing
-npm install -D tsx
-```
-
-### Database Connection Error
-
-```bash
-# Check .env file
-cat .env | grep DATABASE_URL
-
-# Test connection
-npx tsx scripts/index.ts test:db
-```
-
-### Prisma Client Error
-
-```bash
-# Regenerate client
-npx prisma generate
-
-# Test again
-npx tsx scripts/index.ts test:db
-```
-
-## 📖 Related Documentation
-
-- [Password Validation](../docs/PASSWORD-VALIDATION.md)
-- [Total Deals Feature](../docs/TOTAL-DEALS-FEATURE.md)
-- [User Data Integration](../docs/USER-DATA-INTEGRATION.md)
-- [Troubleshooting](../docs/TROUBLESHOOT-500-ERROR.md)
+Consider adding:
+- Multiple projects
+- Different building configurations
+- Customer data for reserved/sold units
+- Booking/Deposit/Reservation records
+- Commission records
+- Payment schedules
