@@ -19,6 +19,7 @@ import {
     Sun,
     Moon,
     AlertTriangle,
+    FileText,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatCurrency } from '@/lib/utils';
@@ -31,12 +32,16 @@ export default function DashboardScreen(): JSX.Element {
     const router = useRouter();
     const { isDark, toggleTheme } = useTheme();
     const [userData, setUserData] = useState<any>(null);
+    const [urgentReservations, setUrgentReservations] = useState<any[]>([]);
+    const [recentBookings, setRecentBookings] = useState<any[]>([]);
+    const [recentDeposits, setRecentDeposits] = useState<any[]>([]);
+    const [stats, setStats] = useState({ reservations: 0, bookings: 0, deposits: 0 });
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Fetch user data from database
+    // Fetch all dashboard data
     useEffect(() => {
-        async function fetchUserData() {
+        async function fetchDashboardData() {
             try {
-                // Get user phone from sessionStorage
                 const userPhone = sessionStorage.getItem('login:userPhone');
 
                 if (!userPhone) {
@@ -45,34 +50,70 @@ export default function DashboardScreen(): JSX.Element {
                     return;
                 }
 
-                // Fetch user data from API
-                const res = await fetch('/api/user/me', {
-                    headers: {
-                        'x-user-phone': userPhone
-                    }
-                });
+                setIsLoading(true);
 
-                if (!res.ok) {
-                    throw new Error('Failed to fetch user data');
-                }
+                // Fetch user data and all transactions in parallel
+                const [userRes, reservationsRes, bookingsRes, depositsRes] = await Promise.all([
+                    fetch('/api/user/me', { headers: { 'x-user-phone': userPhone } }),
+                    fetch('/api/reservations', { headers: { 'x-user-phone': userPhone } }),
+                    fetch('/api/bookings', { headers: { 'x-user-phone': userPhone } }),
+                    fetch('/api/deposits', { headers: { 'x-user-phone': userPhone } })
+                ]);
 
-                const data = await res.json();
+                // Parse responses
+                const user = userRes.ok ? await userRes.json() : null;
+                const reservations = reservationsRes.ok ? await reservationsRes.json() : [];
+                const bookings = bookingsRes.ok ? await bookingsRes.json() : [];
+                const deposits = depositsRes.ok ? await depositsRes.json() : [];
 
-                // Check if data has error property (error response)
-                if (data.error) {
-                    console.error('Failed to get user data:', data.error);
+                if (user && !user.error) {
+                    setUserData(user);
+                } else {
                     router.push('/login');
                     return;
                 }
 
-                // API now returns user object directly
-                setUserData(data);
+                // Filter urgent reservations (expiring within 24 hours)
+                const now = new Date();
+                const urgent = reservations
+                    .filter((r: any) => {
+                        const expiryDate = new Date(r.reservedUntil);
+                        const hoursUntilExpiry = (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+                        return hoursUntilExpiry > 0 && hoursUntilExpiry <= 24 && r.status === 'ACTIVE';
+                    })
+                    .sort((a: any, b: any) => new Date(a.reservedUntil).getTime() - new Date(b.reservedUntil).getTime())
+                    .slice(0, 4);
+
+                setUrgentReservations(urgent);
+
+                // Get recent bookings (last 4)
+                const recent = bookings
+                    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .slice(0, 4);
+
+                setRecentBookings(recent);
+
+                // Get recent deposits (last 4)
+                const recentDeps = deposits
+                    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .slice(0, 4);
+
+                setRecentDeposits(recentDeps);
+
+                // Set stats
+                setStats({
+                    reservations: reservations.filter((r: any) => r.status === 'ACTIVE').length,
+                    bookings: bookings.filter((b: any) => b.status !== 'CANCELLED').length,
+                    deposits: deposits.filter((d: any) => d.status !== 'CANCELLED').length
+                });
+
             } catch (err) {
-                console.error("Failed to fetch user data:", err);
-                router.push('/login');
+                console.error("Failed to fetch dashboard data:", err);
+            } finally {
+                setIsLoading(false);
             }
         }
-        fetchUserData();
+        fetchDashboardData();
     }, [router]);
 
     // Get greeting based on current time
@@ -87,57 +128,22 @@ export default function DashboardScreen(): JSX.Element {
         }
     };
 
-    const mockUser = {
-        fullName: 'No name',
-        level: 'Sales Manager',
-        totalDeals: 24,
-        totalRevenue: 125000000,
-        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+    // Helper function to calculate time until expiry
+    const getTimeUntilExpiry = (expiryDate: string) => {
+        const now = new Date();
+        const expiry = new Date(expiryDate);
+        const diffMs = expiry.getTime() - now.getTime();
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        if (diffHours > 0) {
+            return `${diffHours} giờ ${diffMinutes} phút`;
+        } else if (diffMinutes > 0) {
+            return `${diffMinutes} phút`;
+        } else {
+            return 'Đã hết hạn';
+        }
     };
-
-    const mockStats = {
-        reservations: 5,
-        bookings: 10,
-        deposits: 8,
-    };
-
-    const mockUrgentReservations = [
-        {
-            id: 1,
-            unitCode: 'A1-1201',
-            customerName: 'Nguyễn Văn A',
-            expiryTime: '2 giờ',
-            phone: '0901234567',
-        },
-        {
-            id: 2,
-            unitCode: 'B2-0803',
-            customerName: 'Trần Thị B',
-            expiryTime: '4 giờ',
-            phone: '0901234568',
-        },
-        {
-            id: 3,
-            unitCode: 'C2-0802',
-            customerName: 'Trần Hoàng C',
-            expiryTime: '4 giờ',
-            phone: '0901234569',
-        },
-        {
-            id: 4,
-            unitCode: 'B4-0103',
-            customerName: 'Nguyễn Thị D',
-            expiryTime: '4 giờ',
-            phone: '0901234570',
-        },
-    ];
-
-    const mockbookings = [
-        { id: 1, title: "Booking căn hộ LK1-01", time: "06:00 – 07:00 Thứ 2 12/02/2024" },
-        { id: 2, title: "Booking căn hộ LK1-02", time: "08:00 – 09:00 Thứ 3 13/02/2024" },
-        { id: 3, title: "Booking căn hộ LK1-03", time: "10:00 – 11:00 Thứ 4 14/02/2024" },
-        { id: 4, title: "Booking căn hộ LK1-04", time: "10:00 – 11:00 Thứ 4 14/02/2024" },
-    ];
 
     const handleLogout = () => {
         sessionStorage.removeItem("login:userPhone");
@@ -191,22 +197,23 @@ export default function DashboardScreen(): JSX.Element {
                     >
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-[#C6A052]/80 to-[#C6A052]/50 flex items-center justify-center">
-                                <img
-                                    src={userData?.avatar || mockUser?.avatar}
-                                    alt="User Avatar"
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                        // Fallback to User icon if image fails to load
-                                        e.currentTarget.style.display = 'none';
-                                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                                    }}
-                                />
-                                <User className="w-6 h-6 text-white hidden" />
+                                {userData?.avatar ? (
+                                    <img
+                                        src={userData.avatar}
+                                        alt="User Avatar"
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                        }}
+                                    />
+                                ) : null}
+                                <User className={`w-6 h-6 text-white ${userData?.avatar ? 'hidden' : ''}`} />
                             </div>
                             <div>
                                 <p className="text-sm opacity-70 mb-1">{getGreeting()}</p>
-                                <p className="text-lg font-semibold">{userData?.fullName || mockUser?.fullName}</p>
-                                <p className="text-sm opacity-80">{userData?.role || mockUser?.level}</p>
+                                <p className="text-lg font-semibold">{userData?.fullName || 'Đang tải...'}</p>
+                                <p className="text-sm opacity-80">{userData?.role || 'CTV'}</p>
                             </div>
                         </div>
                     </motion.section>
@@ -221,7 +228,7 @@ export default function DashboardScreen(): JSX.Element {
                     >
                         <div>
                             <p className="text-slate-400 text-sm">Tổng số giao dịch đã thực hiện</p>
-                            <h2 className="text-4xl font-bold mt-1">{userData?.totalDeals ?? mockUser?.totalDeals}</h2>
+                            <h2 className="text-4xl font-bold mt-1">{stats.reservations + stats.bookings + stats.deposits}</h2>
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="flex items-center text-green-500 text-sm font-medium">
@@ -243,8 +250,9 @@ export default function DashboardScreen(): JSX.Element {
                                 }`}
                         >
                             <div>
-                                <p className="text-slate-400 text-sm">Tổng số doanh thu</p>
-                                <h2 className="text-4xl font-bold mt-1">{formatCurrency(mockUser?.totalRevenue)}</h2>
+                                <p className="text-slate-400 text-sm">Tổng số hoa hồng</p>
+                                <h2 className="text-4xl font-bold mt-1">{formatCurrency(0)}</h2>
+                                <p className="text-xs text-slate-400 mt-1">Đang cập nhật</p>
                             </div>
                         </motion.section>
 
@@ -258,11 +266,11 @@ export default function DashboardScreen(): JSX.Element {
                         >
                             <div>
                                 <p className="text-slate-400 text-sm">Tổng số booking</p>
-                                <h2 className="text-4xl font-bold mt-1">{mockStats?.bookings}</h2>
+                                <h2 className="text-4xl font-bold mt-1">{stats.bookings}</h2>
                             </div>
                         </motion.section>
 
-                        {/* Tổng số booking */}
+                        {/* Tổng số giữ chỗ */}
                         <motion.section
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -272,7 +280,7 @@ export default function DashboardScreen(): JSX.Element {
                         >
                             <div>
                                 <p className="text-slate-400 text-sm">Tổng số giữ chỗ</p>
-                                <h2 className="text-4xl font-bold mt-1">{mockStats?.reservations}</h2>
+                                <h2 className="text-4xl font-bold mt-1">{stats.reservations}</h2>
                             </div>
                         </motion.section>
 
@@ -286,7 +294,7 @@ export default function DashboardScreen(): JSX.Element {
                         >
                             <div>
                                 <p className="text-slate-400 text-sm">Tổng số hợp đồng đã cọc</p>
-                                <h2 className="text-4xl font-bold mt-1">{mockStats?.deposits}</h2>
+                                <h2 className="text-4xl font-bold mt-1">{stats.deposits}</h2>
                             </div>
                         </motion.section>
                     </div>
@@ -300,35 +308,41 @@ export default function DashboardScreen(): JSX.Element {
                     >
                         <div className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 ${isDark ? "bg-[#1B2342]" : "bg-white"}`}>
                             <h3 className="text-lg font-semibold mb-2">Giữ chỗ sắp hết hạn</h3>
-                            <p className="text-slate-400 text-sm">Cần xử lý gấp</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                                {mockUrgentReservations.map((urgentRevervation, index) => (
-                                    <motion.div
-                                        key={urgentRevervation.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
-                                        className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${isDark ? "bg-[#1B2342]" : "bg-white"
-                                            }`}
-                                    >
-                                        <div
-                                            className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-red-900/30" : "bg-red-50"
+                            <p className="text-slate-400 text-sm mb-4">Cần xử lý gấp</p>
+                            {isLoading ? (
+                                <div className="text-center py-8 text-slate-400">Đang tải...</div>
+                            ) : urgentReservations.length === 0 ? (
+                                <div className="text-center py-8 text-slate-400">Không có giữ chỗ nào sắp hết hạn</div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                    {urgentReservations.map((reservation: any, index: number) => (
+                                        <motion.div
+                                            key={reservation.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+                                            className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${isDark ? "bg-[#1B2342]" : "bg-white"
                                                 }`}
                                         >
-                                            <AlertTriangle className="w-6 h-6 text-red-600" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium truncate">{urgentRevervation.unitCode}</p>
-                                            <p className="text-xs opacity-70 mt-1">{urgentRevervation.expiryTime}</p>
-                                            <p className="text-xs opacity-70 mt-1">{urgentRevervation.customerName}</p>
-                                            <p className="text-xs opacity-70 mt-1">{urgentRevervation.phone}</p>
-                                        </div>
-                                        <button className="text-[#cc1427] text-sm font-medium hover:underline">
-                                            Xem chi tiết
-                                        </button>
-                                    </motion.div>
-                                ))}
-                            </div>
+                                            <div
+                                                className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-red-900/30" : "bg-red-50"
+                                                    }`}
+                                            >
+                                                <AlertTriangle className="w-6 h-6 text-red-600" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium truncate">{reservation.unit?.code || 'N/A'}</p>
+                                                <p className="text-xs opacity-70 mt-1">Còn {getTimeUntilExpiry(reservation.reservedUntil)}</p>
+                                                <p className="text-xs opacity-70 mt-1">{reservation.customerName}</p>
+                                                <p className="text-xs opacity-70 mt-1">{reservation.customerPhone}</p>
+                                            </div>
+                                            <button className="text-[#cc1427] text-sm font-medium hover:underline">
+                                                Xem chi tiết
+                                            </button>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </motion.section>
 
@@ -341,33 +355,99 @@ export default function DashboardScreen(): JSX.Element {
                     >
                         <div className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 ${isDark ? "bg-[#1B2342]" : "bg-white"}`}>
                             <h3 className="text-lg font-semibold mb-2">Danh sách Booking</h3>
-                            <p className="text-slate-400 text-sm">Tổng số căn hộ đã thực hiện cọc</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                                {mockbookings.map((b, index) => (
-                                    <motion.div
-                                        key={b.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
-                                        className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${isDark ? "bg-[#1B2342]" : "bg-white"
-                                            }`}
-                                    >
-                                        <div
-                                            className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-green-900/30" : "bg-green-50"
+                            <p className="text-slate-400 text-sm mb-4">Các booking gần đây</p>
+                            {isLoading ? (
+                                <div className="text-center py-8 text-slate-400">Đang tải...</div>
+                            ) : recentBookings.length === 0 ? (
+                                <div className="text-center py-8 text-slate-400">Chưa có booking nào</div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                    {recentBookings.map((booking: any, index: number) => (
+                                        <motion.div
+                                            key={booking.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+                                            className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${isDark ? "bg-[#1B2342]" : "bg-white"
                                                 }`}
                                         >
-                                            <Calendar className="w-6 h-6 text-green-600" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium truncate">{b.title}</p>
-                                            <p className="text-xs opacity-70 mt-1">{b.time}</p>
-                                        </div>
-                                        <button className="text-[#1224c4] text-sm font-medium hover:underline">
-                                            Xem chi tiết
-                                        </button>
-                                    </motion.div>
-                                ))}
-                            </div>
+                                            <div
+                                                className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-green-900/30" : "bg-green-50"
+                                                    }`}
+                                            >
+                                                <Calendar className="w-6 h-6 text-green-600" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium truncate">{booking.unit?.code || 'N/A'}</p>
+                                                <p className="text-xs opacity-70 mt-1">{new Date(booking.createdAt).toLocaleDateString('vi-VN')}</p>
+                                                <p className="text-xs opacity-70 mt-1">{booking.customerName}</p>
+                                                <p className="text-xs opacity-70 mt-1">{formatCurrency(booking.bookingAmount)}</p>
+                                            </div>
+                                            <button className="text-[#1224c4] text-sm font-medium hover:underline">
+                                                Xem chi tiết
+                                            </button>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </motion.section>
+
+                    {/* Deposit list */}
+                    <motion.section
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.4 }}
+                        className="mt-10"
+                    >
+                        <div className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 ${isDark ? "bg-[#1B2342]" : "bg-white"}`}>
+                            <h3 className="text-lg font-semibold mb-2">Danh sách hợp đồng đang trong quá trình đặt cọc</h3>
+                            <p className="text-slate-400 text-sm mb-4">Các hợp đồng đặt cọc gần đây</p>
+                            {isLoading ? (
+                                <div className="text-center py-8 text-slate-400">Đang tải...</div>
+                            ) : recentDeposits.length === 0 ? (
+                                <div className="text-center py-8 text-slate-400">Chưa có hợp đồng đặt cọc nào</div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                    {recentDeposits.map((deposit: any, index: number) => (
+                                        <motion.div
+                                            key={deposit.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+                                            className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${isDark ? "bg-[#1B2342]" : "bg-white"
+                                                }`}
+                                        >
+                                            <div
+                                                className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-blue-900/30" : "bg-blue-50"
+                                                    }`}
+                                            >
+                                                <FileText className="w-6 h-6 text-blue-600" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium truncate">{deposit.unit?.code || 'N/A'}</p>
+                                                <p className="text-xs opacity-70 mt-1">{new Date(deposit.depositDate).toLocaleDateString('vi-VN')}</p>
+                                                <p className="text-xs opacity-70 mt-1">{deposit.customerName}</p>
+                                                <p className="text-xs opacity-70 mt-1">{formatCurrency(deposit.depositAmount)}</p>
+                                                <p className={`text-xs mt-1 font-medium ${deposit.status === 'CONFIRMED' ? 'text-green-600' :
+                                                        deposit.status === 'PENDING_APPROVAL' ? 'text-yellow-600' :
+                                                            deposit.status === 'CANCELLED' ? 'text-red-600' :
+                                                                'text-blue-600'
+                                                    }`}>
+                                                    {deposit.status === 'CONFIRMED' ? 'Đã xác nhận' :
+                                                        deposit.status === 'PENDING_APPROVAL' ? 'Chờ duyệt' :
+                                                            deposit.status === 'CANCELLED' ? 'Đã hủy' :
+                                                                deposit.status === 'OVERDUE' ? 'Quá hạn' :
+                                                                    'Hoàn thành'}
+                                                </p>
+                                            </div>
+                                            <button className="text-[#1224c4] text-sm font-medium hover:underline">
+                                                Xem chi tiết
+                                            </button>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </motion.section>
                 </div>
