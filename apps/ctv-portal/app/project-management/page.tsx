@@ -143,6 +143,7 @@ export default function DashboardScreen(): JSX.Element {
     const [isLoading, setIsLoading] = useState(true);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+    const [selectedProjectId, setSelectedProjectId] = useState<string>("");
 
     const fetchProjects = useCallback(async (silent: boolean = false) => {
         try {
@@ -219,6 +220,13 @@ export default function DashboardScreen(): JSX.Element {
         fetchProjects();
     }, [router, fetchProjects]);
 
+    // Set first project as default when projects load
+    useEffect(() => {
+        if (!selectedProjectId && projects.length > 0) {
+            setSelectedProjectId(projects[0].id);
+        }
+    }, [projects, selectedProjectId]);
+
     // Auto-refresh every 10 seconds
     useEffect(() => {
         if (!autoRefresh) return;
@@ -230,8 +238,13 @@ export default function DashboardScreen(): JSX.Element {
         return () => clearInterval(interval);
     }, [autoRefresh, fetchProjects]);
 
-    // Combine all units from all projects and buildings
-    const allUnits = projects.flatMap(project =>
+    // Filter projects based on selection - only show selected project
+    const filteredProjects = projects.filter(project =>
+        project.id === selectedProjectId
+    );
+
+    // Combine all units from filtered projects and buildings
+    const allUnits = filteredProjects.flatMap(project =>
         project.buildings.flatMap(building => building.units)
     );
 
@@ -361,7 +374,7 @@ export default function DashboardScreen(): JSX.Element {
             {/* 🔹 MAIN */}
             <main className="flex-1 w-full">
                 <div className="max-w-[1500px] mx-auto px-6 py-5 space-y-8">
-                    {/* Greeting Section */}
+                    {/* Greeting Section with Project Filter */}
                     <motion.section
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -369,16 +382,56 @@ export default function DashboardScreen(): JSX.Element {
                         className={`rounded-3xl ${responsiveClasses.cardPadding} shadow-md hover:shadow-xl transition ${isDark ? "bg-[#1B2342]" : "bg-white"
                             }`}
                     >
-                        <div className="flex items-center gap-4">
-                            <div className={`${deviceInfo.isMobile ? "w-8 h-8" : "w-12 h-12"} rounded-full overflow-hidden bg-gradient-to-br from-[#1436cc]/80 to-[#142985]/50 flex items-center justify-center`}>
-                                <Home className={`${deviceInfo.isMobile ? "w-4 h-4" : "w-6 h-6"} text-white`} />
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className={`${deviceInfo.isMobile ? "w-8 h-8" : "w-12 h-12"} rounded-full overflow-hidden bg-gradient-to-br from-[#1436cc]/80 to-[#142985]/50 flex items-center justify-center`}>
+                                    <Home className={`${deviceInfo.isMobile ? "w-4 h-4" : "w-6 h-6"} text-white`} />
+                                </div>
+                                <div>
+                                    <p className="text-sm opacity-70 mb-1">{getGreeting()}</p>
+                                    <p className="text-lg font-semibold">Danh sách căn hộ</p>
+                                    <p className="text-sm opacity-80">Chọn căn hộ để xem chi tiết và thực hiện giao dịch</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-sm opacity-70 mb-1">{getGreeting()}</p>
-                                <p className="text-lg font-semibold">Danh sách căn hộ</p>
-                                <p className="text-sm opacity-80">Chọn căn hộ để xem chi tiết và thực hiện giao dịch</p>
-                            </div>
+                            {!deviceInfo.isMobile && (
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm opacity-70">Dự án:</label>
+                                    <select
+                                        value={selectedProjectId}
+                                        onChange={(e) => setSelectedProjectId(e.target.value)}
+                                        className={`px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark
+                                            ? "bg-[#0C1125] border-gray-600 text-white"
+                                            : "bg-white border-gray-300 text-slate-900"
+                                            }`}
+                                    >
+                                        {projects.map((project) => (
+                                            <option key={project.id} value={project.id}>
+                                                {project.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                         </div>
+                        {deviceInfo.isMobile && (
+                            <div className="mt-4 flex items-center gap-2">
+                                <label className="text-sm opacity-70">Dự án:</label>
+                                <select
+                                    value={selectedProjectId}
+                                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                                    className={`flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark
+                                        ? "bg-[#0C1125] border-gray-600 text-white"
+                                        : "bg-white border-gray-300 text-slate-900"
+                                        }`}
+                                >
+                                    {projects.map((project) => (
+                                        <option key={project.id} value={project.id}>
+                                            {project.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </motion.section>
 
                     {/* 🔍 Search Bar */}
@@ -461,7 +514,7 @@ export default function DashboardScreen(): JSX.Element {
                             </div>
                         ) : (
                             <>
-                                {projects.map((project) => (
+                                {filteredProjects.map((project) => (
                                     <div key={project.id} className="mb-12">
                                         <motion.section
                                             initial={{ opacity: 0, y: 20 }}
@@ -474,6 +527,9 @@ export default function DashboardScreen(): JSX.Element {
                                                 <div className="flex items-center gap-4 mb-4">
                                                     <div>
                                                         <p className="text-lg font-semibold mb-1">Dự Án: {project.name}</p>
+                                                        <p className="text-sm opacity-80 mb-2">
+                                                            {project.buildings.flatMap(b => b.units).length} căn hộ • {project.buildings.length} tòa
+                                                        </p>
                                                         <p className="text-sm opacity-80">
                                                             Danh sách các tòa: {project.buildings.map(b => b.name).join(', ')}
                                                         </p>
