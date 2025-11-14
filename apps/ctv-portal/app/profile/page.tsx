@@ -204,6 +204,18 @@ export default function ProfilePage(): JSX.Element {
         router.push("/login");
     };
 
+    // Get greeting based on current time
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) {
+            return "Chào buổi sáng";
+        } else if (hour < 18) {
+            return "Chào buổi chiều";
+        } else {
+            return "Chào buổi tối";
+        }
+    };
+
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -227,7 +239,7 @@ export default function ProfilePage(): JSX.Element {
             >
                 <div className="max-w-[1500px] mx-auto px-6 py-6 flex items-center justify-between">
                     <div className="flex items-center">
-                        <h1 className="text-xl font-semibold">Hồ Sơ Cá Nhân</h1>
+                        <h1 className="text-xl font-semibold">Cộng Tác Viên Bất Động Sản Winland</h1>
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -254,297 +266,315 @@ export default function ProfilePage(): JSX.Element {
                         <Loader2 className="w-8 h-8 animate-spin" />
                     </div>
                 ) : profile ? (
-                    <div className={`rounded-2xl shadow-lg p-8 ${isDark ? 'bg-[#10182F]' : 'bg-white'}`}>
-                        {/* Avatar Section */}
-                        <div className="flex flex-col items-center mb-8">
-                            <div className="relative">
-                                <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center relative">
-                                    {(isEditing ? editedProfile.avatar : profile.avatar) ? (
-                                        <Image
-                                            src={(isEditing ? editedProfile.avatar : profile.avatar) || ''}
-                                            alt="Avatar"
-                                            fill
-                                            className="object-cover"
-                                            sizes="128px"
-                                        />
-                                    ) : (
-                                        <User className="w-16 h-16 text-white" />
+                    <>
+                        {/* Greeting Card */}
+                        <div className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 mb-6 ${isDark ? "bg-[#1B2342]" : "bg-white"}`}>
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-[#C6A052]/80 to-[#C6A052]/50 flex items-center justify-center">
+                                    <User className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <p className="text-sm opacity-70 mb-1">{getGreeting()}</p>
+                                    <p className="text-lg font-semibold">Hồ Sơ Cá Nhân</p>
+                                    <p className="text-sm opacity-80">Đây là trang thông tin cá nhân của bạn</p>
+                                    <p className="text-sm opacity-80 text-green-500 mt-1">Chúc bạn kiếm được thật nhiều lợi nhuận</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Profile Card */}
+                        <div className={`rounded-2xl shadow-lg p-8 ${isDark ? 'bg-[#10182F]' : 'bg-white'}`}>
+                            {/* Avatar Section */}
+                            <div className="flex flex-col items-center mb-8">
+                                <div className="relative">
+                                    <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center relative">
+                                        {(isEditing ? editedProfile.avatar : profile.avatar) ? (
+                                            <Image
+                                                src={(isEditing ? editedProfile.avatar : profile.avatar) || ''}
+                                                alt="Avatar"
+                                                fill
+                                                className="object-cover"
+                                                sizes="128px"
+                                            />
+                                        ) : (
+                                            <User className="w-16 h-16 text-white" />
+                                        )}
+                                    </div>
+                                    {isEditing && (
+                                        <label className="absolute bottom-0 right-0 bg-blue-600 rounded-full p-2 cursor-pointer hover:bg-blue-700 transition">
+                                            <Camera className="w-5 h-5 text-white" />
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleAvatarChange}
+                                            />
+                                        </label>
                                     )}
                                 </div>
-                                {isEditing && (
-                                    <label className="absolute bottom-0 right-0 bg-blue-600 rounded-full p-2 cursor-pointer hover:bg-blue-700 transition">
-                                        <Camera className="w-5 h-5 text-white" />
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={handleAvatarChange}
-                                        />
+                                <h2 className="text-2xl font-bold mt-4">{profile.fullName}</h2>
+                                <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                                    {profile.role === 'CTV' ? 'Cộng Tác Viên' : profile.role}
+                                </p>
+                            </div>
+
+                            {/* Edit Button */}
+                            <div className="flex justify-end mb-6">
+                                {!isEditing ? (
+                                    <Button
+                                        onClick={() => setIsEditing(true)}
+                                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                                    >
+                                        <Edit2 className="w-4 h-4" />
+                                        Chỉnh sửa
+                                    </Button>
+                                ) : (
+                                    <div className="flex gap-2">
+                                        <Button
+                                            onClick={handleSave}
+                                            disabled={isSaving}
+                                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                                        >
+                                            {isSaving ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <Save className="w-4 h-4" />
+                                            )}
+                                            Lưu
+                                        </Button>
+                                        <Button
+                                            onClick={handleCancel}
+                                            variant="outline"
+                                            className="flex items-center gap-2"
+                                        >
+                                            <X className="w-4 h-4" />
+                                            Hủy
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Profile Information */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Full Name */}
+                                <div>
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        <User className="w-4 h-4 inline mr-2" />
+                                        Họ và tên
                                     </label>
-                                )}
-                            </div>
-                            <h2 className="text-2xl font-bold mt-4">{profile.fullName}</h2>
-                            <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                                {profile.role === 'CTV' ? 'Cộng Tác Viên' : profile.role}
-                            </p>
-                        </div>
-
-                        {/* Edit Button */}
-                        <div className="flex justify-end mb-6">
-                            {!isEditing ? (
-                                <Button
-                                    onClick={() => setIsEditing(true)}
-                                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-                                >
-                                    <Edit2 className="w-4 h-4" />
-                                    Chỉnh sửa
-                                </Button>
-                            ) : (
-                                <div className="flex gap-2">
-                                    <Button
-                                        onClick={handleSave}
-                                        disabled={isSaving}
-                                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-                                    >
-                                        {isSaving ? (
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                            <Save className="w-4 h-4" />
-                                        )}
-                                        Lưu
-                                    </Button>
-                                    <Button
-                                        onClick={handleCancel}
-                                        variant="outline"
-                                        className="flex items-center gap-2"
-                                    >
-                                        <X className="w-4 h-4" />
-                                        Hủy
-                                    </Button>
+                                    {isEditing ? (
+                                        <input
+                                            type="text"
+                                            value={editedProfile.fullName || ''}
+                                            onChange={(e) => setEditedProfile({ ...editedProfile, fullName: e.target.value })}
+                                            className={`w-full px-4 py-2 rounded-lg border ${isDark
+                                                ? 'bg-[#0C1125] border-slate-700 text-white'
+                                                : 'bg-white border-slate-300 text-slate-900'
+                                                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                        />
+                                    ) : (
+                                        <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
+                                            {profile.fullName}
+                                        </p>
+                                    )}
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Profile Information */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Full Name */}
-                            <div>
-                                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    <User className="w-4 h-4 inline mr-2" />
-                                    Họ và tên
-                                </label>
-                                {isEditing ? (
-                                    <input
-                                        type="text"
-                                        value={editedProfile.fullName || ''}
-                                        onChange={(e) => setEditedProfile({ ...editedProfile, fullName: e.target.value })}
-                                        className={`w-full px-4 py-2 rounded-lg border ${isDark
-                                            ? 'bg-[#0C1125] border-slate-700 text-white'
-                                            : 'bg-white border-slate-300 text-slate-900'
-                                            } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    />
-                                ) : (
+                                {/* Email */}
+                                <div>
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        <Mail className="w-4 h-4 inline mr-2" />
+                                        Email
+                                    </label>
+                                    {isEditing ? (
+                                        <input
+                                            type="email"
+                                            value={editedProfile.email || ''}
+                                            onChange={(e) => setEditedProfile({ ...editedProfile, email: e.target.value })}
+                                            className={`w-full px-4 py-2 rounded-lg border ${isDark
+                                                ? 'bg-[#0C1125] border-slate-700 text-white'
+                                                : 'bg-white border-slate-300 text-slate-900'
+                                                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                        />
+                                    ) : (
+                                        <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
+                                            {profile.email || 'Chưa cập nhật'}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Phone */}
+                                <div>
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        <Phone className="w-4 h-4 inline mr-2" />
+                                        Số điện thoại
+                                    </label>
                                     <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
-                                        {profile.fullName}
+                                        {profile.phone || 'Chưa cập nhật'}
                                     </p>
-                                )}
-                            </div>
+                                </div>
 
-                            {/* Email */}
-                            <div>
-                                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    <Mail className="w-4 h-4 inline mr-2" />
-                                    Email
-                                </label>
-                                {isEditing ? (
-                                    <input
-                                        type="email"
-                                        value={editedProfile.email || ''}
-                                        onChange={(e) => setEditedProfile({ ...editedProfile, email: e.target.value })}
-                                        className={`w-full px-4 py-2 rounded-lg border ${isDark
-                                            ? 'bg-[#0C1125] border-slate-700 text-white'
-                                            : 'bg-white border-slate-300 text-slate-900'
-                                            } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    />
-                                ) : (
+                                {/* Gender */}
+                                <div>
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        <Users className="w-4 h-4 inline mr-2" />
+                                        Giới tính
+                                    </label>
+                                    {isEditing ? (
+                                        <select
+                                            value={editedProfile.gender || ''}
+                                            onChange={(e) => setEditedProfile({ ...editedProfile, gender: e.target.value })}
+                                            className={`w-full px-4 py-2 rounded-lg border ${isDark
+                                                ? 'bg-[#0C1125] border-slate-700 text-white'
+                                                : 'bg-white border-slate-300 text-slate-900'
+                                                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                        >
+                                            <option value="">Chọn giới tính</option>
+                                            <option value="Nam">Nam</option>
+                                            <option value="Nữ">Nữ</option>
+                                            <option value="Khác">Khác</option>
+                                        </select>
+                                    ) : (
+                                        <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
+                                            {profile.gender || 'Chưa cập nhật'}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Birthday */}
+                                <div>
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        <Calendar className="w-4 h-4 inline mr-2" />
+                                        Ngày sinh
+                                    </label>
+                                    {isEditing ? (
+                                        <input
+                                            type="date"
+                                            value={editedProfile.birthday ? new Date(editedProfile.birthday).toISOString().split('T')[0] : ''}
+                                            onChange={(e) => setEditedProfile({ ...editedProfile, birthday: e.target.value })}
+                                            className={`w-full px-4 py-2 rounded-lg border ${isDark
+                                                ? 'bg-[#0C1125] border-slate-700 text-white'
+                                                : 'bg-white border-slate-300 text-slate-900'
+                                                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                        />
+                                    ) : (
+                                        <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
+                                            {profile.birthday ? new Date(profile.birthday).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Address */}
+                                <div className="md:col-span-2">
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        <MapPin className="w-4 h-4 inline mr-2" />
+                                        Địa chỉ
+                                    </label>
+                                    {isEditing ? (
+                                        <textarea
+                                            value={editedProfile.address || ''}
+                                            onChange={(e) => setEditedProfile({ ...editedProfile, address: e.target.value })}
+                                            rows={3}
+                                            className={`w-full px-4 py-2 rounded-lg border ${isDark
+                                                ? 'bg-[#0C1125] border-slate-700 text-white'
+                                                : 'bg-white border-slate-300 text-slate-900'
+                                                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                            placeholder="Nhập địa chỉ của bạn"
+                                        />
+                                    ) : (
+                                        <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
+                                            {profile.address || 'Chưa cập nhật'}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Status (Read-only, from isActive) */}
+                                <div>
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        <CheckCircle2 className="w-4 h-4 inline mr-2" />
+                                        Trạng thái
+                                    </label>
+                                    <p className={`px-4 py-2 rounded-lg flex items-center gap-2 ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
+                                        <span className={`w-2 h-2 rounded-full ${profile.isActive ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                        <span className={profile.isActive ? 'text-green-600' : 'text-red-600'}>
+                                            {profile.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
+                                        </span>
+                                    </p>
+                                </div>
+
+                                {/* CIF Number (Read-only) */}
+                                <div>
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        <Hash className="w-4 h-4 inline mr-2" />
+                                        Mã CIF
+                                    </label>
+                                    <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'} font-mono`}>
+                                        {profile.cifNumber || 'Chưa có'}
+                                    </p>
+                                </div>
+
+                                {/* Sector (Read-only, auto-set based on role) */}
+                                <div>
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        <Briefcase className="w-4 h-4 inline mr-2" />
+                                        Bộ phận
+                                    </label>
                                     <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
-                                        {profile.email || 'Chưa cập nhật'}
+                                        {profile.sector || 'Chưa cập nhật'}
                                     </p>
-                                )}
-                            </div>
+                                </div>
 
-                            {/* Phone */}
-                            <div>
-                                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    <Phone className="w-4 h-4 inline mr-2" />
-                                    Số điện thoại
-                                </label>
-                                <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
-                                    {profile.phone || 'Chưa cập nhật'}
-                                </p>
-                            </div>
+                                {/* Working Place */}
+                                <div>
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        <Building2 className="w-4 h-4 inline mr-2" />
+                                        Nơi làm việc
+                                    </label>
+                                    {isEditing ? (
+                                        <input
+                                            type="text"
+                                            value={editedProfile.workingPlace || ''}
+                                            onChange={(e) => setEditedProfile({ ...editedProfile, workingPlace: e.target.value })}
+                                            className={`w-full px-4 py-2 rounded-lg border ${isDark
+                                                ? 'bg-[#0C1125] border-slate-700 text-white'
+                                                : 'bg-white border-slate-300 text-slate-900'
+                                                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                            placeholder="Nhập nơi làm việc"
+                                        />
+                                    ) : (
+                                        <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
+                                            {profile.workingPlace || 'Chưa cập nhật'}
+                                        </p>
+                                    )}
+                                </div>
 
-                            {/* Gender */}
-                            <div>
-                                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    <Users className="w-4 h-4 inline mr-2" />
-                                    Giới tính
-                                </label>
-                                {isEditing ? (
-                                    <select
-                                        value={editedProfile.gender || ''}
-                                        onChange={(e) => setEditedProfile({ ...editedProfile, gender: e.target.value })}
-                                        className={`w-full px-4 py-2 rounded-lg border ${isDark
-                                            ? 'bg-[#0C1125] border-slate-700 text-white'
-                                            : 'bg-white border-slate-300 text-slate-900'
-                                            } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    >
-                                        <option value="">Chọn giới tính</option>
-                                        <option value="Nam">Nam</option>
-                                        <option value="Nữ">Nữ</option>
-                                        <option value="Khác">Khác</option>
-                                    </select>
-                                ) : (
+                                {/* Start Working Day (Read-only, from createdAt) */}
+                                <div>
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        <Calendar className="w-4 h-4 inline mr-2" />
+                                        Ngày bắt đầu làm việc
+                                    </label>
                                     <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
-                                        {profile.gender || 'Chưa cập nhật'}
+                                        {profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('vi-VN') : 'Chưa có'}
                                     </p>
-                                )}
-                            </div>
+                                </div>
 
-                            {/* Birthday */}
-                            <div>
-                                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    <Calendar className="w-4 h-4 inline mr-2" />
-                                    Ngày sinh
-                                </label>
-                                {isEditing ? (
-                                    <input
-                                        type="date"
-                                        value={editedProfile.birthday ? new Date(editedProfile.birthday).toISOString().split('T')[0] : ''}
-                                        onChange={(e) => setEditedProfile({ ...editedProfile, birthday: e.target.value })}
-                                        className={`w-full px-4 py-2 rounded-lg border ${isDark
-                                            ? 'bg-[#0C1125] border-slate-700 text-white'
-                                            : 'bg-white border-slate-300 text-slate-900'
-                                            } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                    />
-                                ) : (
-                                    <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
-                                        {profile.birthday ? new Date(profile.birthday).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+                                {/* Total Deals */}
+                                <div>
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        Tổng số giao dịch
+                                    </label>
+                                    <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'} font-semibold text-blue-600`}>
+                                        {profile.totalDeals}
                                     </p>
-                                )}
-                            </div>
-
-                            {/* Address */}
-                            <div className="md:col-span-2">
-                                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    <MapPin className="w-4 h-4 inline mr-2" />
-                                    Địa chỉ
-                                </label>
-                                {isEditing ? (
-                                    <textarea
-                                        value={editedProfile.address || ''}
-                                        onChange={(e) => setEditedProfile({ ...editedProfile, address: e.target.value })}
-                                        rows={3}
-                                        className={`w-full px-4 py-2 rounded-lg border ${isDark
-                                            ? 'bg-[#0C1125] border-slate-700 text-white'
-                                            : 'bg-white border-slate-300 text-slate-900'
-                                            } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                        placeholder="Nhập địa chỉ của bạn"
-                                    />
-                                ) : (
-                                    <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
-                                        {profile.address || 'Chưa cập nhật'}
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Status (Read-only, from isActive) */}
-                            <div>
-                                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    <CheckCircle2 className="w-4 h-4 inline mr-2" />
-                                    Trạng thái
-                                </label>
-                                <p className={`px-4 py-2 rounded-lg flex items-center gap-2 ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
-                                    <span className={`w-2 h-2 rounded-full ${profile.isActive ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                                    <span className={profile.isActive ? 'text-green-600' : 'text-red-600'}>
-                                        {profile.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
-                                    </span>
-                                </p>
-                            </div>
-
-                            {/* CIF Number (Read-only) */}
-                            <div>
-                                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    <Hash className="w-4 h-4 inline mr-2" />
-                                    Mã CIF
-                                </label>
-                                <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'} font-mono`}>
-                                    {profile.cifNumber || 'Chưa có'}
-                                </p>
-                            </div>
-
-                            {/* Sector (Read-only, auto-set based on role) */}
-                            <div>
-                                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    <Briefcase className="w-4 h-4 inline mr-2" />
-                                    Bộ phận
-                                </label>
-                                <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
-                                    {profile.sector || 'Chưa cập nhật'}
-                                </p>
-                            </div>
-
-                            {/* Working Place */}
-                            <div>
-                                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    <Building2 className="w-4 h-4 inline mr-2" />
-                                    Nơi làm việc
-                                </label>
-                                {isEditing ? (
-                                    <input
-                                        type="text"
-                                        value={editedProfile.workingPlace || ''}
-                                        onChange={(e) => setEditedProfile({ ...editedProfile, workingPlace: e.target.value })}
-                                        className={`w-full px-4 py-2 rounded-lg border ${isDark
-                                            ? 'bg-[#0C1125] border-slate-700 text-white'
-                                            : 'bg-white border-slate-300 text-slate-900'
-                                            } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                        placeholder="Nhập nơi làm việc"
-                                    />
-                                ) : (
-                                    <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
-                                        {profile.workingPlace || 'Chưa cập nhật'}
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Start Working Day (Read-only, from createdAt) */}
-                            <div>
-                                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    <Calendar className="w-4 h-4 inline mr-2" />
-                                    Ngày bắt đầu làm việc
-                                </label>
-                                <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'}`}>
-                                    {profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('vi-VN') : 'Chưa có'}
-                                </p>
-                            </div>
-
-                            {/* Total Deals */}
-                            <div>
-                                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    Tổng số giao dịch
-                                </label>
-                                <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'} font-semibold text-blue-600`}>
-                                    {profile.totalDeals}
-                                </p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ) : (
-                    <div className="text-center py-12">
-                        <p>Không thể tải thông tin hồ sơ</p>
-                    </div>
-                )}
+                        ) : (
+                        <div className="text-center py-12">
+                            <p>Không thể tải thông tin hồ sơ</p>
+                        </div>
+                    </>
+                ) : null}
             </main>
 
             {/* Footer */}
