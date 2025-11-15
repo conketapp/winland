@@ -25,8 +25,23 @@ export default function ReservedModal({ unit, onClose, onBack }: ReservedModalPr
     const deviceInfo = useDeviceDetect();
     const responsive = getModalResponsiveClasses(deviceInfo);
 
-    // Use the image array from unit data (3-5 images)
-    const unitImages = unit.image;
+    // Parse images from database (stored as JSON string) or use default
+    const defaultImages = [
+        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1560448204-61dc36dc98c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+    ];
+    
+    let unitImages = defaultImages;
+    try {
+        if (unit.images && typeof unit.images === 'string') {
+            unitImages = JSON.parse(unit.images);
+        } else if (unit.image && Array.isArray(unit.image)) {
+            unitImages = unit.image;
+        }
+    } catch (e) {
+        console.error('Error parsing unit images:', e);
+    }
 
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [form, setForm] = useState({
@@ -229,11 +244,11 @@ export default function ReservedModal({ unit, onClose, onBack }: ReservedModalPr
                             <div className="grid grid-cols-2 gap-0">
                                 <div className="bg-white p-1 text-center">
                                     <p className="text-xs text-gray-500">Phòng ngủ</p>
-                                    <p className="font-semibold text-lg text-black-500">{unit.numRoom}</p>
+                                    <p className="font-semibold text-lg text-black-500">{unit.bedrooms || unit.numRoom || 0}</p>
                                 </div>
                                 <div className="bg-white p-1 text-center">
                                     <p className="text-xs text-gray-500">Phòng tắm</p>
-                                    <p className="font-semibold text-lg text-black-500">{unit.numWC}</p>
+                                    <p className="font-semibold text-lg text-black-500">{unit.bathrooms || unit.numWC || 0}</p>
                                 </div>
                                 <div className="bg-white p-1 text-center">
                                     <p className="text-xs text-gray-500">Diện tích</p>
@@ -250,26 +265,21 @@ export default function ReservedModal({ unit, onClose, onBack }: ReservedModalPr
                             </div>
                             <div className="py-2">
                                 <p className="text-lg font-semibold">Thông tin căn hộ</p>
-                                <p className="text-sm opacity-80 py-2">{unit.information}</p>
+                                <p className="text-sm opacity-80 py-2">{unit.description || unit.information || 'Thông tin chi tiết đang được cập nhật'}</p>
                             </div>
                             <div className="bg-white py-2">
                                 <p className="text-lg font-semibold">Chứng từ</p>
-                                <div className="flex items-center gap-2 mb-2 text-center justify-center">
-                                    {!unit.legalDocument ? (
-                                        <BadgeAlert className="text-orange-500 w-7 h-7 flex-shrink-0" />
-                                    ) : null}
-                                </div>
-                                <p className="text-sm opacity-80 text-center">
-                                    {unit.legalDocument || "Căn hộ này chưa có thông tin chứng từ"}
+                                <p className="text-sm opacity-80 py-2">
+                                    {unit.houseCertificate || "Căn hộ này chưa có thông tin chứng từ"}
                                 </p>
                             </div>
                             <div>
                                 <p className="text-xs opacity-80">Chiết khấu</p>
-                                <p className="text-xl font-semibold">{formatCurrency(unit.commission, { style: 'standard', locale: 'en-US' })}</p>
+                                <p className="text-xl font-semibold">{formatCurrency(unit.commission || (unit.price * (unit.commissionRate || 2) / 100))}</p>
                             </div>
                             <div>
                                 <p className="text-xs opacity-80">Số tiền giữ chỗ</p>
-                                <p className="text-xl font-semibold">{formatCurrency(unit.reservedMoney, { style: 'standard', locale: 'en-US' })}</p>
+                                <p className="text-xl font-semibold">{formatCurrency(unit.reservedMoney || 50000000)}</p>
                             </div>
                             {/* Customer Info */}
                             <div>

@@ -125,35 +125,36 @@ model Floor {
 }
 
 model Unit {
-  id             String        @id @default(uuid())
-  projectId      String        @map("project_id")
-  buildingId     String        @map("building_id")
-  floorId        String        @map("floor_id")
-  code           String        @unique
-  unitNumber     String        @map("unit_number")
-  unitTypeId     String?       @map("unit_type_id")
-  status         UnitStatus    @default(AVAILABLE)
-  price          Float
-  area           Float
-  bedrooms       Int?
-  bathrooms      Int?
-  direction      String?
-  balcony        Boolean       @default(false)
-  view           String?
-  description    String?
-  floorPlanImage String?       @map("floor_plan_image")
-  images         String?
-  commissionRate Float?        @map("commission_rate")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  bookings       Booking[]
-  commissions    Commission[]
-  deposits       Deposit[]
-  reservations   Reservation[]
-  building       Building      @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  floor          Floor         @relation(fields: [floorId], references: [id], onDelete: Cascade)
-  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  unitType       UnitType?     @relation(fields: [unitTypeId], references: [id])
+  id               String        @id @default(uuid())
+  projectId        String        @map("project_id")
+  buildingId       String        @map("building_id")
+  floorId          String        @map("floor_id")
+  code             String        @unique
+  unitNumber       String        @map("unit_number")
+  unitTypeId       String?       @map("unit_type_id")
+  status           UnitStatus    @default(AVAILABLE)
+  price            Float
+  area             Float
+  bedrooms         Int?
+  bathrooms        Int?
+  direction        String?
+  balcony          Boolean       @default(false)
+  view             String?
+  description      String?
+  floorPlanImage   String?       @map("floor_plan_image")
+  images           String?
+  houseCertificate String?       @map("house_certificate")
+  commissionRate   Float?        @map("commission_rate")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  bookings         Booking[]
+  commissions      Commission[]
+  deposits         Deposit[]
+  reservations     Reservation[]
+  building         Building      @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  floor            Floor         @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  project          Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  unitType         UnitType?     @relation(fields: [unitTypeId], references: [id])
 
   @@index([projectId])
   @@index([buildingId])

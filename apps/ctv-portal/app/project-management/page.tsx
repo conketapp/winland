@@ -52,6 +52,7 @@ type Unit = {
     description: string | null;
     unitNumber: string;
     buildingName?: string;
+    houseCertificate?: string | null;
 };
 
 type Building = {
@@ -187,7 +188,8 @@ export default function DashboardScreen(): JSX.Element {
                                 images: unit.images,
                                 description: unit.description,
                                 unitNumber: unit.unitNumber,
-                                buildingName: building.name
+                                buildingName: building.name,
+                                houseCertificate: unit.houseCertificate
                             };
                         })
                     }))

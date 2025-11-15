@@ -32,7 +32,7 @@ export default function UnitModal({ unit, onClose, onDeposit, onReserved, onBook
         "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1560448204-61dc36dc98c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
     ];
-    
+
     let unitImages = defaultImages;
     try {
         if (unit.images && typeof unit.images === 'string') {
@@ -43,7 +43,7 @@ export default function UnitModal({ unit, onClose, onDeposit, onReserved, onBook
     } catch (e) {
         console.error('Error parsing unit images:', e);
     }
-    
+
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
     const nextImage = () => {
@@ -153,22 +153,17 @@ export default function UnitModal({ unit, onClose, onDeposit, onReserved, onBook
                             <p className="font-semibold text-blue-600">{unit.view}</p>
                         </div>
 
-                        <div className="flex items-center gap-2 bg-white rounded-3xl shadow-md hover:shadow-xl transition">
+                        <div className="flex items-center gap-2 bg-white rounded-2xl shadow-md hover:shadow-xl transition p-4">
                             <div>
                                 <p className="text-lg font-semibold">Thông tin căn hộ</p>
                                 <p className="text-sm opacity-80 py-2">{unit.description || unit.information || 'Thông tin chi tiết đang được cập nhật'}</p>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-3xl shadow-md hover:shadow-xl transition">
+                        <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition p-4">
                             <p className="text-lg font-semibold">Chứng từ</p>
-                            <div className="flex items-center gap-2 mb-2 text-center justify-center">
-                                {!unit.legalDocument ? (
-                                    <BadgeAlert className="text-orange-500 w-7 h-7 flex-shrink-0" />
-                                ) : null}
-                            </div>
-                            <p className="text-sm opacity-80 text-center">
-                                {unit.legalDocument || "Căn hộ này chưa có thông tin chứng từ"}
+                            <p className="text-sm opacity-80 py-2">
+                                {unit.houseCertificate || "Căn hộ này chưa có thông tin chứng từ"}
                             </p>
                         </div>
 
