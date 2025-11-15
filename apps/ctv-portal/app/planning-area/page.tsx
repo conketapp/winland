@@ -55,6 +55,7 @@ export default function PlanningAreaScreen(): JSX.Element {
     const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
     const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
     const [imageList, setImageList] = useState<string[]>([]);
+    const [greeting, setGreeting] = useState<string>("Chào buổi");
 
     // Fetch projects
     const fetchProjects = useCallback(async () => {
@@ -87,17 +88,17 @@ export default function PlanningAreaScreen(): JSX.Element {
         fetchProjects();
     }, [router, fetchProjects]);
 
-    // Get greeting based on current time
-    const getGreeting = () => {
+    // Set greeting on client side only to avoid hydration mismatch
+    useEffect(() => {
         const hour = new Date().getHours();
         if (hour < 12) {
-            return "Chào buổi sáng";
+            setGreeting("Chào buổi sáng");
         } else if (hour < 18) {
-            return "Chào buổi chiều";
+            setGreeting("Chào buổi chiều");
         } else {
-            return "Chào buổi tối";
+            setGreeting("Chào buổi tối");
         }
-    };
+    }, []);
 
     const handleLogout = () => {
         sessionStorage.removeItem("login:userPhone");
@@ -195,7 +196,7 @@ export default function PlanningAreaScreen(): JSX.Element {
                                     <Map className={`${deviceInfo.isMobile ? "w-4 h-4" : "w-6 h-6"} text-white`} />
                                 </div>
                                 <div>
-                                    <p className="text-sm opacity-70 mb-1">{getGreeting()}</p>
+                                    <p className="text-sm opacity-70 mb-1">{greeting}</p>
                                     <p className="text-lg font-semibold">Quy hoạch dự án</p>
                                     <p className="text-sm opacity-80">Chọn dự án để xem chi tiết</p>
                                 </div>

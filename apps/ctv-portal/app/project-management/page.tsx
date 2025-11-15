@@ -143,7 +143,9 @@ export default function DashboardScreen(): JSX.Element {
     const [isLoading, setIsLoading] = useState(true);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+    const [lastUpdateTime, setLastUpdateTime] = useState<string>("");
     const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+    const [greeting, setGreeting] = useState<string>("Chào buổi");
 
     const fetchProjects = useCallback(async (silent: boolean = false) => {
         try {
@@ -192,7 +194,9 @@ export default function DashboardScreen(): JSX.Element {
                 }));
 
                 setProjects(transformedProjects);
-                setLastUpdate(new Date());
+                const now = new Date();
+                setLastUpdate(now);
+                setLastUpdateTime(now.toLocaleTimeString('vi-VN'));
             } else {
                 if (!silent) {
                     toastNotification.error('Không thể tải danh sách dự án');
@@ -253,13 +257,17 @@ export default function DashboardScreen(): JSX.Element {
         unit.code.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Greeting by time
-    const getGreeting = () => {
+    // Set greeting on client side only to avoid hydration mismatch
+    useEffect(() => {
         const hour = new Date().getHours();
-        if (hour < 12) return "Chào buổi sáng";
-        if (hour < 18) return "Chào buổi chiều";
-        return "Chào buổi tối";
-    };
+        if (hour < 12) {
+            setGreeting("Chào buổi sáng");
+        } else if (hour < 18) {
+            setGreeting("Chào buổi chiều");
+        } else {
+            setGreeting("Chào buổi tối");
+        }
+    }, []);
 
     const handleLogout = () => {
         sessionStorage.removeItem("login:userPhone");
@@ -330,7 +338,7 @@ export default function DashboardScreen(): JSX.Element {
                         <h1 className={`${responsiveClasses.titleSize} font-semibold ${deviceInfo.isMobile ? "text-center" : ""}`}>
                             {deviceInfo.isMobile ? "CTV Winland" : "Cộng Tác Viên Bất Động Sản Winland"}
                         </h1>
-                        {!deviceInfo.isMobile && (
+                        {!deviceInfo.isMobile && lastUpdateTime && (
                             <div className="flex items-center gap-2 mt-1">
                                 <div className={`flex items-center gap-1 text-xs ${autoRefresh ? 'text-green-400' : 'text-gray-400'}`}>
                                     <div className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
@@ -338,7 +346,7 @@ export default function DashboardScreen(): JSX.Element {
                                 </div>
                                 <span className="text-xs text-gray-400">•</span>
                                 <span className="text-xs text-gray-400">
-                                    Cập nhật lúc: {lastUpdate.toLocaleTimeString('vi-VN')}
+                                    Cập nhật lúc: {lastUpdateTime}
                                 </span>
                             </div>
                         )}
@@ -388,7 +396,7 @@ export default function DashboardScreen(): JSX.Element {
                                     <Home className={`${deviceInfo.isMobile ? "w-4 h-4" : "w-6 h-6"} text-white`} />
                                 </div>
                                 <div>
-                                    <p className="text-sm opacity-70 mb-1">{getGreeting()}</p>
+                                    <p className="text-sm opacity-70 mb-1">{greeting}</p>
                                     <p className="text-lg font-semibold">Danh sách căn hộ</p>
                                     <p className="text-sm opacity-80">Chọn căn hộ để xem chi tiết và thực hiện giao dịch</p>
                                 </div>

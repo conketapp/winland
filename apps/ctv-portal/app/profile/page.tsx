@@ -67,6 +67,7 @@ export default function ProfilePage(): JSX.Element {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [editedProfile, setEditedProfile] = useState<Partial<UserProfile>>({});
+    const [actualTotalDeals, setActualTotalDeals] = useState<number>(0);
 
     useEffect(() => {
         const userPhone = sessionStorage.getItem('login:userPhone');
@@ -87,21 +88,34 @@ export default function ProfilePage(): JSX.Element {
                 return;
             }
 
-            const response = await fetch('/api/user/me', {
-                headers: {
-                    'x-user-phone': userPhone,
-                },
-            });
+            const [userRes, reservationsRes, bookingsRes, depositsRes] = await Promise.all([
+                fetch('/api/user/me', { headers: { 'x-user-phone': userPhone } }),
+                fetch('/api/reservations', { headers: { 'x-user-phone': userPhone } }),
+                fetch('/api/bookings', { headers: { 'x-user-phone': userPhone } }),
+                fetch('/api/deposits', { headers: { 'x-user-phone': userPhone } })
+            ]);
 
-            if (response.ok) {
-                const data = await response.json();
+            if (userRes.ok) {
+                const data = await userRes.json();
                 setProfile(data);
                 setEditedProfile(data);
+
+                // Calculate actual total deals from transactions
+                const reservations = reservationsRes.ok ? await reservationsRes.json() : [];
+                const bookings = bookingsRes.ok ? await bookingsRes.json() : [];
+                const deposits = depositsRes.ok ? await depositsRes.json() : [];
+
+                const totalDeals =
+                    reservations.filter((r: any) => r.status === 'ACTIVE').length +
+                    bookings.filter((b: any) => b.status !== 'CANCELLED').length +
+                    deposits.filter((d: any) => d.status !== 'CANCELLED').length;
+
+                setActualTotalDeals(totalDeals);
             } else {
-                const errorData = await response.json();
+                const errorData = await userRes.json();
                 console.error('Failed to fetch profile:', errorData);
                 toastNotification.error('Không thể tải thông tin hồ sơ!');
-                if (response.status === 401 || response.status === 404) {
+                if (userRes.status === 401 || userRes.status === 404) {
                     router.push('/login');
                 }
             }
@@ -204,17 +218,19 @@ export default function ProfilePage(): JSX.Element {
         router.push("/login");
     };
 
-    // Get greeting based on current time
-    const getGreeting = () => {
+    // Set greeting on client side only to avoid hydration mismatch
+    const [greeting, setGreeting] = useState<string>("Chào buổi");
+
+    useEffect(() => {
         const hour = new Date().getHours();
         if (hour < 12) {
-            return "Chào buổi sáng";
+            setGreeting("Chào buổi sáng");
         } else if (hour < 18) {
-            return "Chào buổi chiều";
+            setGreeting("Chào buổi chiều");
         } else {
-            return "Chào buổi tối";
+            setGreeting("Chào buổi tối");
         }
-    };
+    }, []);
 
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -274,7 +290,7 @@ export default function ProfilePage(): JSX.Element {
                                     <User className="w-6 h-6 text-white" />
                                 </div>
                                 <div>
-                                    <p className="text-sm opacity-70 mb-1">{getGreeting()}</p>
+                                    <p className="text-sm opacity-70 mb-1">{greeting}</p>
                                     <p className="text-lg font-semibold">Hồ Sơ Cá Nhân</p>
                                     <p className="text-sm opacity-80">Đây là trang thông tin cá nhân của bạn</p>
                                     <p className="text-sm opacity-80 text-green-500 mt-1">Chúc bạn kiếm được thật nhiều lợi nhuận</p>
@@ -564,17 +580,17 @@ export default function ProfilePage(): JSX.Element {
                                         Tổng số giao dịch
                                     </label>
                                     <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'} font-semibold text-blue-600`}>
-                                        {profile.totalDeals}
+                                        {actualTotalDeals}
                                     </p>
                                 </div>
                             </div>
                         </div>
-                        ) : (
-                        <div className="text-center py-12">
-                            <p>Không thể tải thông tin hồ sơ</p>
-                        </div>
                     </>
-                ) : null}
+                ) : (
+                    <div className="text-center py-12">
+                        <p>Không thể tải thông tin hồ sơ</p>
+                    </div>
+                )}
             </main>
 
             {/* Footer */}

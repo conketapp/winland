@@ -37,6 +37,7 @@ export default function DashboardScreen(): JSX.Element {
     const [recentDeposits, setRecentDeposits] = useState<any[]>([]);
     const [stats, setStats] = useState({ reservations: 0, bookings: 0, deposits: 0 });
     const [isLoading, setIsLoading] = useState(true);
+    const [greeting, setGreeting] = useState<string>("Chào buổi");
 
     // Fetch all dashboard data
     useEffect(() => {
@@ -116,17 +117,17 @@ export default function DashboardScreen(): JSX.Element {
         fetchDashboardData();
     }, [router]);
 
-    // Get greeting based on current time
-    const getGreeting = () => {
+    // Set greeting on client side only to avoid hydration mismatch
+    useEffect(() => {
         const hour = new Date().getHours();
         if (hour < 12) {
-            return "Chào buổi sáng";
+            setGreeting("Chào buổi sáng");
         } else if (hour < 18) {
-            return "Chào buổi chiều";
+            setGreeting("Chào buổi chiều");
         } else {
-            return "Chào buổi tối";
+            setGreeting("Chào buổi tối");
         }
-    };
+    }, []);
 
     // Helper function to calculate time until expiry
     const getTimeUntilExpiry = (expiryDate: string) => {
@@ -211,7 +212,7 @@ export default function DashboardScreen(): JSX.Element {
                                 <User className={`w-6 h-6 text-white ${userData?.avatar ? 'hidden' : ''}`} />
                             </div>
                             <div>
-                                <p className="text-sm opacity-70 mb-1">{getGreeting()}</p>
+                                <p className="text-sm opacity-70 mb-1">{greeting}</p>
                                 <p className="text-lg font-semibold">{userData?.fullName || 'Đang tải...'}</p>
                                 <p className="text-sm opacity-80">{userData?.role || 'CTV'}</p>
                             </div>
