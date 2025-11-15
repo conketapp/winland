@@ -1,0 +1,6 @@
+Copy-Item "assets\images\sunrise_0.jpg" -Destination "public\images\projects\"
+Copy-Item "assets\images\sunrise_1.jpg" -Destination "public\images\projects\"
+Copy-Item "assets\images\sunrise_2.jpg" -Destination "public\images\projects\"
+Copy-Item "assets\images\sunrise_3.jpg" -Destination "public\images\projects\"
+Copy-Item "assets\images\sunrise_4.jpg" -Destination "public\images\projects\"
+Write-Host "Images copied successfully!"
