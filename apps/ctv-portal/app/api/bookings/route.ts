@@ -32,10 +32,32 @@ export async function GET(request: NextRequest) {
                 ctvId: user.id
             },
             include: {
-                unit: {
+                ctv: {
                     select: {
-                        code: true,
-                        unitNumber: true
+                        fullName: true,
+                        phone: true,
+                        email: true
+                    }
+                },
+                unit: {
+                    include: {
+                        project: {
+                            select: {
+                                name: true,
+                                code: true
+                            }
+                        },
+                        building: {
+                            select: {
+                                name: true,
+                                code: true
+                            }
+                        },
+                        floor: {
+                            select: {
+                                number: true
+                            }
+                        }
                     }
                 }
             },

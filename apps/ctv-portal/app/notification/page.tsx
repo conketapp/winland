@@ -30,6 +30,7 @@ import { formatCurrency } from '@/lib/utils';
 import { AnimatedBottomNavigation } from '@/components/AnimatedBottomNavigation';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useTheme } from '@/hooks/useTheme';
+import BookingDetailModal from '@/components/BookingDetailModal';
 
 interface Notification {
     id: string;
@@ -42,6 +43,9 @@ interface Notification {
     status: string;
     createdAt: string;
     expiresAt?: string;
+    visitDate?: string;
+    visitStartTime?: string;
+    visitEndTime?: string;
 }
 
 export default function NotificationPage(): JSX.Element {
@@ -51,6 +55,8 @@ export default function NotificationPage(): JSX.Element {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'booking' | 'deposit' | 'reservation'>('all');
+    const [selectedBooking, setSelectedBooking] = useState<any>(null);
+    const [bookingsData, setBookingsData] = useState<any[]>([]);
 
     useEffect(() => {
         const userPhone = sessionStorage.getItem('login:userPhone');
@@ -83,20 +89,42 @@ export default function NotificationPage(): JSX.Element {
             const deposits = depositsRes.ok ? await depositsRes.json() : [];
             const reservations = reservationsRes.ok ? await reservationsRes.json() : [];
 
+            // Store full bookings data for detail modal
+            setBookingsData(bookings);
+
             // Combine and format notifications
             const allNotifications: Notification[] = [
-                ...bookings.map((b: any) => ({
-                    id: b.id,
-                    type: 'booking' as const,
-                    code: b.code,
-                    customerName: b.customerName,
-                    customerPhone: b.customerPhone,
-                    unitCode: b.unit?.code || 'N/A',
-                    amount: b.bookingAmount,
-                    status: b.status,
-                    createdAt: b.createdAt,
-                    expiresAt: b.expiresAt
-                })),
+                ...bookings.map((b: any) => {
+                    // Try to extract schedule from notes if fields are null (backward compatibility)
+                    let visitDate = b.visitDate;
+                    let visitStartTime = b.visitStartTime;
+                    let visitEndTime = b.visitEndTime;
+
+                    if (!visitDate && b.notes) {
+                        // Parse from notes: "Lịch xem nhà: 2025-11-17 từ 14:30 đến 15:30"
+                        const match = b.notes.match(/Lịch xem nhà: (\S+) từ (\S+) đến (\S+)/);
+                        if (match) {
+                            visitDate = match[1];
+                            visitStartTime = match[2];
+                            visitEndTime = match[3];
+                        }
+                    }
+
+                    return {
+                        id: b.id,
+                        type: 'booking' as const,
+                        code: b.code,
+                        customerName: b.customerName,
+                        customerPhone: b.customerPhone,
+                        unitCode: b.unit?.code || 'N/A',
+                        status: b.status,
+                        createdAt: b.createdAt,
+                        expiresAt: b.expiresAt,
+                        visitDate,
+                        visitStartTime,
+                        visitEndTime
+                    };
+                }),
                 ...deposits.map((d: any) => ({
                     id: d.id,
                     type: 'deposit' as const,
@@ -210,10 +238,10 @@ export default function NotificationPage(): JSX.Element {
                             key={tab.key}
                             onClick={() => setFilter(tab.key as any)}
                             className={`px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${filter === tab.key
-                                    ? 'bg-blue-600 text-white'
-                                    : isDark
-                                        ? 'bg-[#10182F] text-slate-300 hover:bg-[#1B2342]'
-                                        : 'bg-white text-slate-700 hover:bg-gray-100'
+                                ? 'bg-blue-600 text-white'
+                                : isDark
+                                    ? 'bg-[#10182F] text-slate-300 hover:bg-[#1B2342]'
+                                    : 'bg-white text-slate-700 hover:bg-gray-100'
                                 }`}
                         >
                             {tab.label} ({tab.count})
@@ -245,8 +273,8 @@ export default function NotificationPage(): JSX.Element {
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex items-start gap-4 flex-1">
                                         <div className={`p-3 rounded-xl ${notification.type === 'booking' ? 'bg-blue-100 text-blue-600' :
-                                                notification.type === 'deposit' ? 'bg-green-100 text-green-600' :
-                                                    'bg-purple-100 text-purple-600'
+                                            notification.type === 'deposit' ? 'bg-green-100 text-green-600' :
+                                                'bg-purple-100 text-purple-600'
                                             }`}>
                                             {getTypeIcon(notification.type)}
                                         </div>
@@ -274,7 +302,15 @@ export default function NotificationPage(): JSX.Element {
                                                     <span className="font-medium">Căn hộ:</span>
                                                     <span className="font-semibold text-blue-600">{notification.unitCode}</span>
                                                 </div>
-                                                {notification.amount && (
+                                                {notification.visitDate && notification.visitStartTime && notification.visitEndTime && (
+                                                    <div className="flex items-center gap-2 text-sm bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg">
+                                                        <Calendar className="w-4 h-4 text-blue-600" />
+                                                        <span className="font-medium text-blue-700 dark:text-blue-400">
+                                                            Lịch xem: {notification.visitDate} từ {notification.visitStartTime} đến {notification.visitEndTime}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {notification.amount !== undefined && notification.amount > 0 && (
                                                     <div className="flex items-center gap-2 text-sm">
                                                         <DollarSign className="w-4 h-4" />
                                                         <span className="font-semibold text-green-600">
@@ -284,12 +320,29 @@ export default function NotificationPage(): JSX.Element {
                                                 )}
                                                 <div className="flex items-center gap-2 text-sm text-gray-500">
                                                     <Clock className="w-4 h-4" />
-                                                    <span>{new Date(notification.createdAt).toLocaleString('vi-VN')}</span>
+                                                    <span>Tạo lúc: {new Date(notification.createdAt).toLocaleString('vi-VN')}</span>
                                                 </div>
                                                 {notification.expiresAt && (
                                                     <div className="flex items-center gap-2 text-sm text-orange-600">
                                                         <AlertCircle className="w-4 h-4" />
                                                         <span>Hết hạn: {new Date(notification.expiresAt).toLocaleString('vi-VN')}</span>
+                                                    </div>
+                                                )}
+
+                                                {/* View Details Button for Bookings */}
+                                                {notification.type === 'booking' && (
+                                                    <div className="mt-3 text-right">
+                                                        <button
+                                                            onClick={() => {
+                                                                const fullBooking = bookingsData.find(b => b.id === notification.id);
+                                                                if (fullBooking) {
+                                                                    setSelectedBooking(fullBooking);
+                                                                }
+                                                            }}
+                                                            className="text-[#1224c4] text-sm font-medium hover:underline"
+                                                        >
+                                                            Xem chi tiết
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>
@@ -313,6 +366,14 @@ export default function NotificationPage(): JSX.Element {
                 setActiveNav={setActiveNav}
                 darkMode={isDark}
             />
+
+            {/* Booking Detail Modal */}
+            {selectedBooking && (
+                <BookingDetailModal
+                    booking={selectedBooking}
+                    onClose={() => setSelectedBooking(null)}
+                />
+            )}
         </div>
     );
 }

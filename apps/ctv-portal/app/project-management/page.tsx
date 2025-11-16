@@ -27,6 +27,7 @@ import UnitModal from "@/components/UnitModal";
 import DepositModal from "@/components/DepositModal";
 import ReservedModal from "@/components/ReservedModal";
 import BookingModal from "@/components/BookingModal";
+import BookingDetailModal from "@/components/BookingDetailModal";
 import { formatCurrency } from "@/lib/utils";
 import { toastNotification } from '@/app/utils/toastNotification';
 import { ToastContainer } from 'react-toastify';
@@ -140,6 +141,7 @@ export default function DashboardScreen(): JSX.Element {
     const [showDepositModal, setShowDepositModal] = useState(false);
     const [showReservedModal, setShowReservedModal] = useState(false);
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [selectedBookingDetail, setSelectedBookingDetail] = useState<any>(null);
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [autoRefresh, setAutoRefresh] = useState(true);
@@ -277,11 +279,33 @@ export default function DashboardScreen(): JSX.Element {
     };
 
     // Helper function to handle unit click based on status
-    const handleUnitClick = (unit: Unit) => {
+    const handleUnitClick = async (unit: Unit) => {
         if (unit.status === "available") {
             setSelectedUnit(unit);
         } else if (unit.status === "booking") {
-            toastNotification.info("Căn này đang trong quá trình booking");
+            // Fetch booking details for this unit
+            try {
+                const userPhone = sessionStorage.getItem('login:userPhone');
+                const response = await fetch('/api/bookings', {
+                    headers: { 'x-user-phone': userPhone || '' }
+                });
+
+                if (response.ok) {
+                    const bookings = await response.json();
+                    // Find the booking for this unit
+                    const booking = bookings.find((b: any) => b.unitId === unit.id);
+                    if (booking) {
+                        setSelectedBookingDetail(booking);
+                    } else {
+                        toastNotification.info("Căn này đang trong quá trình booking");
+                    }
+                } else {
+                    toastNotification.info("Căn này đang trong quá trình booking");
+                }
+            } catch (error) {
+                console.error('Error fetching booking:', error);
+                toastNotification.info("Căn này đang trong quá trình booking");
+            }
         } else if (unit.status === "deposit") {
             toastNotification.warning("Căn này đã được đặt cọc");
         } else if (unit.status === "reserved") {
@@ -683,6 +707,12 @@ export default function DashboardScreen(): JSX.Element {
                         setShowBookingModal(false);
                         // This will show the UnitModal again since showBookingModal becomes false
                     }}
+                />
+            )}
+            {selectedBookingDetail && (
+                <BookingDetailModal
+                    booking={selectedBookingDetail}
+                    onClose={() => setSelectedBookingDetail(null)}
                 />
             )}
             <ToastContainer />

@@ -26,6 +26,7 @@ import { formatCurrency } from '@/lib/utils';
 import { AnimatedBottomNavigation } from '@/components/AnimatedBottomNavigation';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useTheme } from '@/hooks/useTheme';
+import BookingDetailModal from '@/components/BookingDetailModal';
 
 export default function DashboardScreen(): JSX.Element {
     const { activeNav, setActiveNav } = useNavigation();
@@ -38,6 +39,7 @@ export default function DashboardScreen(): JSX.Element {
     const [stats, setStats] = useState({ reservations: 0, bookings: 0, deposits: 0 });
     const [isLoading, setIsLoading] = useState(true);
     const [greeting, setGreeting] = useState<string>("Chào buổi");
+    const [selectedBooking, setSelectedBooking] = useState<any>(null);
 
     // Fetch all dashboard data
     useEffect(() => {
@@ -363,32 +365,57 @@ export default function DashboardScreen(): JSX.Element {
                                 <div className="text-center py-8 text-slate-400">Chưa có booking nào</div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                                    {recentBookings.map((booking: any, index: number) => (
-                                        <motion.div
-                                            key={booking.id}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
-                                            className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${isDark ? "bg-[#1B2342]" : "bg-white"
-                                                }`}
-                                        >
-                                            <div
-                                                className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-green-900/30" : "bg-green-50"
+                                    {recentBookings.map((booking: any, index: number) => {
+                                        // Extract schedule from notes if fields are null (backward compatibility)
+                                        let visitDate = booking.visitDate;
+                                        let visitStartTime = booking.visitStartTime;
+                                        let visitEndTime = booking.visitEndTime;
+
+                                        if (!visitDate && booking.notes) {
+                                            const match = booking.notes.match(/Lịch xem nhà: (\S+) từ (\S+) đến (\S+)/);
+                                            if (match) {
+                                                visitDate = match[1];
+                                                visitStartTime = match[2];
+                                                visitEndTime = match[3];
+                                            }
+                                        }
+
+                                        return (
+                                            <motion.div
+                                                key={booking.id}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+                                                className={`rounded-2xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition ${isDark ? "bg-[#1B2342]" : "bg-white"
                                                     }`}
                                             >
-                                                <Calendar className="w-6 h-6 text-green-600" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium truncate">{booking.unit?.code || 'N/A'}</p>
-                                                <p className="text-xs opacity-70 mt-1">{new Date(booking.createdAt).toLocaleDateString('vi-VN')}</p>
-                                                <p className="text-xs opacity-70 mt-1">{booking.customerName}</p>
-                                                <p className="text-xs opacity-70 mt-1">{formatCurrency(booking.bookingAmount)}</p>
-                                            </div>
-                                            <button className="text-[#1224c4] text-sm font-medium hover:underline">
-                                                Xem chi tiết
-                                            </button>
-                                        </motion.div>
-                                    ))}
+                                                <div
+                                                    className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-green-900/30" : "bg-green-50"
+                                                        }`}
+                                                >
+                                                    <Calendar className="w-6 h-6 text-green-600" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium truncate">{booking.unit?.code || 'N/A'}</p>
+                                                    <p className="text-xs opacity-70 mt-1">{booking.customerName}</p>
+                                                    {visitDate && visitStartTime && visitEndTime && (
+                                                        <p className="text-xs text-blue-600 font-medium mt-1">
+                                                            {visitDate} • {visitStartTime}-{visitEndTime}
+                                                        </p>
+                                                    )}
+                                                    <p className="text-xs opacity-70 mt-1">Tạo lúc: {new Date(booking.createdAt).toLocaleDateString('vi-VN')}</p>
+                                                    <div className="mt-2 text-right">
+                                                        <button
+                                                            onClick={() => setSelectedBooking(booking)}
+                                                            className="text-[#1224c4] text-sm font-medium hover:underline"
+                                                        >
+                                                            Xem chi tiết
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -431,9 +458,9 @@ export default function DashboardScreen(): JSX.Element {
                                                 <p className="text-xs opacity-70 mt-1">{deposit.customerName}</p>
                                                 <p className="text-xs opacity-70 mt-1">{formatCurrency(deposit.depositAmount)}</p>
                                                 <p className={`text-xs mt-1 font-medium ${deposit.status === 'CONFIRMED' ? 'text-green-600' :
-                                                        deposit.status === 'PENDING_APPROVAL' ? 'text-yellow-600' :
-                                                            deposit.status === 'CANCELLED' ? 'text-red-600' :
-                                                                'text-blue-600'
+                                                    deposit.status === 'PENDING_APPROVAL' ? 'text-yellow-600' :
+                                                        deposit.status === 'CANCELLED' ? 'text-red-600' :
+                                                            'text-blue-600'
                                                     }`}>
                                                     {deposit.status === 'CONFIRMED' ? 'Đã xác nhận' :
                                                         deposit.status === 'PENDING_APPROVAL' ? 'Chờ duyệt' :
@@ -468,6 +495,14 @@ export default function DashboardScreen(): JSX.Element {
                 setActiveNav={setActiveNav}
                 darkMode={isDark}
             />
+
+            {/* Booking Detail Modal */}
+            {selectedBooking && (
+                <BookingDetailModal
+                    booking={selectedBooking}
+                    onClose={() => setSelectedBooking(null)}
+                />
+            )}
         </div>
     );
 }

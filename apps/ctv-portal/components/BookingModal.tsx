@@ -30,7 +30,7 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
         "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1560448204-61dc36dc98c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
     ];
-    
+
     let unitImages = defaultImages;
     try {
         if (unit.images && typeof unit.images === 'string') {
@@ -55,6 +55,7 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
 
     const [phoneError, setPhoneError] = useState("");
     const [timeError, setTimeError] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Time options for booking
     const timeOptions = [
@@ -399,17 +400,71 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
                             {/* Submit Button */}
                             <div className="mt-6">
                                 <Button
-                                    disabled={!isFormValid()}
-                                    onClick={() => {
-                                        toastNotification.success("Booking đã được xác nhận thành công!");
-                                        onClose();
+                                    disabled={!isFormValid() || isSubmitting}
+                                    onClick={async () => {
+                                        if (isSubmitting) return;
+
+                                        setIsSubmitting(true);
+                                        try {
+                                            // Get user ID from session
+                                            const userPhone = sessionStorage.getItem('login:userPhone');
+                                            if (!userPhone) {
+                                                toastNotification.error('Vui lòng đăng nhập lại');
+                                                return;
+                                            }
+
+                                            // Get user info
+                                            const userResponse = await fetch('/api/user/me', {
+                                                headers: {
+                                                    'x-user-phone': userPhone
+                                                }
+                                            });
+                                            if (!userResponse.ok) {
+                                                throw new Error('Không thể lấy thông tin người dùng');
+                                            }
+                                            const userData = await userResponse.json();
+
+                                            // Create booking
+                                            const response = await fetch('/api/bookings/create', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                },
+                                                body: JSON.stringify({
+                                                    unitId: unit.id,
+                                                    ctvId: userData.id,
+                                                    customerName: BookingForm.name,
+                                                    customerPhone: BookingForm.phone,
+                                                    customerEmail: BookingForm.email,
+                                                    visitDate: BookingForm.date,
+                                                    startTime: BookingForm.startTime,
+                                                    endTime: BookingForm.endTime
+                                                }),
+                                            });
+
+                                            const data = await response.json();
+
+                                            if (response.ok) {
+                                                toastNotification.success("Booking đã được xác nhận thành công!");
+                                                onClose();
+                                                // Reload page to update unit status
+                                                window.location.reload();
+                                            } else {
+                                                toastNotification.error(data.error || 'Đã xảy ra lỗi khi tạo booking');
+                                            }
+                                        } catch (error) {
+                                            console.error('Booking error:', error);
+                                            toastNotification.error('Đã xảy ra lỗi khi tạo booking');
+                                        } finally {
+                                            setIsSubmitting(false);
+                                        }
                                     }}
-                                    className={`w-full py-3.5 rounded-xl font-semibold text-white text-base transition ${isFormValid()
+                                    className={`w-full py-3.5 rounded-xl font-semibold text-white text-base transition ${isFormValid() && !isSubmitting
                                         ? "bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-600"
                                         : "bg-gray-300 cursor-not-allowed"
                                         }`}
                                 >
-                                    Xác nhận
+                                    {isSubmitting ? 'Đang xử lý...' : 'Xác nhận'}
                                 </Button>
                             </div>
                         </div>

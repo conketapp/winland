@@ -224,6 +224,9 @@ model Booking {
   approvedAt      DateTime?     @map("approved_at")
   cancelledReason String?       @map("cancelled_reason")
   refundAmount    Float?        @map("refund_amount")
+  visitDate       String?       @map("visit_date")
+  visitStartTime  String?       @map("visit_start_time")
+  visitEndTime    String?       @map("visit_end_time")
   notes           String?
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
