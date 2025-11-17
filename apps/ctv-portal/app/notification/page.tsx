@@ -57,6 +57,7 @@ export default function NotificationPage(): JSX.Element {
     const [filter, setFilter] = useState<'all' | 'booking' | 'deposit' | 'reservation'>('all');
     const [selectedBooking, setSelectedBooking] = useState<any>(null);
     const [bookingsData, setBookingsData] = useState<any[]>([]);
+    const [currentUserPhone, setCurrentUserPhone] = useState<string>('');
 
     useEffect(() => {
         const userPhone = sessionStorage.getItem('login:userPhone');
@@ -64,6 +65,7 @@ export default function NotificationPage(): JSX.Element {
             router.push('/login');
             return;
         }
+        setCurrentUserPhone(userPhone);
         fetchNotifications();
     }, [router]);
 
@@ -72,16 +74,19 @@ export default function NotificationPage(): JSX.Element {
             setIsLoading(true);
             const userPhone = sessionStorage.getItem('login:userPhone');
 
-            // Fetch all notifications
+            // Fetch all notifications (including other users) with cache-busting
             const [bookingsRes, depositsRes, reservationsRes] = await Promise.all([
-                fetch('/api/bookings', {
-                    headers: { 'x-user-phone': userPhone || '' }
+                fetch('/api/bookings/all', {
+                    headers: { 'x-user-phone': userPhone || '' },
+                    cache: 'no-store'
                 }),
                 fetch('/api/deposits', {
-                    headers: { 'x-user-phone': userPhone || '' }
+                    headers: { 'x-user-phone': userPhone || '' },
+                    cache: 'no-store'
                 }),
                 fetch('/api/reservations', {
-                    headers: { 'x-user-phone': userPhone || '' }
+                    headers: { 'x-user-phone': userPhone || '' },
+                    cache: 'no-store'
                 })
             ]);
 
@@ -167,12 +172,39 @@ export default function NotificationPage(): JSX.Element {
         router.push("/login");
     };
 
-    const getStatusColor = (status: string) => {
-        const statusLower = status.toLowerCase();
-        if (statusLower.includes('confirmed') || statusLower.includes('active')) return 'text-green-600 bg-green-50';
-        if (statusLower.includes('pending')) return 'text-yellow-600 bg-yellow-50';
-        if (statusLower.includes('cancelled') || statusLower.includes('expired')) return 'text-red-600 bg-red-50';
+    const getStatusColor = (status: string, type?: string) => {
+        if (status === 'CONFIRMED') {
+            return 'text-blue-600 bg-blue-50';
+        } else if (status === 'ACTIVE' || status === 'COMPLETED') {
+            return 'text-green-600 bg-green-50';
+        } else if (status.includes('PENDING')) {
+            return 'text-yellow-600 bg-yellow-50';
+        } else if (status === 'EXPIRED' && type === 'booking') {
+            // Completed bookings show as success
+            return 'text-green-600 bg-green-50';
+        } else if (status === 'CANCELLED' || status === 'EXPIRED') {
+            return 'text-red-600 bg-red-50';
+        }
         return 'text-gray-600 bg-gray-50';
+    };
+
+    const getStatusText = (status: string, type?: string) => {
+        switch (status) {
+            case 'CONFIRMED':
+                return 'Đã xác nhận';
+            case 'PENDING_APPROVAL':
+                return 'Chờ duyệt';
+            case 'CANCELLED':
+                return 'Đã hủy';
+            case 'EXPIRED':
+                return type === 'booking' ? 'Đã hoàn thành' : 'Hết hạn';
+            case 'ACTIVE':
+                return 'Đang hoạt động';
+            case 'COMPLETED':
+                return 'Hoàn thành';
+            default:
+                return status;
+        }
     };
 
     const getTypeIcon = (type: string) => {
@@ -282,8 +314,8 @@ export default function NotificationPage(): JSX.Element {
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <span className="font-semibold text-lg">{getTypeLabel(notification.type)}</span>
-                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(notification.status)}`}>
-                                                    {notification.status}
+                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(notification.status, notification.type)}`}>
+                                                    {getStatusText(notification.status, notification.type)}
                                                 </span>
                                             </div>
 
@@ -329,22 +361,25 @@ export default function NotificationPage(): JSX.Element {
                                                     </div>
                                                 )}
 
-                                                {/* View Details Button for Bookings */}
-                                                {notification.type === 'booking' && (
-                                                    <div className="mt-3 text-right">
-                                                        <button
-                                                            onClick={() => {
-                                                                const fullBooking = bookingsData.find(b => b.id === notification.id);
-                                                                if (fullBooking) {
-                                                                    setSelectedBooking(fullBooking);
-                                                                }
-                                                            }}
-                                                            className="text-[#1224c4] text-sm font-medium hover:underline"
-                                                        >
-                                                            Xem chi tiết
-                                                        </button>
-                                                    </div>
-                                                )}
+                                                {/* View Details Button for Bookings - Only show for booking owner */}
+                                                {notification.type === 'booking' && (() => {
+                                                    const fullBooking = bookingsData.find(b => b.id === notification.id);
+                                                    const isOwner = fullBooking?.ctv?.phone === currentUserPhone;
+                                                    return isOwner && (
+                                                        <div className="mt-3 text-right">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (fullBooking) {
+                                                                        setSelectedBooking(fullBooking);
+                                                                    }
+                                                                }}
+                                                                className="text-[#1224c4] text-sm font-medium hover:underline"
+                                                            >
+                                                                Xem chi tiết
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                     </div>
@@ -372,6 +407,11 @@ export default function NotificationPage(): JSX.Element {
                 <BookingDetailModal
                     booking={selectedBooking}
                     onClose={() => setSelectedBooking(null)}
+                    onComplete={() => {
+                        setSelectedBooking(null);
+                        fetchNotifications();
+                    }}
+                    readOnly={selectedBooking.ctv?.phone !== currentUserPhone}
                 />
             )}
         </div>

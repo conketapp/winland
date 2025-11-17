@@ -713,6 +713,7 @@ export default function DashboardScreen(): JSX.Element {
                 <BookingDetailModal
                     booking={selectedBookingDetail}
                     onClose={() => setSelectedBookingDetail(null)}
+                    readOnly={true}
                 />
             )}
             <ToastContainer />

@@ -354,7 +354,7 @@ export default function PlanningAreaScreen(): JSX.Element {
                             <div className="mt-6">
                                 <p className="text-sm text-gray-500 mb-3">Hình ảnh dự án</p>
                                 {selectedProject.images ? (
-                                    <div className="flex flex-wrap gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 justify-items-center">
                                         {selectedProject.images.split(',').map((imageUrl, index) => {
                                             const images = selectedProject.images!.split(',').map(url => url.trim());
                                             return (

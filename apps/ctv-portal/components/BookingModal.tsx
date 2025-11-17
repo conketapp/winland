@@ -55,14 +55,40 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
 
     const [phoneError, setPhoneError] = useState("");
     const [timeError, setTimeError] = useState("");
+    const [dateError, setDateError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Time options for booking
-    const timeOptions = [
+    const allTimeOptions = [
         "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
         "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
         "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30"
     ];
+
+    // Filter time options based on selected date
+    const getAvailableTimeOptions = () => {
+        const selectedDate = BookingForm.date;
+        const today = new Date().toISOString().split('T')[0];
+        
+        // If selected date is today, filter out past times
+        if (selectedDate === today) {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            const currentTimeInMinutes = currentHour * 60 + currentMinute;
+            
+            return allTimeOptions.filter(time => {
+                const [hour, minute] = time.split(':').map(Number);
+                const timeInMinutes = hour * 60 + minute;
+                return timeInMinutes > currentTimeInMinutes;
+            });
+        }
+        
+        // For future dates, show all times
+        return allTimeOptions;
+    };
+
+    const timeOptions = getAvailableTimeOptions();
 
     // Time validation function
     const validateTimeRange = (startTime: string, endTime: string) => {
@@ -83,13 +109,49 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
             filteredValue = value.replace(/\D/g, ''); // Remove all non-digit characters
         }
 
-        const updatedForm = { ...BookingForm, [name]: filteredValue };
+        let updatedForm = { ...BookingForm, [name]: filteredValue };
+
+        // If date changes, validate it's not in the past
+        if (name === 'date') {
+            const selectedDate = new Date(value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+            selectedDate.setHours(0, 0, 0, 0);
+
+            if (selectedDate < today) {
+                setDateError('Không thể chọn ngày trong quá khứ. Vui lòng chọn từ hôm nay trở đi.');
+                toastNotification.error('Không thể chọn ngày trong quá khứ!');
+                updatedForm.date = ''; // Clear the invalid date
+            } else {
+                setDateError('');
+                
+                // If date is today, clear times if they're in the past
+                const todayStr = new Date().toISOString().split('T')[0];
+                if (value === todayStr) {
+                    const now = new Date();
+                    const currentHour = now.getHours();
+                    const currentMinute = now.getMinutes();
+                    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+                    // Check if start time is in the past
+                    if (updatedForm.startTime) {
+                        const [hour, minute] = updatedForm.startTime.split(':').map(Number);
+                        const timeInMinutes = hour * 60 + minute;
+                        if (timeInMinutes <= currentTimeInMinutes) {
+                            updatedForm.startTime = '';
+                            updatedForm.endTime = '';
+                        }
+                    }
+                }
+            }
+        }
+
         setForm(updatedForm);
 
         // Validate time range when start or end time changes
         if (name === 'startTime' || name === 'endTime') {
-            const startTime = name === 'startTime' ? value : BookingForm.startTime;
-            const endTime = name === 'endTime' ? value : BookingForm.endTime;
+            const startTime = name === 'startTime' ? value : updatedForm.startTime;
+            const endTime = name === 'endTime' ? value : updatedForm.endTime;
 
             if (startTime && endTime) {
                 if (!validateTimeRange(startTime, endTime)) {
@@ -351,9 +413,14 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
                                             value={BookingForm.date}
                                             onChange={handleChange}
                                             min={new Date().toISOString().split('T')[0]}
-                                            className="w-full mt-1 border rounded-lg p-2.5 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                                            className={`w-full mt-1 border rounded-lg p-2.5 text-gray-700 focus:outline-none focus:ring-1 cursor-pointer ${dateError ? 'border-red-500 focus:ring-red-500' : 'focus:ring-blue-500'}`}
                                             required
                                         />
+                                        {dateError && (
+                                            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                                                <span>⚠️</span> {dateError}
+                                            </p>
+                                        )}
                                     </div>
                                     {/* Time inputs */}
                                     <div className="grid grid-cols-2 gap-3 mt-3">

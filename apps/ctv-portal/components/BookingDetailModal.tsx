@@ -7,18 +7,26 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { useDeviceDetect } from "@/hooks/useDeviceDetect";
 import { getModalResponsiveClasses } from "@/app/utils/responsive";
+import { toastNotification } from '@/app/utils/toastNotification';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 type BookingDetailModalProps = {
     booking: any;
     onClose: () => void;
+    onComplete?: () => void;
+    readOnly?: boolean;
 };
 
-export default function BookingDetailModal({ booking, onClose }: BookingDetailModalProps) {
+export default function BookingDetailModal({ booking, onClose, onComplete, readOnly = false }: BookingDetailModalProps) {
     if (!booking) return null;
 
     const deviceInfo = useDeviceDetect();
     const responsive = getModalResponsiveClasses(deviceInfo);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [isCompleting, setIsCompleting] = useState(false);
+    const [isCancelling, setIsCancelling] = useState(false);
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    const [showCancelDialog, setShowCancelDialog] = useState(false);
 
     // Parse images from database
     const defaultImages = [
@@ -373,18 +381,41 @@ export default function BookingDetailModal({ booking, onClose }: BookingDetailMo
                             </div>
                         </div>
 
-                        {/* Notes */}
-                        {booking.notes && (
-                            <div className="bg-yellow-50 rounded-2xl shadow-md p-5 border border-yellow-200">
-                                <h4 className="text-lg font-semibold mb-2 text-yellow-800">Ghi chú</h4>
-                                <p className="text-sm text-gray-700">{booking.notes}</p>
-                            </div>
-                        )}
+                        {/* Notes - Filter out hidden marker */}
+                        {(() => {
+                            const cleanNotes = booking.notes?.replace(/\[HIDDEN_FROM_DASHBOARD\]/g, '').replace(/\n+/g, '\n').trim();
+                            return cleanNotes && (
+                                <div className="bg-yellow-50 rounded-2xl shadow-md p-5 border border-yellow-200">
+                                    <h4 className="text-lg font-semibold mb-2 text-yellow-800">Ghi chú</h4>
+                                    <p className="text-sm text-gray-700">{cleanNotes}</p>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 bg-white border-t">
+                <div className="p-6 bg-white border-t space-y-3">
+                    {/* Action Buttons - Only show for CONFIRMED bookings and not in readOnly mode */}
+                    {!readOnly && booking.status === 'CONFIRMED' && (
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button
+                                onClick={() => setShowCancelDialog(true)}
+                                disabled={isCancelling || isCompleting}
+                                className="py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isCancelling ? 'Đang hủy...' : 'Hủy Booking'}
+                            </Button>
+                            <Button
+                                onClick={() => setShowConfirmDialog(true)}
+                                disabled={isCompleting || isCancelling}
+                                className="py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isCompleting ? 'Đang xử lý...' : '✓ Kết thúc booking'}
+                            </Button>
+                        </div>
+                    )}
+
                     <Button
                         onClick={onClose}
                         className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 transition-all"
@@ -392,6 +423,94 @@ export default function BookingDetailModal({ booking, onClose }: BookingDetailMo
                         Đóng
                     </Button>
                 </div>
+
+                {/* Confirmation Dialog */}
+                <ConfirmDialog
+                    isOpen={showConfirmDialog}
+                    title="Xác nhận kết thúc"
+                    message="Bạn có chắc chắn muốn kết thúc booking này? Căn hộ sẽ trở về trạng thái có sẵn."
+                    confirmText="Kết thúc"
+                    cancelText="Hủy"
+                    type="warning"
+                    onConfirm={async () => {
+                        setShowConfirmDialog(false);
+                        setIsCompleting(true);
+                        try {
+                            const response = await fetch('/api/bookings/complete', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    bookingId: booking.id
+                                }),
+                            });
+
+                            const data = await response.json();
+
+                            if (response.ok) {
+                                toastNotification.success('Đã kết thúc booking thành công!');
+                                onClose();
+                                if (onComplete) {
+                                    onComplete();
+                                } else {
+                                    window.location.reload();
+                                }
+                            } else {
+                                toastNotification.error(data.error || 'Đã xảy ra lỗi');
+                            }
+                        } catch (error) {
+                            toastNotification.error('Đã xảy ra lỗi khi kết thúc booking');
+                        } finally {
+                            setIsCompleting(false);
+                        }
+                    }}
+                    onCancel={() => setShowConfirmDialog(false)}
+                />
+
+                {/* Cancel Confirmation Dialog */}
+                <ConfirmDialog
+                    isOpen={showCancelDialog}
+                    title="Xác nhận hủy booking"
+                    message="Bạn có chắc chắn muốn hủy booking này? Căn hộ sẽ trở về trạng thái có sẵn."
+                    confirmText="Hủy booking"
+                    cancelText="Quay lại"
+                    type="danger"
+                    onConfirm={async () => {
+                        setShowCancelDialog(false);
+                        setIsCancelling(true);
+                        try {
+                            const response = await fetch('/api/bookings/cancel', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    bookingId: booking.id
+                                }),
+                            });
+
+                            const data = await response.json();
+
+                            if (response.ok) {
+                                toastNotification.success('Đã hủy booking thành công!');
+                                onClose();
+                                if (onComplete) {
+                                    onComplete();
+                                } else {
+                                    window.location.reload();
+                                }
+                            } else {
+                                toastNotification.error(data.error || 'Đã xảy ra lỗi');
+                            }
+                        } catch (error) {
+                            toastNotification.error('Đã xảy ra lỗi khi hủy booking');
+                        } finally {
+                            setIsCancelling(false);
+                        }
+                    }}
+                    onCancel={() => setShowCancelDialog(false)}
+                />
             </motion.div>
         </div>
     );
