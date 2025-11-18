@@ -17,6 +17,8 @@ import {
     Moon,
     LogOut,
     Search,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AnimatedBottomNavigation } from "@/components/AnimatedBottomNavigation";
@@ -148,7 +150,9 @@ export default function DashboardScreen(): JSX.Element {
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
     const [lastUpdateTime, setLastUpdateTime] = useState<string>("");
     const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+    const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
     const [greeting, setGreeting] = useState<string>("Chào buổi");
+    const [currentPage, setCurrentPage] = useState<number>(1);
 
     const fetchProjects = useCallback(async (silent: boolean = false) => {
         try {
@@ -349,6 +353,14 @@ export default function DashboardScreen(): JSX.Element {
 
     const responsiveClasses = getResponsiveClasses();
 
+    // Pagination logic
+    const unitsPerPage = deviceInfo.isMobile ? 10 : 20;
+
+    // Reset to page 1 when building selection changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedBuildingId, selectedProjectId]);
+
     return (
         <div
             className={`min-h-screen flex flex-col transition-colors duration-500 ${isDark ? "bg-[#0C1125] text-white" : "bg-gray-50 text-slate-900"
@@ -428,12 +440,53 @@ export default function DashboardScreen(): JSX.Element {
                                 </div>
                             </div>
                             {!deviceInfo.isMobile && (
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-sm opacity-70">Dự án:</label>
+                                        <select
+                                            value={selectedProjectId}
+                                            onChange={(e) => setSelectedProjectId(e.target.value)}
+                                            className={`px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark
+                                                ? "bg-[#0C1125] border-gray-600 text-white"
+                                                : "bg-white border-gray-300 text-slate-900"
+                                                }`}
+                                        >
+                                            {projects.map((project) => (
+                                                <option key={project.id} value={project.id}>
+                                                    {project.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-sm opacity-70">Tòa nhà:</label>
+                                        <select
+                                            value={selectedBuildingId}
+                                            onChange={(e) => setSelectedBuildingId(e.target.value)}
+                                            className={`px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark
+                                                ? "bg-[#0C1125] border-gray-600 text-white"
+                                                : "bg-white border-gray-300 text-slate-900"
+                                                }`}
+                                        >
+                                            <option value="all">Tất cả tòa nhà</option>
+                                            {filteredProjects[0]?.buildings.map((building: any) => (
+                                                <option key={building.id} value={building.id}>
+                                                    {building.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        {deviceInfo.isMobile && (
+                            <div className="mt-4 flex flex-col gap-2">
                                 <div className="flex items-center gap-2">
-                                    <label className="text-sm opacity-70">Dự án:</label>
+                                    <label className="text-sm opacity-70 whitespace-nowrap">Dự án:</label>
                                     <select
                                         value={selectedProjectId}
                                         onChange={(e) => setSelectedProjectId(e.target.value)}
-                                        className={`px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark
+                                        className={`flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark
                                             ? "bg-[#0C1125] border-gray-600 text-white"
                                             : "bg-white border-gray-300 text-slate-900"
                                             }`}
@@ -445,25 +498,24 @@ export default function DashboardScreen(): JSX.Element {
                                         ))}
                                     </select>
                                 </div>
-                            )}
-                        </div>
-                        {deviceInfo.isMobile && (
-                            <div className="mt-4 flex items-center gap-2">
-                                <label className="text-sm opacity-70">Dự án:</label>
-                                <select
-                                    value={selectedProjectId}
-                                    onChange={(e) => setSelectedProjectId(e.target.value)}
-                                    className={`flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark
-                                        ? "bg-[#0C1125] border-gray-600 text-white"
-                                        : "bg-white border-gray-300 text-slate-900"
-                                        }`}
-                                >
-                                    {projects.map((project) => (
-                                        <option key={project.id} value={project.id}>
-                                            {project.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm opacity-70 whitespace-nowrap">Tòa nhà:</label>
+                                    <select
+                                        value={selectedBuildingId}
+                                        onChange={(e) => setSelectedBuildingId(e.target.value)}
+                                        className={`flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark
+                                            ? "bg-[#0C1125] border-gray-600 text-white"
+                                            : "bg-white border-gray-300 text-slate-900"
+                                            }`}
+                                    >
+                                        <option value="all">Tất cả tòa nhà</option>
+                                        {filteredProjects[0]?.buildings.map((building: any) => (
+                                            <option key={building.id} value={building.id}>
+                                                {building.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         )}
                     </motion.section>
@@ -580,57 +632,112 @@ export default function DashboardScreen(): JSX.Element {
                                         </motion.section>
 
                                         <AnimatePresence>
-                                            {project.buildings.map((building) => (
-                                                <section key={building.id} className="space-y-4 mb-7 mt-8">
-                                                    <div className="w-full flex justify-center">
-                                                        <div
-                                                            className={`${isDark ? "bg-[#1B2342]" : "bg-white/70"
-                                                                } ${deviceInfo.isMobile ? "text-lg" : "text-2xl"} backdrop-blur-sm rounded-xl px-40 py-3 text-center font-medium shadow-sm max-w-[1000px]`}
-                                                        >
-                                                            {building.name}
-                                                        </div>
-                                                    </div>
+                                            {project.buildings
+                                                .filter((building: any) => selectedBuildingId === 'all' || building.id === selectedBuildingId)
+                                                .map((building) => {
+                                                    const totalUnits = building.units.length;
+                                                    const totalPages = Math.ceil(totalUnits / unitsPerPage);
+                                                    const startIndex = (currentPage - 1) * unitsPerPage;
+                                                    const endIndex = startIndex + unitsPerPage;
+                                                    const paginatedUnits = building.units.slice(startIndex, endIndex);
 
-                                                    <motion.div
-                                                        initial="hidden"
-                                                        animate="visible"
-                                                        variants={containerVariants}
-                                                        className={`grid ${responsiveClasses.gridCols} gap-4`}
-                                                    >
-                                                        {building.units.map((unit) => {
-                                                            const status = statusProperty[unit.status];
-                                                            return (
-                                                                <motion.article
-                                                                    key={unit.id}
-                                                                    className="relative"
-                                                                    variants={cardVariants}
-                                                                    initial="hidden"
-                                                                    animate="visible"
-                                                                    whileHover="hover"
-                                                                    onClick={() => handleUnitClick(unit)}
+                                                    return (
+                                                        <section key={building.id} className="space-y-4 mb-7 mt-8">
+                                                            <div className="w-full flex justify-center">
+                                                                <div
+                                                                    className={`${isDark ? "bg-[#1B2342]" : "bg-white/70"
+                                                                        } ${deviceInfo.isMobile ? "text-lg" : "text-2xl"} backdrop-blur-sm rounded-xl px-40 py-3 text-center font-medium shadow-sm max-w-[1000px]`}
                                                                 >
-                                                                    <div
-                                                                        className={`${deviceInfo.isMobile ? "w-50%" : "w-auto"} rounded-xl shadow-sm text-white ${responsiveClasses.cardPadding} ${responsiveClasses.cardShape} flex flex-col items-center justify-center gap-2 min-h-[88px] ${status.bgClass} cursor-pointer`}
+                                                                    {building.name}
+                                                                </div>
+                                                            </div>
+
+                                                            <motion.div
+                                                                initial="hidden"
+                                                                animate="visible"
+                                                                variants={containerVariants}
+                                                                className={`grid ${responsiveClasses.gridCols} gap-4`}
+                                                            >
+                                                                {paginatedUnits.map((unit) => {
+                                                                    const status = statusProperty[unit.status];
+                                                                    return (
+                                                                        <motion.article
+                                                                            key={unit.id}
+                                                                            className="relative"
+                                                                            variants={cardVariants}
+                                                                            initial="hidden"
+                                                                            animate="visible"
+                                                                            whileHover="hover"
+                                                                            onClick={() => handleUnitClick(unit)}
+                                                                        >
+                                                                            <div
+                                                                                className={`${deviceInfo.isMobile ? "w-50%" : "w-auto"} rounded-xl shadow-sm text-white ${responsiveClasses.cardPadding} ${responsiveClasses.cardShape} flex flex-col items-center justify-center gap-2 min-h-[88px] ${status.bgClass} cursor-pointer`}
+                                                                            >
+                                                                                <div className={`${deviceInfo.isMobile ? "text-lg" : "text-2xl"} font-semibold`}>{unit.code}</div>
+                                                                                <div className="w-full flex justify-center">
+                                                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full bg-white/25 backdrop-blur-sm`}>
+                                                                                        {status.label}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div className="grid grid-cols-2 gap-1 w-full text-center">
+                                                                                    <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>{unit.area}m²</div>
+                                                                                    <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>{formatCurrency(unit.price)}</div>
+                                                                                    <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>PN: {unit.bedrooms || 0}</div>
+                                                                                    <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>WC: {unit.bathrooms || 0}</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </motion.article>
+                                                                    );
+                                                                })}
+                                                            </motion.div>
+
+                                                            {/* Pagination Controls */}
+                                                            {totalPages > 1 && (
+                                                                <div className="flex items-center justify-center gap-4 mt-6">
+                                                                    <button
+                                                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                                                        disabled={currentPage === 1}
+                                                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${currentPage === 1
+                                                                            ? 'opacity-50 cursor-not-allowed'
+                                                                            : 'hover:bg-blue-500/10'
+                                                                            } ${isDark
+                                                                                ? "bg-[#1B2342] border-gray-600 text-white"
+                                                                                : "bg-white border-gray-300 text-slate-900"
+                                                                            }`}
                                                                     >
-                                                                        <div className={`${deviceInfo.isMobile ? "text-lg" : "text-2xl"} font-semibold`}>{unit.code}</div>
-                                                                        <div className="w-full flex justify-center">
-                                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full bg-white/25 backdrop-blur-sm`}>
-                                                                                {status.label}
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="grid grid-cols-2 gap-1 w-full text-center">
-                                                                            <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>{unit.area}m²</div>
-                                                                            <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>{formatCurrency(unit.price)}</div>
-                                                                            <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>PN: {unit.bedrooms || 0}</div>
-                                                                            <div className={` ${deviceInfo.isMobile ? "text-xs" : "text-lg"} opacity-90`}>WC: {unit.bathrooms || 0}</div>
-                                                                        </div>
+                                                                        <ChevronLeft className="w-4 h-4" />
+                                                                        {!deviceInfo.isMobile && <span>Trước</span>}
+                                                                    </button>
+
+                                                                    <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${isDark ? "bg-[#1B2342] text-white" : "bg-white text-slate-900"
+                                                                        }`}>
+                                                                        <span className="text-sm">
+                                                                            Trang {currentPage} / {totalPages}
+                                                                        </span>
+                                                                        <span className="text-xs opacity-70">
+                                                                            ({startIndex + 1}-{Math.min(endIndex, totalUnits)} / {totalUnits} căn)
+                                                                        </span>
                                                                     </div>
-                                                                </motion.article>
-                                                            );
-                                                        })}
-                                                    </motion.div>
-                                                </section>
-                                            ))}
+
+                                                                    <button
+                                                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                                                        disabled={currentPage === totalPages}
+                                                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${currentPage === totalPages
+                                                                            ? 'opacity-50 cursor-not-allowed'
+                                                                            : 'hover:bg-blue-500/10'
+                                                                            } ${isDark
+                                                                                ? "bg-[#1B2342] border-gray-600 text-white"
+                                                                                : "bg-white border-gray-300 text-slate-900"
+                                                                            }`}
+                                                                    >
+                                                                        {!deviceInfo.isMobile && <span>Sau</span>}
+                                                                        <ChevronRight className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </section>
+                                                    );
+                                                })}
                                         </AnimatePresence>
                                     </div>
                                 ))}

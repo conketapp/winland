@@ -39,6 +39,7 @@ interface Notification {
     customerName: string;
     customerPhone: string;
     unitCode: string;
+    ctvName?: string;
     amount?: number;
     status: string;
     createdAt: string;
@@ -58,6 +59,9 @@ export default function NotificationPage(): JSX.Element {
     const [selectedBooking, setSelectedBooking] = useState<any>(null);
     const [bookingsData, setBookingsData] = useState<any[]>([]);
     const [currentUserPhone, setCurrentUserPhone] = useState<string>('');
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 3;
 
     useEffect(() => {
         const userPhone = sessionStorage.getItem('login:userPhone');
@@ -122,6 +126,7 @@ export default function NotificationPage(): JSX.Element {
                         customerName: b.customerName,
                         customerPhone: b.customerPhone,
                         unitCode: b.unit?.code || 'N/A',
+                        ctvName: b.ctv?.fullName || 'N/A',
                         status: b.status,
                         createdAt: b.createdAt,
                         expiresAt: b.expiresAt,
@@ -137,6 +142,7 @@ export default function NotificationPage(): JSX.Element {
                     customerName: d.customerName,
                     customerPhone: d.customerPhone,
                     unitCode: d.unit?.code || 'N/A',
+                    ctvName: d.ctv?.fullName || 'N/A',
                     amount: d.depositAmount,
                     status: d.status,
                     createdAt: d.createdAt
@@ -146,6 +152,7 @@ export default function NotificationPage(): JSX.Element {
                     type: 'reservation' as const,
                     code: r.code,
                     customerName: r.customerName,
+                    ctvName: r.ctv?.fullName || 'N/A',
                     customerPhone: r.customerPhone,
                     unitCode: r.unit?.code || 'N/A',
                     status: r.status,
@@ -160,6 +167,7 @@ export default function NotificationPage(): JSX.Element {
             );
 
             setNotifications(allNotifications);
+            setLastUpdated(new Date());
         } catch (error) {
             console.error('Error fetching notifications:', error);
         } finally {
@@ -229,14 +237,31 @@ export default function NotificationPage(): JSX.Element {
         ? notifications
         : notifications.filter(n => n.type === filter);
 
+    // Pagination
+    const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedNotifications = filteredNotifications.slice(startIndex, startIndex + itemsPerPage);
+
+    // Reset to page 1 when filter changes
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [filter]);
+
     return (
         <div className={`min-h-screen flex flex-col transition-colors duration-500 ${isDark ? "bg-[#0C1125] text-white" : "bg-gray-50 text-slate-900"}`}>
             {/* Header */}
             <header className={`rounded-b-3xl shadow-md ${isDark ? "bg-[#10182F]" : "bg-[#041b40] text-white"}`}>
                 <div className="max-w-[1500px] mx-auto px-6 py-6 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <Bell className="w-6 h-6" />
-                        <h1 className="text-xl font-semibold">Thông Báo</h1>
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-3">
+                            <Bell className="w-6 h-6" />
+                            <h1 className="text-xl font-semibold">Thông Báo</h1>
+                        </div>
+                        {lastUpdated && (
+                            <p className="text-xs opacity-70 mt-1 ml-9">
+                                Cập nhật lúc: {lastUpdated.toLocaleTimeString('vi-VN')}
+                            </p>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -293,7 +318,7 @@ export default function NotificationPage(): JSX.Element {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {filteredNotifications.map((notification, index) => (
+                        {paginatedNotifications.map((notification, index) => (
                             <motion.div
                                 key={notification.id}
                                 initial={{ opacity: 0, y: 20 }}
@@ -324,6 +349,14 @@ export default function NotificationPage(): JSX.Element {
                                                     <span className="font-medium">Mã:</span>
                                                     <span className="font-mono">{notification.code}</span>
                                                 </div>
+                                                {notification.ctvName && (
+                                                    <div className="flex items-center gap-2 text-sm bg-purple-50 dark:bg-purple-900/20 p-2 rounded-lg">
+                                                        <User className="w-4 h-4 text-purple-600" />
+                                                        <span className="font-medium text-purple-700 dark:text-purple-400">
+                                                            CTV: {notification.ctvName}
+                                                        </span>
+                                                    </div>
+                                                )}
                                                 <div className="flex items-center gap-2 text-sm">
                                                     <User className="w-4 h-4" />
                                                     <span>{notification.customerName}</span>
@@ -386,6 +419,54 @@ export default function NotificationPage(): JSX.Element {
                                 </div>
                             </motion.div>
                         ))}
+                    </div>
+                )}
+
+                {/* Pagination Controls */}
+                {!isLoading && filteredNotifications.length > itemsPerPage && (
+                    <div className="flex items-center justify-center gap-2 mt-6">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className={`px-4 py-2 rounded-lg font-medium transition ${currentPage === 1
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : isDark
+                                        ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
+                                        : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                                }`}
+                        >
+                            ← Trước
+                        </button>
+
+                        <div className="flex gap-2">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                <button
+                                    key={page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className={`w-10 h-10 rounded-lg font-medium transition ${currentPage === page
+                                            ? 'bg-blue-600 text-white'
+                                            : isDark
+                                                ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
+                                                : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                                        }`}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className={`px-4 py-2 rounded-lg font-medium transition ${currentPage === totalPages
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : isDark
+                                        ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
+                                        : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                                }`}
+                        >
+                            Sau →
+                        </button>
                     </div>
                 )}
             </main>
