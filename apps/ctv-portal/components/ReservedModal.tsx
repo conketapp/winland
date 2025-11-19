@@ -169,7 +169,6 @@ export default function ReservedModal({ unit, onClose, onBack }: ReservedModalPr
                         >
                             <ArrowLeft size={deviceInfo.isMobile ? 16 : 18} />
                             <span className={`${responsive.buttonTextSize} font-medium ${deviceInfo.isMobile ? 'hidden' : ''}`}>
-                                Quay lại
                             </span>
                         </button>
                     )}
@@ -404,7 +403,7 @@ export default function ReservedModal({ unit, onClose, onBack }: ReservedModalPr
                                 : "bg-gray-300 cursor-not-allowed"
                                 }`}
                         >
-                            Thanh toán - {formatCurrency(unit.reservedMoney, { style: 'standard', locale: 'en-US' })}
+                            Thanh toán - {formatCurrency(unit.reservedMoney || 50000000, { style: 'standard', locale: 'en-US' })}
                         </Button>
                     </div>
                 </div>

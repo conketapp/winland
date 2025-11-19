@@ -168,7 +168,6 @@ export default function DepositModal({ unit, onClose, onBack }: DepositModalProp
                         >
                             <ArrowLeft size={deviceInfo.isMobile ? 16 : 18} />
                             <span className={`${responsive.buttonTextSize} font-medium ${deviceInfo.isMobile ? 'hidden' : ''}`}>
-                                Quay lại
                             </span>
                         </button>
                     )}
