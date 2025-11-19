@@ -69,21 +69,21 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
     const getAvailableTimeOptions = () => {
         const selectedDate = BookingForm.date;
         const today = new Date().toISOString().split('T')[0];
-        
+
         // If selected date is today, filter out past times
         if (selectedDate === today) {
             const now = new Date();
             const currentHour = now.getHours();
             const currentMinute = now.getMinutes();
             const currentTimeInMinutes = currentHour * 60 + currentMinute;
-            
+
             return allTimeOptions.filter(time => {
                 const [hour, minute] = time.split(':').map(Number);
                 const timeInMinutes = hour * 60 + minute;
                 return timeInMinutes > currentTimeInMinutes;
             });
         }
-        
+
         // For future dates, show all times
         return allTimeOptions;
     };
@@ -124,7 +124,7 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
                 updatedForm.date = ''; // Clear the invalid date
             } else {
                 setDateError('');
-                
+
                 // If date is today, clear times if they're in the past
                 const todayStr = new Date().toISOString().split('T')[0];
                 if (value === todayStr) {
@@ -260,7 +260,7 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
                 <div className="flex-1 overflow-y-auto bg-gray-100">
                     {/* Deposit Receipt Section */}
                     <div className="px-4 pt-4 pb-0">
-                        <h3 className={`font-bold ${responsive.titleSize} text-black-800`}>Booking</h3>
+                        <h3 className={`font-bold ${responsive.titleSize} text-black-800`}>Phiếu Booking</h3>
                     </div>
                     {/* Body */}
                     <div className="px-2 pb-3 space-y-3">

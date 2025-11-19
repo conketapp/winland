@@ -48,6 +48,16 @@ export default function BookingDetailModal({ booking, onClose, onComplete, readO
         }
     }
 
+    // Calculate actual expiry time: visitEndTime + 30 minutes
+    const getActualExpiryTime = () => {
+        if (!booking.visitDate || !booking.visitEndTime) return null;
+        const visitDateTime = new Date(`${booking.visitDate}T${booking.visitEndTime}`);
+        visitDateTime.setMinutes(visitDateTime.getMinutes() + 30);
+        return visitDateTime;
+    };
+
+    const actualExpiryTime = getActualExpiryTime();
+
     // Extract schedule from notes if fields are null
     let visitDate = booking.visitDate;
     let visitStartTime = booking.visitStartTime;
@@ -366,10 +376,10 @@ export default function BookingDetailModal({ booking, onClose, onComplete, readO
                                     <span className="text-sm text-gray-600">Ngày tạo:</span>
                                     <span className="font-medium">{new Date(booking.createdAt).toLocaleString('vi-VN')}</span>
                                 </div>
-                                {booking.expiresAt && (
+                                {actualExpiryTime && (
                                     <div className="flex justify-between items-center">
                                         <span className="text-sm text-gray-600">Hết hạn:</span>
-                                        <span className="font-medium text-orange-600">{new Date(booking.expiresAt).toLocaleString('vi-VN')}</span>
+                                        <span className="font-medium text-orange-600">{actualExpiryTime.toLocaleString('vi-VN')}</span>
                                     </div>
                                 )}
                                 {booking.approvedAt && (

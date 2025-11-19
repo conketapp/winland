@@ -44,9 +44,10 @@ export async function POST(request: NextRequest) {
         const bookingCount = await prisma.booking.count()
         const bookingCode = `BK${String(bookingCount + 1).padStart(6, '0')}`
 
-        // Calculate booking expiry (7 days from now)
-        const expiresAt = new Date()
-        expiresAt.setDate(expiresAt.getDate() + 7)
+        // Calculate booking expiry: visitEndTime + 30 minutes
+        const visitDateTime = new Date(`${visitDate}T${endTime}`)
+        const expiresAt = new Date(visitDateTime)
+        expiresAt.setMinutes(expiresAt.getMinutes() + 30)
 
         // Create booking
         const booking = await prisma.booking.create({

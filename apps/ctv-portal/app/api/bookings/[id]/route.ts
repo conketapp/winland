@@ -29,10 +29,10 @@ export async function DELETE(
             )
         }
 
-        // Only allow hiding completed or cancelled bookings
-        if (booking.status !== 'EXPIRED' && booking.status !== 'CANCELLED') {
+        // Only allow hiding completed, expired or cancelled bookings
+        if (booking.status !== 'COMPLETED' && booking.status !== 'EXPIRED' && booking.status !== 'CANCELLED') {
             return NextResponse.json(
-                { error: 'Chỉ có thể ẩn booking đã hoàn thành hoặc đã hủy' },
+                { error: 'Chỉ có thể ẩn booking đã hoàn thành, hết hạn hoặc đã hủy' },
                 { status: 400 }
             )
         }

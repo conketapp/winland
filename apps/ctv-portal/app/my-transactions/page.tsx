@@ -79,6 +79,13 @@ export default function MyTransactionsPage(): JSX.Element {
             setIsLoading(true);
             const userPhone = sessionStorage.getItem('login:userPhone');
 
+            // Check and update expired bookings first
+            try {
+                await fetch('/api/bookings/check-expired', { method: 'POST' });
+            } catch (error) {
+                console.error('Error checking expired bookings:', error);
+            }
+
             const [reservationsRes, bookingsRes, depositsRes] = await Promise.all([
                 fetch('/api/reservations', {
                     headers: { 'x-user-phone': userPhone || '' },
@@ -206,16 +213,17 @@ export default function MyTransactionsPage(): JSX.Element {
     };
 
     const getStatusColor = (status: string, type?: string) => {
-        if (status === 'CONFIRMED') {
+        if (status === 'COMPLETED') {
+            return 'bg-green-100 text-green-700 border-green-300';
+        } else if (status === 'CONFIRMED') {
             return 'bg-blue-100 text-blue-700 border-blue-300';
-        } else if (status === 'COMPLETED' || status === 'ACTIVE') {
+        } else if (status === 'ACTIVE') {
             return 'bg-green-100 text-green-700 border-green-300';
         } else if (status.includes('PENDING')) {
             return 'bg-yellow-100 text-yellow-700 border-yellow-300';
-        } else if (status === 'EXPIRED' && type === 'booking') {
-            // Completed bookings show as success
-            return 'bg-green-100 text-green-700 border-green-300';
-        } else if (status.includes('CANCELLED') || status.includes('EXPIRED')) {
+        } else if (status === 'EXPIRED') {
+            return 'bg-gray-100 text-gray-700 border-gray-300';
+        } else if (status.includes('CANCELLED')) {
             return 'bg-red-100 text-red-700 border-red-300';
         }
         return 'bg-gray-100 text-gray-700 border-gray-300';
@@ -223,18 +231,20 @@ export default function MyTransactionsPage(): JSX.Element {
 
     const getStatusText = (status: string, type?: string) => {
         switch (status) {
+            case 'COMPLETED':
+                return 'Hoàn thành';
             case 'CONFIRMED':
                 return 'Đã xác nhận';
             case 'PENDING_APPROVAL':
                 return 'Chờ duyệt';
+            case 'PENDING_PAYMENT':
+                return 'Chờ thanh toán';
+            case 'EXPIRED':
+                return 'Hết hạn';
             case 'CANCELLED':
                 return 'Đã hủy';
-            case 'EXPIRED':
-                return type === 'booking' ? 'Đã hoàn thành' : 'Hết hạn';
             case 'ACTIVE':
                 return 'Đang hoạt động';
-            case 'COMPLETED':
-                return 'Hoàn thành';
             default:
                 return status;
         }

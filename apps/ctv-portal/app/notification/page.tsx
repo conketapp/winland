@@ -78,6 +78,13 @@ export default function NotificationPage(): JSX.Element {
             setIsLoading(true);
             const userPhone = sessionStorage.getItem('login:userPhone');
 
+            // Check and update expired bookings first
+            try {
+                await fetch('/api/bookings/check-expired', { method: 'POST' });
+            } catch (error) {
+                console.error('Error checking expired bookings:', error);
+            }
+
             // Fetch all notifications (including other users) with cache-busting
             const [bookingsRes, depositsRes, reservationsRes] = await Promise.all([
                 fetch('/api/bookings/all', {
@@ -181,16 +188,17 @@ export default function NotificationPage(): JSX.Element {
     };
 
     const getStatusColor = (status: string, type?: string) => {
-        if (status === 'CONFIRMED') {
+        if (status === 'COMPLETED') {
+            return 'text-green-600 bg-green-50';
+        } else if (status === 'CONFIRMED') {
             return 'text-blue-600 bg-blue-50';
-        } else if (status === 'ACTIVE' || status === 'COMPLETED') {
+        } else if (status === 'ACTIVE') {
             return 'text-green-600 bg-green-50';
         } else if (status.includes('PENDING')) {
             return 'text-yellow-600 bg-yellow-50';
-        } else if (status === 'EXPIRED' && type === 'booking') {
-            // Completed bookings show as success
-            return 'text-green-600 bg-green-50';
-        } else if (status === 'CANCELLED' || status === 'EXPIRED') {
+        } else if (status === 'EXPIRED') {
+            return 'text-gray-600 bg-gray-50';
+        } else if (status === 'CANCELLED') {
             return 'text-red-600 bg-red-50';
         }
         return 'text-gray-600 bg-gray-50';
@@ -198,18 +206,20 @@ export default function NotificationPage(): JSX.Element {
 
     const getStatusText = (status: string, type?: string) => {
         switch (status) {
+            case 'COMPLETED':
+                return 'Hoàn thành';
             case 'CONFIRMED':
                 return 'Đã xác nhận';
             case 'PENDING_APPROVAL':
                 return 'Chờ duyệt';
+            case 'PENDING_PAYMENT':
+                return 'Chờ thanh toán';
+            case 'EXPIRED':
+                return 'Hết hạn';
             case 'CANCELLED':
                 return 'Đã hủy';
-            case 'EXPIRED':
-                return type === 'booking' ? 'Đã hoàn thành' : 'Hết hạn';
             case 'ACTIVE':
                 return 'Đang hoạt động';
-            case 'COMPLETED':
-                return 'Hoàn thành';
             default:
                 return status;
         }
@@ -349,14 +359,30 @@ export default function NotificationPage(): JSX.Element {
                                                     <span className="font-medium">Mã:</span>
                                                     <span className="font-mono">{notification.code}</span>
                                                 </div>
-                                                {notification.ctvName && (
-                                                    <div className="flex items-center gap-2 text-sm bg-purple-50 dark:bg-purple-900/20 p-2 rounded-lg">
-                                                        <User className="w-4 h-4 text-purple-600" />
-                                                        <span className="font-medium text-purple-700 dark:text-purple-400">
-                                                            CTV: {notification.ctvName}
-                                                        </span>
-                                                    </div>
-                                                )}
+                                                {notification.ctvName && (() => {
+                                                    // Check if this notification belongs to current user
+                                                    let isCurrentUser = false;
+                                                    if (notification.type === 'booking') {
+                                                        const fullBooking = bookingsData.find(b => b.id === notification.id);
+                                                        isCurrentUser = fullBooking?.ctv?.phone === currentUserPhone;
+                                                    }
+                                                    // For deposits and reservations, we can add similar logic if needed
+
+                                                    return (
+                                                        <div className={`flex items-center gap-2 text-sm p-2 rounded-lg ${isCurrentUser
+                                                            ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-700'
+                                                            : 'bg-purple-50 dark:bg-purple-900/20'
+                                                            }`}>
+                                                            <User className={`w-4 h-4 ${isCurrentUser ? 'text-blue-600' : 'text-purple-600'}`} />
+                                                            <span className={`font-medium ${isCurrentUser
+                                                                ? 'text-blue-700 dark:text-blue-400'
+                                                                : 'text-purple-700 dark:text-purple-400'
+                                                                }`}>
+                                                                CTV: {notification.ctvName} {isCurrentUser}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })()}
                                                 <div className="flex items-center gap-2 text-sm">
                                                     <User className="w-4 h-4" />
                                                     <span>{notification.customerName}</span>
@@ -429,10 +455,10 @@ export default function NotificationPage(): JSX.Element {
                             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                             disabled={currentPage === 1}
                             className={`px-4 py-2 rounded-lg font-medium transition ${currentPage === 1
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : isDark
-                                        ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
-                                        : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : isDark
+                                    ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
+                                    : 'bg-white text-gray-700 hover:bg-gray-100 border'
                                 }`}
                         >
                             ← Trước
@@ -444,10 +470,10 @@ export default function NotificationPage(): JSX.Element {
                                     key={page}
                                     onClick={() => setCurrentPage(page)}
                                     className={`w-10 h-10 rounded-lg font-medium transition ${currentPage === page
-                                            ? 'bg-blue-600 text-white'
-                                            : isDark
-                                                ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
-                                                : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                                        ? 'bg-blue-600 text-white'
+                                        : isDark
+                                            ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
+                                            : 'bg-white text-gray-700 hover:bg-gray-100 border'
                                         }`}
                                 >
                                     {page}
@@ -459,10 +485,10 @@ export default function NotificationPage(): JSX.Element {
                             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                             disabled={currentPage === totalPages}
                             className={`px-4 py-2 rounded-lg font-medium transition ${currentPage === totalPages
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : isDark
-                                        ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
-                                        : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : isDark
+                                    ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
+                                    : 'bg-white text-gray-700 hover:bg-gray-100 border'
                                 }`}
                         >
                             Sau →

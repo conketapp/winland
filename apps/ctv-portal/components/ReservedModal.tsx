@@ -187,7 +187,6 @@ export default function ReservedModal({ unit, onClose, onBack }: ReservedModalPr
                     {/* Deposit Receipt Section */}
                     <div className="px-4 pt-4 pb-0">
                         <h3 className="font-bold text-lg text-black-800">Phiếu giữ chỗ</h3>
-                        <p className="text-sm text-black-600">Mã phiếu: XXXXXXX</p>
                     </div>
                     {/* Body */}
                     <div className="px-2 pb-3 space-y-3">

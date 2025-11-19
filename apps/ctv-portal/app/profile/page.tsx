@@ -68,6 +68,8 @@ export default function ProfilePage(): JSX.Element {
     const [isSaving, setIsSaving] = useState(false);
     const [editedProfile, setEditedProfile] = useState<Partial<UserProfile>>({});
     const [actualTotalDeals, setActualTotalDeals] = useState<number>(0);
+    const [totalCommission, setTotalCommission] = useState<number>(0);
+    const [completedDeals, setCompletedDeals] = useState<number>(0);
 
     useEffect(() => {
         const userPhone = sessionStorage.getItem('login:userPhone');
@@ -88,11 +90,12 @@ export default function ProfilePage(): JSX.Element {
                 return;
             }
 
-            const [userRes, reservationsRes, bookingsRes, depositsRes] = await Promise.all([
+            const [userRes, reservationsRes, bookingsRes, depositsRes, commissionsRes] = await Promise.all([
                 fetch('/api/user/me', { headers: { 'x-user-phone': userPhone } }),
                 fetch('/api/reservations', { headers: { 'x-user-phone': userPhone } }),
                 fetch('/api/bookings', { headers: { 'x-user-phone': userPhone } }),
-                fetch('/api/deposits', { headers: { 'x-user-phone': userPhone } })
+                fetch('/api/deposits', { headers: { 'x-user-phone': userPhone } }),
+                fetch('/api/commissions', { headers: { 'x-user-phone': userPhone } })
             ]);
 
             if (userRes.ok) {
@@ -104,13 +107,31 @@ export default function ProfilePage(): JSX.Element {
                 const reservations = reservationsRes.ok ? await reservationsRes.json() : [];
                 const bookings = bookingsRes.ok ? await bookingsRes.json() : [];
                 const deposits = depositsRes.ok ? await depositsRes.json() : [];
+                const commissions = commissionsRes.ok ? await commissionsRes.json() : [];
 
+                // Active deals (đang hoạt động)
                 const totalDeals =
                     reservations.filter((r: any) => r.status === 'ACTIVE').length +
-                    bookings.filter((b: any) => b.status !== 'CANCELLED').length +
+                    bookings.filter((b: any) => 
+                        b.status !== 'CANCELLED' && 
+                        b.status !== 'EXPIRED' && 
+                        b.status !== 'COMPLETED'
+                    ).length +
                     deposits.filter((d: any) => d.status !== 'CANCELLED').length;
 
+                // Completed deals (đã hoàn thành)
+                const completed =
+                    bookings.filter((b: any) => b.status === 'COMPLETED').length +
+                    deposits.filter((d: any) => d.status === 'CONFIRMED').length;
+
+                // Total commission (tổng hoa hồng đã nhận)
+                const totalComm = commissions
+                    .filter((c: any) => c.status === 'CONFIRMED' || c.status === 'PAID')
+                    .reduce((sum: number, c: any) => sum + (c.amount || 0), 0);
+
                 setActualTotalDeals(totalDeals);
+                setCompletedDeals(completed);
+                setTotalCommission(totalComm);
             } else {
                 const errorData = await userRes.json();
                 console.error('Failed to fetch profile:', errorData);
@@ -577,10 +598,30 @@ export default function ProfilePage(): JSX.Element {
                                 {/* Total Deals */}
                                 <div>
                                     <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                                        Tổng số giao dịch
+                                        Tổng số giao dịch đang hoạt động
                                     </label>
                                     <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'} font-semibold text-blue-600`}>
                                         {actualTotalDeals}
+                                    </p>
+                                </div>
+
+                                {/* Completed Deals */}
+                                <div>
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        Số giao dịch thành công
+                                    </label>
+                                    <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'} font-semibold text-green-600`}>
+                                        {completedDeals}
+                                    </p>
+                                </div>
+
+                                {/* Total Commission */}
+                                <div>
+                                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        Tổng hoa hồng đã nhận
+                                    </label>
+                                    <p className={`px-4 py-2 rounded-lg ${isDark ? 'bg-[#0C1125]' : 'bg-gray-50'} font-semibold text-emerald-600`}>
+                                        {totalCommission.toLocaleString('vi-VN')} VND
                                     </p>
                                 </div>
                             </div>

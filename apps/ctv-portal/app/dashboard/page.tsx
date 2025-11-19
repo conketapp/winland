@@ -64,6 +64,13 @@ export default function DashboardScreen(): JSX.Element {
 
             setIsLoading(true);
 
+            // Check and update expired bookings first
+            try {
+                await fetch('/api/bookings/check-expired', { method: 'POST' });
+            } catch (error) {
+                console.error('Error checking expired bookings:', error);
+            }
+
             // Fetch user data and all transactions in parallel with cache-busting
             const [userRes, reservationsRes, bookingsRes, depositsRes] = await Promise.all([
                 fetch('/api/user/me', {
@@ -448,9 +455,14 @@ export default function DashboardScreen(): JSX.Element {
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <p className="text-sm font-medium truncate">{booking.unit?.code || 'N/A'}</p>
-                                                        {booking.status === 'EXPIRED' && (
+                                                        {booking.status === 'COMPLETED' && (
                                                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'}`}>
                                                                 ✓ Hoàn thành
+                                                            </span>
+                                                        )}
+                                                        {booking.status === 'EXPIRED' && (
+                                                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-gray-900/30 text-gray-400' : 'bg-gray-100 text-gray-700'}`}>
+                                                                ⏱ Hết hạn
                                                             </span>
                                                         )}
                                                         {booking.status === 'CONFIRMED' && (
@@ -483,7 +495,7 @@ export default function DashboardScreen(): JSX.Element {
                                                         >
                                                             Xem chi tiết
                                                         </button>
-                                                        {(booking.status === 'EXPIRED' || booking.status === 'CANCELLED') && (
+                                                        {(booking.status === 'COMPLETED' || booking.status === 'EXPIRED' || booking.status === 'CANCELLED') && (
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();

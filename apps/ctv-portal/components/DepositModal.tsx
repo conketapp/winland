@@ -30,7 +30,7 @@ export default function DepositModal({ unit, onClose, onBack }: DepositModalProp
         "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1560448204-61dc36dc98c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
     ];
-    
+
     let unitImages = defaultImages;
     try {
         if (unit.images && typeof unit.images === 'string') {
@@ -186,7 +186,6 @@ export default function DepositModal({ unit, onClose, onBack }: DepositModalProp
                     {/* Deposit Receipt Section */}
                     <div className="px-4 pt-4 pb-0">
                         <h3 className="font-bold text-lg text-black-800">Phiếu đặt cọc</h3>
-                        <p className="text-sm text-black-600">Mã phiếu: XXXXXXX</p>
                     </div>
                     {/* Body */}
                     <div className="px-2 pb-3 space-y-3">
@@ -404,7 +403,7 @@ export default function DepositModal({ unit, onClose, onBack }: DepositModalProp
                                 : "bg-gray-300 cursor-not-allowed"
                                 }`}
                         >
-                            Thanh toán - {formatCurrency(unit.depositMoney, { style: 'standard', locale: 'en-US' })}
+                            Thanh toán - {formatCurrency(unit.depositMoney || (unit.price * 0.1), { style: 'standard', locale: 'en-US' })}
                         </button>
                     </div>
                 </div>
