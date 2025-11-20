@@ -159,14 +159,14 @@ export default function DashboardScreen(): JSX.Element {
             if (!silent) {
                 setIsLoading(true);
             }
-            
+
             // Check and update expired bookings first
             try {
                 await fetch('/api/bookings/check-expired', { method: 'POST' });
             } catch (error) {
                 console.error('Error checking expired bookings:', error);
             }
-            
+
             const response = await fetch('/api/projects');
 
             if (response.ok) {

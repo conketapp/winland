@@ -58,8 +58,6 @@ export async function POST(request: NextRequest) {
                 customerName,
                 customerPhone,
                 customerEmail,
-                customerIdCard: '', // Will be filled later
-                customerAddress: '', // Will be filled later
                 bookingAmount: 0, // No payment required for viewing
                 paymentMethod: 'NONE',
                 status: 'CONFIRMED',

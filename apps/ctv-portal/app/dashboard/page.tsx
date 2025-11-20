@@ -619,8 +619,8 @@ export default function DashboardScreen(): JSX.Element {
             <ConfirmDialog
                 isOpen={showDeleteDialog}
                 title="Ẩn booking khỏi dashboard"
-                message="Bạn có chắc chắn muốn ẩn booking này khỏi dashboard? Booking vẫn sẽ được lưu trong lịch sử giao dịch."
-                confirmText={isDeleting ? "Đang ẩn..." : "Ẩn"}
+                message="Bạn có chắc chắn muốn xóa booking này khỏi trang này? Booking vẫn sẽ được lưu trong lịch sử giao dịch."
+                confirmText={isDeleting ? "Đang xóa..." : "Xóa"}
                 cancelText="Hủy"
                 type="warning"
                 onConfirm={confirmDeleteBooking}

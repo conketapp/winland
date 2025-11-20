@@ -26,7 +26,9 @@ export async function GET(request: NextRequest) {
                                         bookings: {
                                             where: {
                                                 status: {
-                                                    in: ['PENDING_APPROVAL', 'CONFIRMED', 'PENDING_PAYMENT']
+                                                    // Include EXPIRED bookings so they show as blue "Đang có booking"
+                                                    // until user clicks Trash button
+                                                    in: ['PENDING_APPROVAL', 'CONFIRMED', 'PENDING_PAYMENT', 'EXPIRED']
                                                 }
                                             },
                                             take: 1
@@ -52,7 +54,9 @@ export async function GET(request: NextRequest) {
                                 bookings: {
                                     where: {
                                         status: {
-                                            in: ['PENDING_APPROVAL', 'CONFIRMED', 'PENDING_PAYMENT']
+                                            // Include EXPIRED bookings so they show as blue "Đang có booking"
+                                            // until user clicks Trash button
+                                            in: ['PENDING_APPROVAL', 'CONFIRMED', 'PENDING_PAYMENT', 'EXPIRED']
                                         }
                                     },
                                     take: 1

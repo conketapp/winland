@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { 
-  Home, 
-  MapPin, 
+import {
+  Home,
+  MapPin,
   DollarSign,
   Calendar,
   Eye,
@@ -46,20 +46,20 @@ export default function UnitsPage() {
 
   // Mock data - Sơ đồ căn hộ theo block
   const availableBlocks = ['LK1', 'LK2', 'LK3', 'LK4'];
-  
+
   const mockUnits: Unit[] = [
     // LK1 - Tầng 12
     { id: 1, code: 'LK1-1201', block: 'LK1', floor: 12, area: 85, price: 2500000000, status: 'AVAILABLE', view: 'City View', bedrooms: 2, bathrooms: 2, commission: 25000000, direction: 'Đông Nam' },
     { id: 2, code: 'LK1-1202', block: 'LK1', floor: 12, area: 85, price: 2500000000, status: 'RESERVED', view: 'City View', bedrooms: 2, bathrooms: 2, commission: 25000000, direction: 'Đông Nam', customerName: 'Nguyễn Văn A', reservedUntil: '2 giờ' },
     { id: 3, code: 'LK1-1203', block: 'LK1', floor: 12, area: 95, price: 2800000000, status: 'BOOKING', view: 'River View', bedrooms: 3, bathrooms: 2, commission: 28000000, direction: 'Đông', customerName: 'Trần Thị B' },
     { id: 4, code: 'LK1-1204', block: 'LK1', floor: 12, area: 85, price: 2500000000, status: 'SOLD', view: 'City View', bedrooms: 2, bathrooms: 2, commission: 25000000, direction: 'Tây Nam' },
-    
+
     // LK1 - Tầng 11
     { id: 5, code: 'LK1-1101', block: 'LK1', floor: 11, area: 85, price: 2450000000, status: 'AVAILABLE', view: 'City View', bedrooms: 2, bathrooms: 2, commission: 24500000, direction: 'Đông Nam' },
     { id: 6, code: 'LK1-1102', block: 'LK1', floor: 11, area: 85, price: 2450000000, status: 'AVAILABLE', view: 'City View', bedrooms: 2, bathrooms: 2, commission: 24500000, direction: 'Đông Nam' },
     { id: 7, code: 'LK1-1103', block: 'LK1', floor: 11, area: 95, price: 2750000000, status: 'DEPOSITED', view: 'River View', bedrooms: 3, bathrooms: 2, commission: 27500000, direction: 'Đông', customerName: 'Lê Văn C' },
     { id: 8, code: 'LK1-1104', block: 'LK1', floor: 11, area: 85, price: 2450000000, status: 'AVAILABLE', view: 'City View', bedrooms: 2, bathrooms: 2, commission: 24500000, direction: 'Tây Nam' },
-    
+
     // LK1 - Tầng 10
     { id: 9, code: 'LK1-1001', block: 'LK1', floor: 10, area: 85, price: 2400000000, status: 'AVAILABLE', view: 'City View', bedrooms: 2, bathrooms: 2, commission: 24000000, direction: 'Đông Nam' },
     { id: 10, code: 'LK1-1002', block: 'LK1', floor: 10, area: 85, price: 2400000000, status: 'SOLD', view: 'City View', bedrooms: 2, bathrooms: 2, commission: 24000000, direction: 'Đông Nam' },
@@ -69,40 +69,40 @@ export default function UnitsPage() {
 
   const getStatusInfo = (status: string) => {
     const statusMap = {
-      AVAILABLE: { 
-        label: 'Có sẵn', 
+      AVAILABLE: {
+        label: 'Có sẵn',
         color: 'bg-green-500',
         textColor: 'text-white',
         borderColor: 'border-green-600',
         canAction: true,
         message: ''
       },
-      RESERVED: { 
-        label: 'Đã giữ', 
+      RESERVED: {
+        label: 'Đã giữ',
         color: 'bg-amber-500',
         textColor: 'text-white',
         borderColor: 'border-amber-600',
         canAction: false,
         message: '⚠️ Căn này đang có người giữ chỗ'
       },
-      BOOKING: { 
-        label: 'Booking', 
+      BOOKING: {
+        label: 'Booking',
         color: 'bg-blue-500',
         textColor: 'text-white',
         borderColor: 'border-blue-600',
         canAction: false,
         message: '⚠️ Căn này đang trong quá trình booking'
       },
-      DEPOSITED: { 
-        label: 'Đã cọc', 
+      DEPOSITED: {
+        label: 'Đã cọc',
         color: 'bg-purple-500',
         textColor: 'text-white',
         borderColor: 'border-purple-600',
         canAction: false,
         message: '⚠️ Căn này đã được đặt cọc'
       },
-      SOLD: { 
-        label: 'Đã bán', 
+      SOLD: {
+        label: 'Đã bán',
         color: 'bg-gray-500',
         textColor: 'text-white',
         borderColor: 'border-gray-600',
@@ -113,8 +113,8 @@ export default function UnitsPage() {
     return statusMap[status as keyof typeof statusMap] || statusMap.AVAILABLE;
   };
 
-  const filteredUnits = mockUnits.filter(unit => 
-    unit.block === selectedBlock && 
+  const filteredUnits = mockUnits.filter(unit =>
+    unit.block === selectedBlock &&
     unit.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -129,13 +129,13 @@ export default function UnitsPage() {
 
   const handleUnitClick = (unit: Unit) => {
     const statusInfo = getStatusInfo(unit.status);
-    
+
     // Nếu căn đã bán/đã giữ/booking/đã cọc → hiển thị cảnh báo
     if (!statusInfo.canAction) {
       alert(statusInfo.message);
       return;
     }
-    
+
     // Nếu available → mở modal chi tiết
     setSelectedUnit(unit);
     setShowDetailModal(true);
@@ -165,11 +165,11 @@ export default function UnitsPage() {
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-700"></div>
         <div className="absolute inset-0 bg-black/10"></div>
-        
+
         {/* Decorative elements */}
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-        
+
         <div className="relative px-6 py-8 text-white">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
@@ -215,11 +215,10 @@ export default function UnitsPage() {
                 <button
                   key={block}
                   onClick={() => setSelectedBlock(block)}
-                  className={`px-6 py-3 rounded-2xl font-bold text-sm whitespace-nowrap transition-all duration-300 ${
-                    selectedBlock === block
-                      ? 'bg-gradient-to-r from-purple-500 to-blue-600 text-white shadow-lg scale-105'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:scale-105'
-                  }`}
+                  className={`px-6 py-3 rounded-2xl font-bold text-sm whitespace-nowrap transition-all duration-300 ${selectedBlock === block
+                    ? 'bg-gradient-to-r from-purple-500 to-blue-600 text-white shadow-lg scale-105'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:scale-105'
+                    }`}
                 >
                   {block}
                 </button>
@@ -270,10 +269,10 @@ export default function UnitsPage() {
         {/* Floor by Floor - Sơ đồ căn hộ */}
         <div className="space-y-4">
           {floors.map((floor, floorIndex) => (
-            <Card 
-              key={floor} 
-              variant="elevated" 
-              padding="md" 
+            <Card
+              key={floor}
+              variant="elevated"
+              padding="md"
               className="animate-slide-up"
               style={{ animationDelay: `${floorIndex * 0.1}s` }}
             >
@@ -303,7 +302,7 @@ export default function UnitsPage() {
                       >
                         {/* Background pattern */}
                         <div className="absolute inset-0 bg-black/5"></div>
-                        
+
                         <div className="relative z-10">
                           {/* Unit Code */}
                           <div className="flex items-center justify-between mb-2">
@@ -312,7 +311,7 @@ export default function UnitsPage() {
                               <CheckCircle className="w-5 h-5" />
                             )}
                           </div>
-                          
+
                           {/* Unit Info */}
                           <div className="flex items-center gap-2 text-sm opacity-90 mb-2">
                             <Bed className="w-4 h-4" />
@@ -320,11 +319,11 @@ export default function UnitsPage() {
                             <Bath className="w-4 h-4 ml-1" />
                             <span>{unit.bathrooms}WC</span>
                           </div>
-                          
+
                           {/* Price */}
                           <p className="text-base font-bold">{formatCurrency(unit.price)}</p>
                           <p className="text-xs opacity-80 mt-1">{unit.area}m²</p>
-                          
+
                           {/* Status Badge */}
                           <div className="mt-2 pt-2 border-t border-white/20">
                             <p className="text-xs font-medium opacity-90">{statusInfo.label}</p>
@@ -348,8 +347,8 @@ export default function UnitsPage() {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Không tìm thấy căn hộ</h3>
               <p className="text-gray-600 mb-4">Hãy thử tìm kiếm với từ khóa khác hoặc chọn block khác</p>
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 onClick={() => {
                   setSearchTerm('');
                   setSelectedBlock('LK1');
@@ -364,11 +363,11 @@ export default function UnitsPage() {
 
       {/* Unit Detail Modal */}
       {showDetailModal && selectedUnit && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end justify-center animate-fade-in"
           onClick={() => setShowDetailModal(false)}
         >
-          <div 
+          <div
             className="w-full max-w-md bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
@@ -383,7 +382,7 @@ export default function UnitsPage() {
                   <X className="w-6 h-6" />
                 </button>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <Badge variant="gradient" size="sm" className={`${getStatusInfo(selectedUnit.status).color} text-white`}>
                   {getStatusInfo(selectedUnit.status).label}
@@ -460,26 +459,26 @@ export default function UnitsPage() {
               {/* Actions - Chỉ hiển thị nếu status = AVAILABLE */}
               {selectedUnit.status === 'AVAILABLE' && (
                 <div className="space-y-3">
-                  <Button 
-                    variant="success" 
-                    fullWidth 
+                  <Button
+                    variant="success"
+                    fullWidth
                     size="lg"
                     onClick={handleReservation}
                     leftIcon={<Calendar className="w-5 h-5" />}
                   >
                     Giữ chỗ
                   </Button>
-                  
+
                   <div className="grid grid-cols-2 gap-3">
-                    <Button 
-                      variant="primary" 
+                    <Button
+                      variant="primary"
                       fullWidth
                       onClick={handleBooking}
                     >
                       Booking
                     </Button>
-                    <Button 
-                      variant="warning" 
+                    <Button
+                      variant="warning"
                       fullWidth
                       onClick={handleDeposit}
                     >
@@ -513,8 +512,8 @@ export default function UnitsPage() {
               )}
 
               {/* Close Button */}
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 fullWidth
                 onClick={() => setShowDetailModal(false)}
               >

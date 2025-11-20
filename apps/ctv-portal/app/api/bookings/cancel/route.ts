@@ -45,11 +45,42 @@ export async function POST(request: NextRequest) {
             }
         })
 
-        // Return unit to AVAILABLE status
-        await prisma.unit.update({
-            where: { id: booking.unitId },
-            data: { status: 'AVAILABLE' }
+        // Return unit to AVAILABLE status only if no other active transactions
+        const activeBookings = await prisma.booking.count({
+            where: {
+                unitId: booking.unitId,
+                status: {
+                    in: ['CONFIRMED', 'PENDING_APPROVAL', 'PENDING_PAYMENT']
+                },
+                id: { not: bookingId }
+            }
         })
+
+        const activeReservations = await prisma.reservation.count({
+            where: {
+                unitId: booking.unitId,
+                status: {
+                    in: ['ACTIVE', 'YOUR_TURN']
+                }
+            }
+        })
+
+        const activeDeposits = await prisma.deposit.count({
+            where: {
+                unitId: booking.unitId,
+                status: {
+                    in: ['PENDING_APPROVAL', 'CONFIRMED']
+                }
+            }
+        })
+
+        // Only return to AVAILABLE if no active transactions exist
+        if (activeBookings === 0 && activeReservations === 0 && activeDeposits === 0) {
+            await prisma.unit.update({
+                where: { id: booking.unitId },
+                data: { status: 'AVAILABLE' }
+            })
+        }
 
         return NextResponse.json({
             success: true,

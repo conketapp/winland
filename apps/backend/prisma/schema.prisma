@@ -204,8 +204,6 @@ model Booking {
   customerName    String        @map("customer_name")
   customerPhone   String        @map("customer_phone")
   customerEmail   String?       @map("customer_email")
-  customerIdCard  String        @map("customer_id_card")
-  customerAddress String        @map("customer_address")
   bookingAmount   Float         @map("booking_amount")
   paymentMethod   String        @default("BANK_TRANSFER") @map("payment_method")
   paymentProof    String?       @map("payment_proof")

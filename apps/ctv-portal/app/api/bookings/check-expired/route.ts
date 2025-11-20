@@ -32,6 +32,8 @@ export async function POST() {
         // Update expired bookings
         const updatePromises = bookingsToExpire.map(async (booking) => {
             // Update booking status to EXPIRED with reason
+            // Unit stays in RESERVED_BOOKING status until user clicks Trash button
+            // This preserves the booking history and allows user to manually clean up
             await prisma.booking.update({
                 where: { id: booking.id },
                 data: { 
@@ -40,32 +42,9 @@ export async function POST() {
                 }
             })
 
-            // Update unit status back to AVAILABLE if no other active bookings/reservations
-            const activeBookings = await prisma.booking.count({
-                where: {
-                    unitId: booking.unitId,
-                    status: {
-                        in: ['CONFIRMED', 'PENDING_APPROVAL', 'PENDING_PAYMENT']
-                    },
-                    id: { not: booking.id }
-                }
-            })
-
-            const activeReservations = await prisma.reservation.count({
-                where: {
-                    unitId: booking.unitId,
-                    status: {
-                        in: ['CONFIRMED', 'PENDING_APPROVAL']
-                    }
-                }
-            })
-
-            if (activeBookings === 0 && activeReservations === 0) {
-                await prisma.unit.update({
-                    where: { id: booking.unitId },
-                    data: { status: 'AVAILABLE' }
-                })
-            }
+            // Note: Unit status is NOT changed here
+            // Unit will return to AVAILABLE only when user clicks Trash button (DELETE endpoint)
+            // This ensures booking history is preserved and user has control over cleanup
 
             return booking
         })
