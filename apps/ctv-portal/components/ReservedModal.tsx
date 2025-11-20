@@ -31,7 +31,7 @@ export default function ReservedModal({ unit, onClose, onBack }: ReservedModalPr
         "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1560448204-61dc36dc98c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
     ];
-    
+
     let unitImages = defaultImages;
     try {
         if (unit.images && typeof unit.images === 'string') {
@@ -102,7 +102,9 @@ export default function ReservedModal({ unit, onClose, onBack }: ReservedModalPr
 
         // Check mobile numbers (10-11 digits)
         // Mobile prefixes: 03, 05, 07, 08, 09
-        const mobilePattern = /^(03|05|07|08|09)\d{8}$/;
+        // 10 digits: 03/05/07/08/09 + 8 digits
+        // 11 digits: 03/05/07/08/09 + 9 digits
+        const mobilePattern = /^(03|05|07|08|09)\d{8,9}$/;
 
         // Check landline numbers (10-11 digits)
         // Landline prefix: 02 + area code + subscriber number
