@@ -461,7 +461,7 @@ export default function DashboardScreen(): JSX.Element {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <p className="text-xs opacity-70 mt-1">{reservation.customerName}</p>
+                                                <p className="text-xs opacity-70 mt-1">Khách hàng: {reservation.customerName}</p>
                                                 {reservation.status === 'ACTIVE' && (
                                                     <p className="text-xs text-orange-600 font-medium mt-1">
                                                         Hết hạn: {new Date(reservation.reservedUntil).toLocaleString('vi-VN')}
@@ -574,10 +574,10 @@ export default function DashboardScreen(): JSX.Element {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="text-xs opacity-70 mt-1">{booking.customerName}</p>
+                                                    <p className="text-xs opacity-70 mt-1">Khách hàng: {booking.customerName}</p>
                                                     {visitDate && visitStartTime && visitEndTime && (
                                                         <p className="text-xs text-blue-600 font-medium mt-1">
-                                                            {visitDate} • {visitStartTime}-{visitEndTime}
+                                                            Lịch booking: {visitDate} • {visitStartTime}-{visitEndTime}
                                                         </p>
                                                     )}
                                                     <p className="text-xs opacity-70 mt-1">Tạo lúc: {new Date(booking.createdAt).toLocaleDateString('vi-VN')}</p>
