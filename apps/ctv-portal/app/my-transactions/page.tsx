@@ -86,6 +86,13 @@ export default function MyTransactionsPage(): JSX.Element {
                 console.error('Error checking expired bookings:', error);
             }
 
+            // Check and update expired reservations first
+            try {
+                await fetch('/api/reservations/check-expired', { method: 'POST' });
+            } catch (error) {
+                console.error('Error checking expired reservations:', error);
+            }
+
             const [reservationsRes, bookingsRes, depositsRes] = await Promise.all([
                 fetch('/api/reservations', {
                     headers: { 'x-user-phone': userPhone || '' },
@@ -368,10 +375,10 @@ export default function MyTransactionsPage(): JSX.Element {
                                     key={tab.key}
                                     onClick={() => setFilter(tab.key as TransactionType)}
                                     className={`px-4 py-2 rounded-lg font-medium transition ${filter === tab.key
-                                            ? 'bg-blue-600 text-white'
-                                            : darkMode
-                                                ? 'bg-[#10182F] text-slate-300 hover:bg-[#1B2342]'
-                                                : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
+                                        ? 'bg-blue-600 text-white'
+                                        : darkMode
+                                            ? 'bg-[#10182F] text-slate-300 hover:bg-[#1B2342]'
+                                            : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
                                         }`}
                                 >
                                     {tab.label} ({tab.count})
@@ -388,8 +395,8 @@ export default function MyTransactionsPage(): JSX.Element {
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className={`w-full pl-10 pr-4 py-2 rounded-lg border ${darkMode
-                                        ? 'bg-[#10182F] border-gray-700 text-white'
-                                        : 'bg-white border-gray-300 text-gray-900'
+                                    ? 'bg-[#10182F] border-gray-700 text-white'
+                                    : 'bg-white border-gray-300 text-gray-900'
                                     } focus:outline-none focus:ring-2 focus:ring-blue-500`}
                             />
                         </div>
@@ -419,8 +426,8 @@ export default function MyTransactionsPage(): JSX.Element {
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex items-start gap-4 flex-1">
                                         <div className={`p-3 rounded-xl ${transaction.type === 'booking' ? 'bg-blue-100 text-blue-600' :
-                                                transaction.type === 'deposit' ? 'bg-green-100 text-green-600' :
-                                                    'bg-purple-100 text-purple-600'
+                                            transaction.type === 'deposit' ? 'bg-green-100 text-green-600' :
+                                                'bg-purple-100 text-purple-600'
                                             }`}>
                                             {transaction.type === 'booking' ? <Calendar className="w-6 h-6" /> :
                                                 transaction.type === 'deposit' ? <DollarSign className="w-6 h-6" /> :
@@ -497,13 +504,12 @@ export default function MyTransactionsPage(): JSX.Element {
                         <button
                             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                             disabled={currentPage === 1}
-                            className={`px-4 py-2 rounded-lg font-medium transition ${
-                                currentPage === 1
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : darkMode
-                                        ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
-                                        : 'bg-white text-gray-700 hover:bg-gray-100 border'
-                            }`}
+                            className={`px-4 py-2 rounded-lg font-medium transition ${currentPage === 1
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : darkMode
+                                    ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
+                                    : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                                }`}
                         >
                             ← Trước
                         </button>
@@ -513,13 +519,12 @@ export default function MyTransactionsPage(): JSX.Element {
                                 <button
                                     key={page}
                                     onClick={() => setCurrentPage(page)}
-                                    className={`w-10 h-10 rounded-lg font-medium transition ${
-                                        currentPage === page
-                                            ? 'bg-blue-600 text-white'
-                                            : darkMode
-                                                ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
-                                                : 'bg-white text-gray-700 hover:bg-gray-100 border'
-                                    }`}
+                                    className={`w-10 h-10 rounded-lg font-medium transition ${currentPage === page
+                                        ? 'bg-blue-600 text-white'
+                                        : darkMode
+                                            ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
+                                            : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                                        }`}
                                 >
                                     {page}
                                 </button>
@@ -529,13 +534,12 @@ export default function MyTransactionsPage(): JSX.Element {
                         <button
                             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                             disabled={currentPage === totalPages}
-                            className={`px-4 py-2 rounded-lg font-medium transition ${
-                                currentPage === totalPages
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : darkMode
-                                        ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
-                                        : 'bg-white text-gray-700 hover:bg-gray-100 border'
-                            }`}
+                            className={`px-4 py-2 rounded-lg font-medium transition ${currentPage === totalPages
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : darkMode
+                                    ? 'bg-[#1B2342] text-white hover:bg-[#2A3454]'
+                                    : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                                }`}
                         >
                             Sau →
                         </button>

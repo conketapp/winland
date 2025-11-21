@@ -32,6 +32,7 @@ import { AnimatedBottomNavigation } from '@/components/AnimatedBottomNavigation'
 import { useNavigation } from '@/hooks/useNavigation';
 import { useTheme } from '@/hooks/useTheme';
 import BookingDetailModal from '@/components/BookingDetailModal';
+import ReservationDetailModal from '@/components/ReservationDetailModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { toastNotification } from '@/app/utils/toastNotification';
 
@@ -41,14 +42,18 @@ export default function DashboardScreen(): JSX.Element {
     const { isDark, toggleTheme } = useTheme();
     const [userData, setUserData] = useState<any>(null);
     const [urgentReservations, setUrgentReservations] = useState<any[]>([]);
+    const [recentReservations, setRecentReservations] = useState<any[]>([]);
     const [recentBookings, setRecentBookings] = useState<any[]>([]);
     const [recentDeposits, setRecentDeposits] = useState<any[]>([]);
     const [stats, setStats] = useState({ reservations: 0, bookings: 0, deposits: 0 });
     const [isLoading, setIsLoading] = useState(true);
     const [greeting, setGreeting] = useState<string>("Chào buổi");
     const [selectedBooking, setSelectedBooking] = useState<any>(null);
+    const [selectedReservation, setSelectedReservation] = useState<any>(null);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [showDeleteReservationDialog, setShowDeleteReservationDialog] = useState(false);
     const [bookingToDelete, setBookingToDelete] = useState<string | null>(null);
+    const [reservationToDelete, setReservationToDelete] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     // Fetch all dashboard data
@@ -64,11 +69,14 @@ export default function DashboardScreen(): JSX.Element {
 
             setIsLoading(true);
 
-            // Check and update expired bookings first
+            // Check and update expired bookings and reservations first
             try {
-                await fetch('/api/bookings/check-expired', { method: 'POST' });
+                await Promise.all([
+                    fetch('/api/bookings/check-expired', { method: 'POST' }),
+                    fetch('/api/reservations/check-expired', { method: 'POST' })
+                ]);
             } catch (error) {
-                console.error('Error checking expired bookings:', error);
+                console.error('Error checking expired transactions:', error);
             }
 
             // Fetch user data and all transactions in parallel with cache-busting
@@ -117,6 +125,14 @@ export default function DashboardScreen(): JSX.Element {
 
             setUrgentReservations(urgent);
 
+            // Get recent reservations (last 4) - exclude hidden ones
+            const recentRes = reservations
+                .filter((r: any) => !r.notes?.includes('[HIDDEN_FROM_DASHBOARD]'))
+                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .slice(0, 4);
+
+            setRecentReservations(recentRes);
+
             // Get recent bookings (last 4) - exclude hidden ones
             const recent = bookings
                 .filter((b: any) => !b.notes?.includes('[HIDDEN_FROM_DASHBOARD]'))
@@ -132,9 +148,11 @@ export default function DashboardScreen(): JSX.Element {
 
             setRecentDeposits(recentDeps);
 
-            // Set stats - exclude hidden bookings
+            // Set stats - exclude cancelled and hidden items
             setStats({
-                reservations: reservations.filter((r: any) => r.status === 'ACTIVE').length,
+                reservations: reservations.filter((r: any) =>
+                    r.status !== 'CANCELLED' && !r.notes?.includes('[HIDDEN_FROM_DASHBOARD]')
+                ).length,
                 bookings: bookings.filter((b: any) =>
                     b.status !== 'CANCELLED' && !b.notes?.includes('[HIDDEN_FROM_DASHBOARD]')
                 ).length,
@@ -170,6 +188,12 @@ export default function DashboardScreen(): JSX.Element {
         setShowDeleteDialog(true);
     };
 
+    // Show delete reservation confirmation dialog
+    const handleDeleteReservationClick = (reservationId: string) => {
+        setReservationToDelete(reservationId);
+        setShowDeleteReservationDialog(true);
+    };
+
     // Delete completed booking
     const confirmDeleteBooking = async () => {
         if (!bookingToDelete) return;
@@ -193,6 +217,34 @@ export default function DashboardScreen(): JSX.Element {
         } catch (error) {
             console.error('Delete booking error:', error);
             toastNotification.error('Đã xảy ra lỗi khi xóa booking');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    // Delete expired reservation
+    const confirmDeleteReservation = async () => {
+        if (!reservationToDelete) return;
+
+        setIsDeleting(true);
+        try {
+            const response = await fetch(`/api/reservations/${reservationToDelete}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                // Remove from local state (hidden from dashboard)
+                setRecentReservations(prev => prev.filter(r => r.id !== reservationToDelete));
+                toastNotification.success('Đã ẩn giữ chỗ khỏi dashboard!');
+                setShowDeleteReservationDialog(false);
+                setReservationToDelete(null);
+            } else {
+                const data = await response.json();
+                toastNotification.error(data.error || 'Không thể ẩn giữ chỗ');
+            }
+        } catch (error) {
+            console.error('Delete reservation error:', error);
+            toastNotification.error('Đã xảy ra lỗi khi xóa giữ chỗ');
         } finally {
             setIsDeleting(false);
         }
@@ -359,7 +411,7 @@ export default function DashboardScreen(): JSX.Element {
                         </motion.div>
                     </div>
 
-                    {/* Emergency list */}
+                    {/* Reservation list */}
                     <motion.section
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -367,15 +419,15 @@ export default function DashboardScreen(): JSX.Element {
                         className="mt-10"
                     >
                         <div className={`rounded-3xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 ${isDark ? "bg-[#1B2342]" : "bg-white"}`}>
-                            <h3 className="text-lg font-semibold mb-2">Giữ chỗ sắp hết hạn</h3>
-                            <p className="text-slate-400 text-sm mb-4">Cần xử lý gấp</p>
+                            <h3 className="text-lg font-semibold mb-2">Danh sách Giữ chỗ</h3>
+                            <p className="text-slate-400 text-sm mb-4">Các giữ chỗ gần đây</p>
                             {isLoading ? (
                                 <div className="text-center py-8 text-slate-400">Đang tải...</div>
-                            ) : urgentReservations.length === 0 ? (
-                                <div className="text-center py-8 text-slate-400">Không có giữ chỗ nào sắp hết hạn</div>
+                            ) : recentReservations.length === 0 ? (
+                                <div className="text-center py-8 text-slate-400">Chưa có giữ chỗ nào</div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                                    {urgentReservations.map((reservation: any, index: number) => (
+                                    {recentReservations.map((reservation: any, index: number) => (
                                         <motion.div
                                             key={reservation.id}
                                             initial={{ opacity: 0, y: 20 }}
@@ -385,20 +437,61 @@ export default function DashboardScreen(): JSX.Element {
                                                 }`}
                                         >
                                             <div
-                                                className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-red-900/30" : "bg-red-50"
+                                                className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-purple-900/30" : "bg-purple-50"
                                                     }`}
                                             >
-                                                <AlertTriangle className="w-6 h-6 text-red-600" />
+                                                <Clock className="w-6 h-6 text-purple-600" />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium truncate">{reservation.unit?.code || 'N/A'}</p>
-                                                <p className="text-xs opacity-70 mt-1">Còn {getTimeUntilExpiry(reservation.reservedUntil)}</p>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <p className="text-sm font-medium truncate">{reservation.unit?.code || 'N/A'}</p>
+                                                    {reservation.status === 'ACTIVE' && (
+                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'}`}>
+                                                            Đang hoạt động
+                                                        </span>
+                                                    )}
+                                                    {reservation.status === 'EXPIRED' && (
+                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-gray-900/30 text-gray-400' : 'bg-gray-100 text-gray-700'}`}>
+                                                            ⏱ Hết hạn
+                                                        </span>
+                                                    )}
+                                                    {reservation.status === 'CANCELLED' && (
+                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700'}`}>
+                                                            Đã hủy
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className="text-xs opacity-70 mt-1">{reservation.customerName}</p>
-                                                <p className="text-xs opacity-70 mt-1">{reservation.customerPhone}</p>
+                                                {reservation.status === 'ACTIVE' && (
+                                                    <p className="text-xs text-orange-600 font-medium mt-1">
+                                                        Hết hạn: {new Date(reservation.reservedUntil).toLocaleString('vi-VN')}
+                                                    </p>
+                                                )}
+                                                <p className="text-xs opacity-70 mt-1">Tạo lúc: {new Date(reservation.createdAt).toLocaleDateString('vi-VN')}</p>
+                                                <div className="mt-2 flex items-center justify-between gap-2">
+                                                    <button
+                                                        onClick={() => setSelectedReservation(reservation)}
+                                                        className="text-[#cc8400] text-sm font-medium hover:underline"
+                                                    >
+                                                        Xem chi tiết
+                                                    </button>
+                                                    {(reservation.status === 'EXPIRED' || reservation.status === 'CANCELLED') && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteReservationClick(reservation.id);
+                                                            }}
+                                                            className={`p-2 rounded-lg transition-colors ${isDark
+                                                                ? 'hover:bg-red-900/30 text-red-400'
+                                                                : 'hover:bg-red-50 text-red-600'
+                                                                }`}
+                                                            title="Xóa giữ chỗ"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <button className="text-[#cc1427] text-sm font-medium hover:underline">
-                                                Xem chi tiết
-                                            </button>
                                         </motion.div>
                                     ))}
                                 </div>
@@ -615,7 +708,19 @@ export default function DashboardScreen(): JSX.Element {
                 />
             )}
 
-            {/* Delete Confirmation Dialog */}
+            {/* Reservation Detail Modal */}
+            {selectedReservation && (
+                <ReservationDetailModal
+                    reservation={selectedReservation}
+                    onClose={() => setSelectedReservation(null)}
+                    onComplete={() => {
+                        setSelectedReservation(null);
+                        fetchDashboardData();
+                    }}
+                />
+            )}
+
+            {/* Delete Booking Confirmation Dialog */}
             <ConfirmDialog
                 isOpen={showDeleteDialog}
                 title="Ẩn booking khỏi dashboard"
@@ -627,6 +732,21 @@ export default function DashboardScreen(): JSX.Element {
                 onCancel={() => {
                     setShowDeleteDialog(false);
                     setBookingToDelete(null);
+                }}
+            />
+
+            {/* Delete Reservation Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteReservationDialog}
+                title="Ẩn giữ chỗ khỏi dashboard"
+                message="Bạn có chắc chắn muốn xóa giữ chỗ này khỏi trang này? Giữ chỗ vẫn sẽ được lưu trong lịch sử giao dịch."
+                confirmText={isDeleting ? "Đang xóa..." : "Xóa"}
+                cancelText="Hủy"
+                type="warning"
+                onConfirm={confirmDeleteReservation}
+                onCancel={() => {
+                    setShowDeleteReservationDialog(false);
+                    setReservationToDelete(null);
                 }}
             />
         </div>

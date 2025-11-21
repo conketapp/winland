@@ -19,7 +19,11 @@ export async function GET(request: NextRequest) {
                                     include: {
                                         reservations: {
                                             where: {
-                                                status: 'ACTIVE'
+                                                status: {
+                                                    // Include EXPIRED reservations so they show as yellow "Đang có đặt chỗ"
+                                                    // until user clicks Trash button
+                                                    in: ['ACTIVE', 'YOUR_TURN', 'EXPIRED']
+                                                }
                                             },
                                             take: 1
                                         },
@@ -47,7 +51,11 @@ export async function GET(request: NextRequest) {
                             include: {
                                 reservations: {
                                     where: {
-                                        status: 'ACTIVE'
+                                        status: {
+                                            // Include EXPIRED reservations so they show as yellow "Đang có đặt chỗ"
+                                            // until user clicks Trash button
+                                            in: ['ACTIVE', 'YOUR_TURN', 'EXPIRED']
+                                        }
                                     },
                                     take: 1
                                 },

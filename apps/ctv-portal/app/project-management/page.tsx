@@ -30,6 +30,7 @@ import DepositModal from "@/components/DepositModal";
 import ReservedModal from "@/components/ReservedModal";
 import BookingModal from "@/components/BookingModal";
 import BookingDetailModal from "@/components/BookingDetailModal";
+import ReservationDetailModal from "@/components/ReservationDetailModal";
 import { formatCurrency } from "@/lib/utils";
 import { toastNotification } from '@/app/utils/toastNotification';
 import { ToastContainer } from 'react-toastify';
@@ -73,19 +74,32 @@ type Project = {
 };
 
 // Map database status to display status
-const mapDatabaseStatus = (dbStatus: string, hasActiveBooking: boolean, hasActiveReservation: boolean): UnitStatus => {
+const mapDatabaseStatus = (dbStatus: string, hasActiveBooking: boolean, hasActiveReservation: boolean, bookingStatus?: string): UnitStatus => {
     switch (dbStatus) {
         case 'AVAILABLE':
             return 'available';
         case 'RESERVED_BOOKING':
-            // If unit has active booking, show as booking
+            // Priority logic:
+            // 1. Active reservation takes priority over expired booking
+            // 2. Active booking (CONFIRMED, PENDING) shows as booking
+            // 3. Expired booking shows as booking (until user deletes it)
+            // 4. Active reservation shows as reserved
+            
+            // If has active reservation and booking is expired, show as reserved
+            if (hasActiveReservation && bookingStatus === 'EXPIRED') {
+                return 'reserved';
+            }
+            
+            // If unit has active booking (including EXPIRED), show as booking
             if (hasActiveBooking) {
                 return 'booking';
             }
+            
             // If unit has active reservation, show as reserved
             if (hasActiveReservation) {
                 return 'reserved';
             }
+            
             // Default to reserved if status is RESERVED_BOOKING but no active records found
             return 'reserved';
         case 'DEPOSITED':
@@ -144,6 +158,7 @@ export default function DashboardScreen(): JSX.Element {
     const [showReservedModal, setShowReservedModal] = useState(false);
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [selectedBookingDetail, setSelectedBookingDetail] = useState<any>(null);
+    const [selectedReservationDetail, setSelectedReservationDetail] = useState<any>(null);
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [autoRefresh, setAutoRefresh] = useState(true);
@@ -184,6 +199,7 @@ export default function DashboardScreen(): JSX.Element {
                         units: building.units.map((unit: any) => {
                             const hasActiveBooking = unit.bookings && unit.bookings.length > 0;
                             const hasActiveReservation = unit.reservations && unit.reservations.length > 0;
+                            const bookingStatus = unit.bookings && unit.bookings.length > 0 ? unit.bookings[0].status : undefined;
 
                             return {
                                 id: unit.id,
@@ -194,7 +210,7 @@ export default function DashboardScreen(): JSX.Element {
                                 price: unit.price,
                                 bedrooms: unit.bedrooms,
                                 bathrooms: unit.bathrooms,
-                                status: mapDatabaseStatus(unit.status, hasActiveBooking, hasActiveReservation),
+                                status: mapDatabaseStatus(unit.status, hasActiveBooking, hasActiveReservation, bookingStatus),
                                 commissionRate: unit.commissionRate,
                                 floor: getFloorNumber(unit.unitNumber),
                                 view: unit.view,
@@ -321,7 +337,29 @@ export default function DashboardScreen(): JSX.Element {
         } else if (unit.status === "deposit") {
             toastNotification.warning("Căn này đã được đặt cọc");
         } else if (unit.status === "reserved") {
-            toastNotification.warning("Căn này đang có người giữ chỗ");
+            // Fetch reservation details for this unit
+            try {
+                const userPhone = sessionStorage.getItem('login:userPhone');
+                const response = await fetch('/api/reservations', {
+                    headers: { 'x-user-phone': userPhone || '' }
+                });
+
+                if (response.ok) {
+                    const reservations = await response.json();
+                    // Find the reservation for this unit
+                    const reservation = reservations.find((r: any) => r.unitId === unit.id && ['ACTIVE', 'YOUR_TURN', 'EXPIRED'].includes(r.status));
+                    if (reservation) {
+                        setSelectedReservationDetail(reservation);
+                    } else {
+                        toastNotification.info("Căn này đang có người giữ chỗ");
+                    }
+                } else {
+                    toastNotification.info("Căn này đang có người giữ chỗ");
+                }
+            } catch (error) {
+                console.error('Error fetching reservation:', error);
+                toastNotification.info("Căn này đang có người giữ chỗ");
+            }
         } else if (unit.status === "sold") {
             toastNotification.error("Căn này đã được bán");
         }
@@ -828,6 +866,17 @@ export default function DashboardScreen(): JSX.Element {
                 <BookingDetailModal
                     booking={selectedBookingDetail}
                     onClose={() => setSelectedBookingDetail(null)}
+                    readOnly={true}
+                />
+            )}
+            {selectedReservationDetail && (
+                <ReservationDetailModal
+                    reservation={selectedReservationDetail}
+                    onClose={() => setSelectedReservationDetail(null)}
+                    onComplete={() => {
+                        setSelectedReservationDetail(null);
+                        fetchProjects();
+                    }}
                     readOnly={true}
                 />
             )}

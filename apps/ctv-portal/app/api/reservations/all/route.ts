@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Find user
+        // Verify user exists
         const user = await prisma.user.findUnique({
             where: { phone: userPhone }
         })
@@ -26,12 +26,16 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Get reservations for this CTV
+        // Get ALL reservations (not filtered by user)
         const reservations = await prisma.reservation.findMany({
-            where: {
-                ctvId: user.id
-            },
             include: {
+                ctv: {
+                    select: {
+                        fullName: true,
+                        phone: true,
+                        email: true
+                    }
+                },
                 unit: {
                     include: {
                         project: {
@@ -52,26 +56,18 @@ export async function GET(request: NextRequest) {
                             }
                         }
                     }
-                },
-                ctv: {
-                    select: {
-                        id: true,
-                        fullName: true,
-                        phone: true,
-                        email: true
-                    }
                 }
             },
             orderBy: {
                 createdAt: 'desc'
             },
-            take: 50 // Limit to last 50 reservations
+            take: 100 // Limit to last 100 reservations
         })
 
         return NextResponse.json(reservations)
 
     } catch (error) {
-        console.error('Get reservations error:', error)
+        console.error('Get all reservations error:', error)
         return NextResponse.json(
             { error: 'Đã xảy ra lỗi khi lấy danh sách giữ chỗ' },
             { status: 500 }

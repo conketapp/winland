@@ -54,6 +54,7 @@ export default function ReservedModal({ unit, onClose, onBack }: ReservedModalPr
     const [agreed, setAgreed] = useState(false);
     const [phoneError, setPhoneError] = useState("");
     const [cccdError, setCccdError] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -395,17 +396,70 @@ export default function ReservedModal({ unit, onClose, onBack }: ReservedModalPr
 
                         {/* Submit Button */}
                         <Button
-                            disabled={!isFormValid()}
-                            onClick={() => {
-                                toastNotification.success("Giữ chỗ đã được xác nhận thành công!");
-                                onClose();
+                            disabled={!isFormValid() || isSubmitting}
+                            onClick={async () => {
+                                if (!isFormValid() || isSubmitting) return;
+
+                                setIsSubmitting(true);
+                                try {
+                                    // Get user phone from session
+                                    const userPhone = sessionStorage.getItem('login:userPhone');
+                                    if (!userPhone) {
+                                        toastNotification.error('Vui lòng đăng nhập lại');
+                                        return;
+                                    }
+
+                                    // Get user info to get CTV ID
+                                    const userRes = await fetch('/api/user/me', {
+                                        headers: { 'x-user-phone': userPhone }
+                                    });
+
+                                    if (!userRes.ok) {
+                                        toastNotification.error('Không thể lấy thông tin người dùng');
+                                        return;
+                                    }
+
+                                    const userData = await userRes.json();
+
+                                    // Create reservation
+                                    const response = await fetch('/api/reservations/create', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            unitId: unit.id,
+                                            ctvId: userData.id,
+                                            customerName: form.name,
+                                            customerPhone: form.phone,
+                                            customerEmail: form.email,
+                                            reservationDays: 7 // Default 7 days
+                                        }),
+                                    });
+
+                                    const data = await response.json();
+
+                                    if (response.ok) {
+                                        toastNotification.success('Giữ chỗ đã được tạo thành công!');
+                                        onClose();
+                                        // Refresh the page to show updated unit status
+                                        window.location.reload();
+                                    } else {
+                                        toastNotification.error(data.error || 'Đã xảy ra lỗi khi tạo giữ chỗ');
+                                    }
+                                } catch (error) {
+                                    console.error('Create reservation error:', error);
+                                    toastNotification.error('Đã xảy ra lỗi khi tạo giữ chỗ');
+                                } finally {
+                                    setIsSubmitting(false);
+                                }
                             }}
-                            className={`w-full py-3.5 rounded-xl font-semibold text-white text-base transition ${isFormValid()
+                            className={`w-full py-3.5 rounded-xl font-semibold text-white text-base transition ${isFormValid() && !isSubmitting
                                 ? "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
                                 : "bg-gray-300 cursor-not-allowed"
                                 }`}
                         >
-                            Thanh toán - {formatCurrency(unit.reservedMoney || 50000000, { style: 'standard', locale: 'en-US' })}
+                            {isSubmitting ? 'Đang xử lý...' : `Thanh toán - ${formatCurrency(unit.reservedMoney || 50000000, { style: 'standard', locale: 'en-US' })}`}
                         </Button>
                     </div>
                 </div>

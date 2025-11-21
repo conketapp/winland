@@ -31,6 +31,7 @@ import { AnimatedBottomNavigation } from '@/components/AnimatedBottomNavigation'
 import { useNavigation } from '@/hooks/useNavigation';
 import { useTheme } from '@/hooks/useTheme';
 import BookingDetailModal from '@/components/BookingDetailModal';
+import ReservationDetailModal from '@/components/ReservationDetailModal';
 
 interface Notification {
     id: string;
@@ -57,7 +58,9 @@ export default function NotificationPage(): JSX.Element {
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'booking' | 'deposit' | 'reservation'>('all');
     const [selectedBooking, setSelectedBooking] = useState<any>(null);
+    const [selectedReservation, setSelectedReservation] = useState<any>(null);
     const [bookingsData, setBookingsData] = useState<any[]>([]);
+    const [reservationsData, setReservationsData] = useState<any[]>([]);
     const [currentUserPhone, setCurrentUserPhone] = useState<string>('');
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -84,6 +87,13 @@ export default function NotificationPage(): JSX.Element {
             } catch (error) {
                 console.error('Error checking expired bookings:', error);
             }
+            // Check and update expired reservation first
+            try {
+                await fetch('/api/reservations/check-expired', { method: 'POST' });
+            } catch (error) {
+                console.error('Error checking expired reservations:', error);
+            }
+
 
             // Fetch all notifications (including other users) with cache-busting
             const [bookingsRes, depositsRes, reservationsRes] = await Promise.all([
@@ -95,7 +105,7 @@ export default function NotificationPage(): JSX.Element {
                     headers: { 'x-user-phone': userPhone || '' },
                     cache: 'no-store'
                 }),
-                fetch('/api/reservations', {
+                fetch('/api/reservations/all', {
                     headers: { 'x-user-phone': userPhone || '' },
                     cache: 'no-store'
                 })
@@ -105,8 +115,9 @@ export default function NotificationPage(): JSX.Element {
             const deposits = depositsRes.ok ? await depositsRes.json() : [];
             const reservations = reservationsRes.ok ? await reservationsRes.json() : [];
 
-            // Store full bookings data for detail modal
+            // Store full bookings and reservations data for detail modal and user check
             setBookingsData(bookings);
+            setReservationsData(reservations);
 
             // Combine and format notifications
             const allNotifications: Notification[] = [
@@ -340,7 +351,7 @@ export default function NotificationPage(): JSX.Element {
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex items-start gap-4 flex-1">
                                         <div className={`p-3 rounded-xl ${notification.type === 'booking' ? 'bg-blue-100 text-blue-600' :
-                                            notification.type === 'deposit' ? 'bg-green-100 text-green-600' :
+                                            notification.type === 'deposit' ? 'bg-green-100 text-green-600' : notification.type === 'reservation' ? 'bg-yellow-100 text-yellow-600' :
                                                 'bg-purple-100 text-purple-600'
                                             }`}>
                                             {getTypeIcon(notification.type)}
@@ -365,8 +376,11 @@ export default function NotificationPage(): JSX.Element {
                                                     if (notification.type === 'booking') {
                                                         const fullBooking = bookingsData.find(b => b.id === notification.id);
                                                         isCurrentUser = fullBooking?.ctv?.phone === currentUserPhone;
+                                                    } else if (notification.type === 'reservation') {
+                                                        const fullReservation = reservationsData.find(r => r.id === notification.id);
+                                                        isCurrentUser = fullReservation?.ctv?.phone === currentUserPhone;
                                                     }
-                                                    // For deposits and reservations, we can add similar logic if needed
+                                                    // For deposits, we can add similar logic if needed
 
                                                     return (
                                                         <div className={`flex items-center gap-2 text-sm p-2 rounded-lg ${isCurrentUser
@@ -433,6 +447,26 @@ export default function NotificationPage(): JSX.Element {
                                                                     }
                                                                 }}
                                                                 className="text-[#1224c4] text-sm font-medium hover:underline"
+                                                            >
+                                                                Xem chi tiết
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })()}
+
+                                                {/* View Details Button for Reservations - Only show for reservation owner */}
+                                                {notification.type === 'reservation' && (() => {
+                                                    const fullReservation = reservationsData.find(r => r.id === notification.id);
+                                                    const isOwner = fullReservation?.ctv?.phone === currentUserPhone;
+                                                    return isOwner && (
+                                                        <div className="mt-3 text-right">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (fullReservation) {
+                                                                        setSelectedReservation(fullReservation);
+                                                                    }
+                                                                }}
+                                                                className="text-[#cc8400] text-sm font-medium hover:underline"
                                                             >
                                                                 Xem chi tiết
                                                             </button>
@@ -519,6 +553,19 @@ export default function NotificationPage(): JSX.Element {
                         fetchNotifications();
                     }}
                     readOnly={selectedBooking.ctv?.phone !== currentUserPhone}
+                />
+            )}
+
+            {/* Reservation Detail Modal */}
+            {selectedReservation && (
+                <ReservationDetailModal
+                    reservation={selectedReservation}
+                    onClose={() => setSelectedReservation(null)}
+                    onComplete={() => {
+                        setSelectedReservation(null);
+                        fetchNotifications();
+                    }}
+                    readOnly={selectedReservation.ctv?.phone !== currentUserPhone}
                 />
             )}
         </div>
