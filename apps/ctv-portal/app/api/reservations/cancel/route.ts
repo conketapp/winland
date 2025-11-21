@@ -3,23 +3,22 @@ import { PrismaClient } from '@/lib/generated/prisma'
 
 const prisma = new PrismaClient()
 
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest) {
     try {
-        const reservationId = params.id
+        const body = await request.json()
+        const { reservationId } = body
 
         if (!reservationId) {
             return NextResponse.json(
-                { error: 'Thiếu ID giữ chỗ' },
+                { error: 'Thiếu thông tin giữ chỗ' },
                 { status: 400 }
             )
         }
 
-        // Check if reservation exists
+        // Get reservation details
         const reservation = await prisma.reservation.findUnique({
-            where: { id: reservationId }
+            where: { id: reservationId },
+            include: { unit: true }
         })
 
         if (!reservation) {
@@ -29,33 +28,29 @@ export async function DELETE(
             )
         }
 
-        // Only allow hiding completed, expired, missed, or cancelled reservations
-        if (!['COMPLETED', 'EXPIRED', 'MISSED', 'CANCELLED'].includes(reservation.status)) {
+        // Only allow cancelling ACTIVE reservations
+        if (reservation.status !== 'ACTIVE') {
             return NextResponse.json(
-                { error: 'Chỉ có thể ẩn giữ chỗ đã hoàn thành, hết hạn, bỏ lỡ hoặc đã hủy' },
+                { error: 'Chỉ có thể hủy giữ chỗ đang hoạt động' },
                 { status: 400 }
             )
         }
 
-        // Add hidden marker WITHOUT changing status - keep original status
-        // This preserves the reservation history while hiding it from dashboard
+        // Update reservation status to CANCELLED
         await prisma.reservation.update({
             where: { id: reservationId },
             data: {
-                // Keep original status (COMPLETED, EXPIRED, MISSED, or CANCELLED), just add hidden marker in notes
-                notes: reservation.notes 
-                    ? `${reservation.notes}\n[HIDDEN_FROM_DASHBOARD]`
-                    : '[HIDDEN_FROM_DASHBOARD]'
+                status: 'CANCELLED'
             }
         })
 
-        // Return unit to AVAILABLE if no other active bookings/reservations/deposits
+        // Return unit to AVAILABLE status only if no other active transactions
         const activeBookings = await prisma.booking.count({
             where: {
                 unitId: reservation.unitId,
                 status: {
                     in: ['CONFIRMED', 'PENDING_APPROVAL', 'PENDING_PAYMENT']
-                },
+                }
             }
         })
 
@@ -88,13 +83,13 @@ export async function DELETE(
 
         return NextResponse.json({
             success: true,
-            message: 'Đã ẩn giữ chỗ và trả căn hộ về trạng thái có sẵn'
+            message: 'Đã hủy giữ chỗ và trả căn hộ về trạng thái có sẵn'
         })
 
     } catch (error) {
-        console.error('Hide reservation error:', error)
+        console.error('Cancel reservation error:', error)
         return NextResponse.json(
-            { error: 'Đã xảy ra lỗi khi ẩn giữ chỗ' },
+            { error: 'Đã xảy ra lỗi khi hủy giữ chỗ' },
             { status: 500 }
         )
     }

@@ -107,7 +107,8 @@ export default function ProfilePage(): JSX.Element {
                 const reservations = reservationsRes.ok ? await reservationsRes.json() : [];
                 const bookings = bookingsRes.ok ? await bookingsRes.json() : [];
                 const deposits = depositsRes.ok ? await depositsRes.json() : [];
-                const commissions = commissionsRes.ok ? await commissionsRes.json() : [];
+                const commissionsData = commissionsRes.ok ? await commissionsRes.json() : { commissions: [], summary: { totalCommission: 0 } };
+                const commissions = commissionsData.commissions || [];
 
                 // Active deals (đang hoạt động)
                 const totalDeals =
@@ -124,10 +125,8 @@ export default function ProfilePage(): JSX.Element {
                     bookings.filter((b: any) => b.status === 'COMPLETED').length +
                     deposits.filter((d: any) => d.status === 'CONFIRMED').length;
 
-                // Total commission (tổng hoa hồng đã nhận)
-                const totalComm = commissions
-                    .filter((c: any) => c.status === 'CONFIRMED' || c.status === 'PAID')
-                    .reduce((sum: number, c: any) => sum + (c.amount || 0), 0);
+                // Total commission (tổng hoa hồng đã nhận) - use summary from API
+                const totalComm = commissionsData.summary?.totalCommission || 0;
 
                 setActualTotalDeals(totalDeals);
                 setCompletedDeals(completed);

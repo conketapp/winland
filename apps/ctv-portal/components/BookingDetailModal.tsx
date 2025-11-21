@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, User, Phone, Mail, Calendar, Clock, MapPin, FileText, CheckCircle, Bed, Bath, Maximize2, Compass, Eye, ChevronLeft, ChevronRight, Building2, UserStar } from "lucide-react";
+import { X, User, Phone, Mail, Calendar, Clock, MapPin, FileText, CheckCircle, Bed, Bath, Maximize2, Compass, Eye, ChevronLeft, ChevronRight, Building2, UserStar, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
@@ -27,6 +27,8 @@ export default function BookingDetailModal({ booking, onClose, onComplete, readO
     const [isCancelling, setIsCancelling] = useState(false);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [showCancelDialog, setShowCancelDialog] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Parse images from database
     const defaultImages = [
@@ -107,6 +109,34 @@ export default function BookingDetailModal({ booking, onClose, onComplete, readO
                 return 'Hết hạn';
             default:
                 return status;
+        }
+    };
+
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        try {
+            const response = await fetch(`/api/bookings/${booking.id}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                toastNotification.success('Đã ẩn booking khỏi dashboard!');
+                setShowDeleteDialog(false);
+                onClose();
+                if (onComplete) {
+                    onComplete();
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                const data = await response.json();
+                toastNotification.error(data.error || 'Không thể ẩn booking');
+            }
+        } catch (error) {
+            console.error('Delete booking error:', error);
+            toastNotification.error('Đã xảy ra lỗi khi xóa booking');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -426,6 +456,18 @@ export default function BookingDetailModal({ booking, onClose, onComplete, readO
                         </div>
                     )}
 
+                    {/* Delete Button - Only show for COMPLETED, EXPIRED, CANCELLED */}
+                    {!readOnly && ['COMPLETED', 'EXPIRED', 'CANCELLED'].includes(booking.status) && (
+                        <Button
+                            onClick={() => setShowDeleteDialog(true)}
+                            disabled={isDeleting}
+                            className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <Trash2 className="w-4 h-4 inline mr-2" />
+                            {isDeleting ? 'Đang xóa...' : 'Xóa Booking'}
+                        </Button>
+                    )}
+
                     <Button
                         onClick={onClose}
                         className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 transition-all"
@@ -520,6 +562,18 @@ export default function BookingDetailModal({ booking, onClose, onComplete, readO
                         }
                     }}
                     onCancel={() => setShowCancelDialog(false)}
+                />
+
+                {/* Delete Confirmation Dialog */}
+                <ConfirmDialog
+                    isOpen={showDeleteDialog}
+                    title="Xác nhận xóa booking"
+                    message="Bạn có chắc chắn muốn ẩn booking này khỏi dashboard? Booking vẫn sẽ được lưu trong lịch sử giao dịch."
+                    confirmText={isDeleting ? "Đang xóa..." : "Xóa"}
+                    cancelText="Hủy"
+                    type="danger"
+                    onConfirm={handleDelete}
+                    onCancel={() => setShowDeleteDialog(false)}
                 />
             </motion.div>
         </div>

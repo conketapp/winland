@@ -42,7 +42,7 @@ export default function ReservationDetailModal({ reservation, onClose, onComplet
             case 'CANCELLED':
                 return 'bg-red-100 text-red-700 border-red-300';
             case 'COMPLETED':
-                return 'bg-purple-100 text-purple-700 border-purple-300';
+                return 'bg-green-100 text-green-700 border-green-300';
             default:
                 return 'bg-gray-100 text-gray-700 border-gray-300';
         }
@@ -271,8 +271,28 @@ export default function ReservationDetailModal({ reservation, onClose, onComplet
 
                 {/* Footer */}
                 <div className="p-6 bg-white border-t space-y-3">
-                    {/* Delete Button - Only show for EXPIRED, MISSED, CANCELLED */}
-                    {!readOnly && ['EXPIRED', 'MISSED', 'CANCELLED'].includes(reservation.status) && (
+                    {/* Action Buttons - Only show for ACTIVE reservations and not in readOnly mode */}
+                    {!readOnly && reservation.status === 'ACTIVE' && (
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button
+                                onClick={() => setShowCancelDialog(true)}
+                                disabled={isCancelling || isCompleting}
+                                className="py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isCancelling ? 'Đang hủy...' : 'Hủy giữ chỗ'}
+                            </Button>
+                            <Button
+                                onClick={() => setShowConfirmDialog(true)}
+                                disabled={isCompleting || isCancelling}
+                                className="py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isCompleting ? 'Đang xử lý...' : '✓ Kết thúc giữ chỗ'}
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Delete Button - Only show for COMPLETED, EXPIRED, MISSED, CANCELLED */}
+                    {!readOnly && ['COMPLETED', 'EXPIRED', 'MISSED', 'CANCELLED'].includes(reservation.status) && (
                         <Button
                             onClick={() => setShowDeleteDialog(true)}
                             disabled={isDeleting}
@@ -290,6 +310,94 @@ export default function ReservationDetailModal({ reservation, onClose, onComplet
                         Đóng
                     </Button>
                 </div>
+
+                {/* Complete Confirmation Dialog */}
+                <ConfirmDialog
+                    isOpen={showConfirmDialog}
+                    title="Xác nhận kết thúc"
+                    message="Bạn có chắc chắn muốn kết thúc giữ chỗ này? Căn hộ sẽ trở về trạng thái có sẵn."
+                    confirmText="Kết thúc"
+                    cancelText="Hủy"
+                    type="warning"
+                    onConfirm={async () => {
+                        setShowConfirmDialog(false);
+                        setIsCompleting(true);
+                        try {
+                            const response = await fetch('/api/reservations/complete', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    reservationId: reservation.id
+                                }),
+                            });
+
+                            const data = await response.json();
+
+                            if (response.ok) {
+                                toastNotification.success('Đã kết thúc giữ chỗ thành công!');
+                                onClose();
+                                if (onComplete) {
+                                    onComplete();
+                                } else {
+                                    window.location.reload();
+                                }
+                            } else {
+                                toastNotification.error(data.error || 'Đã xảy ra lỗi');
+                            }
+                        } catch (error) {
+                            toastNotification.error('Đã xảy ra lỗi khi kết thúc giữ chỗ');
+                        } finally {
+                            setIsCompleting(false);
+                        }
+                    }}
+                    onCancel={() => setShowConfirmDialog(false)}
+                />
+
+                {/* Cancel Confirmation Dialog */}
+                <ConfirmDialog
+                    isOpen={showCancelDialog}
+                    title="Xác nhận hủy giữ chỗ"
+                    message="Bạn có chắc chắn muốn hủy giữ chỗ này? Căn hộ sẽ trở về trạng thái có sẵn."
+                    confirmText="Hủy giữ chỗ"
+                    cancelText="Quay lại"
+                    type="danger"
+                    onConfirm={async () => {
+                        setShowCancelDialog(false);
+                        setIsCancelling(true);
+                        try {
+                            const response = await fetch('/api/reservations/cancel', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    reservationId: reservation.id
+                                }),
+                            });
+
+                            const data = await response.json();
+
+                            if (response.ok) {
+                                toastNotification.success('Đã hủy giữ chỗ thành công!');
+                                onClose();
+                                if (onComplete) {
+                                    onComplete();
+                                } else {
+                                    window.location.reload();
+                                }
+                            } else {
+                                toastNotification.error(data.error || 'Đã xảy ra lỗi');
+                            }
+                        } catch (error) {
+                            toastNotification.error('Đã xảy ra lỗi khi hủy giữ chỗ');
+                        } finally {
+                            setIsCancelling(false);
+                        }
+                    }}
+                    onCancel={() => setShowCancelDialog(false)}
+                />
 
                 {/* Delete Confirmation Dialog */}
                 <ConfirmDialog

@@ -427,7 +427,7 @@ export default function MyTransactionsPage(): JSX.Element {
                                     <div className="flex items-start gap-4 flex-1">
                                         <div className={`p-3 rounded-xl ${transaction.type === 'booking' ? 'bg-blue-100 text-blue-600' :
                                             transaction.type === 'deposit' ? 'bg-green-100 text-green-600' :
-                                                'bg-purple-100 text-purple-600'
+                                                transaction.type === 'reservation' ?'bg-yellow-100 text-yellow-600' : 'bg-black-100 text-black-600'
                                             }`}>
                                             {transaction.type === 'booking' ? <Calendar className="w-6 h-6" /> :
                                                 transaction.type === 'deposit' ? <DollarSign className="w-6 h-6" /> :

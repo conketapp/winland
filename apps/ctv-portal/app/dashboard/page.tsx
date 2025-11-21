@@ -205,11 +205,11 @@ export default function DashboardScreen(): JSX.Element {
             });
 
             if (response.ok) {
-                // Remove from local state (hidden from dashboard)
-                setRecentBookings(prev => prev.filter(b => b.id !== bookingToDelete));
                 toastNotification.success('Đã ẩn booking khỏi dashboard!');
                 setShowDeleteDialog(false);
                 setBookingToDelete(null);
+                // Refresh all dashboard data to update stats
+                await fetchDashboardData();
             } else {
                 const data = await response.json();
                 toastNotification.error(data.error || 'Không thể ẩn booking');
@@ -233,11 +233,11 @@ export default function DashboardScreen(): JSX.Element {
             });
 
             if (response.ok) {
-                // Remove from local state (hidden from dashboard)
-                setRecentReservations(prev => prev.filter(r => r.id !== reservationToDelete));
                 toastNotification.success('Đã ẩn giữ chỗ khỏi dashboard!');
                 setShowDeleteReservationDialog(false);
                 setReservationToDelete(null);
+                // Refresh all dashboard data to update stats
+                await fetchDashboardData();
             } else {
                 const data = await response.json();
                 toastNotification.error(data.error || 'Không thể ẩn giữ chỗ');
@@ -437,10 +437,10 @@ export default function DashboardScreen(): JSX.Element {
                                                 }`}
                                         >
                                             <div
-                                                className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-purple-900/30" : "bg-purple-50"
+                                                className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? "bg-yellow-900/30" : "bg-yellow-50"
                                                     }`}
                                             >
-                                                <Clock className="w-6 h-6 text-purple-600" />
+                                                <Clock className="w-6 h-6 text-yellow-600" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1">
@@ -450,9 +450,14 @@ export default function DashboardScreen(): JSX.Element {
                                                             Đang hoạt động
                                                         </span>
                                                     )}
+                                                    {reservation.status === 'COMPLETED' && (
+                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'}`}>
+                                                            ✓ Đã Hoàn thành
+                                                        </span>
+                                                    )}
                                                     {reservation.status === 'EXPIRED' && (
                                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-gray-900/30 text-gray-400' : 'bg-gray-100 text-gray-700'}`}>
-                                                            ⏱ Hết hạn
+                                                            ⏱ Đã Hết hạn
                                                         </span>
                                                     )}
                                                     {reservation.status === 'CANCELLED' && (
@@ -475,7 +480,7 @@ export default function DashboardScreen(): JSX.Element {
                                                     >
                                                         Xem chi tiết
                                                     </button>
-                                                    {(reservation.status === 'EXPIRED' || reservation.status === 'CANCELLED') && (
+                                                    {(reservation.status === 'COMPLETED' || reservation.status === 'EXPIRED' || reservation.status === 'CANCELLED') && (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -550,12 +555,12 @@ export default function DashboardScreen(): JSX.Element {
                                                         <p className="text-sm font-medium truncate">{booking.unit?.code || 'N/A'}</p>
                                                         {booking.status === 'COMPLETED' && (
                                                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'}`}>
-                                                                ✓ Hoàn thành
+                                                                ✓ Đã Hoàn thành
                                                             </span>
                                                         )}
                                                         {booking.status === 'EXPIRED' && (
                                                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-gray-900/30 text-gray-400' : 'bg-gray-100 text-gray-700'}`}>
-                                                                ⏱ Hết hạn
+                                                                ⏱ Đã Hết hạn
                                                             </span>
                                                         )}
                                                         {booking.status === 'CONFIRMED' && (
@@ -565,7 +570,7 @@ export default function DashboardScreen(): JSX.Element {
                                                         )}
                                                         {booking.status === 'PENDING_APPROVAL' && (
                                                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                                Chờ duyệt
+                                                                Đang Chờ duyệt
                                                             </span>
                                                         )}
                                                         {booking.status === 'CANCELLED' && (
@@ -654,7 +659,7 @@ export default function DashboardScreen(): JSX.Element {
                                                     )}
                                                     {deposit.status === 'PENDING_APPROVAL' && (
                                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                            Chờ duyệt
+                                                            Đang Chờ duyệt
                                                         </span>
                                                     )}
                                                     {deposit.status === 'CANCELLED' && (
