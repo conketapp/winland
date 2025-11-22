@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Find user
+        // Verify user exists
         const user = await prisma.user.findUnique({
             where: { phone: userPhone }
         })
@@ -26,40 +26,35 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Get deposits for this CTV
+        // Get ALL deposits (not filtered by user)
         const deposits = await prisma.deposit.findMany({
-            where: {
-                ctvId: user.id
-            },
             include: {
-                unit: {
+                ctv: {
                     select: {
-                        code: true,
-                        unitNumber: true,
+                        fullName: true,
+                        phone: true,
+                        email: true
+                    }
+                },
+                unit: {
+                    include: {
                         project: {
                             select: {
-                                name: true
+                                name: true,
+                                code: true
                             }
                         },
                         building: {
                             select: {
-                                name: true
+                                name: true,
+                                code: true
                             }
                         },
                         floor: {
                             select: {
                                 number: true
                             }
-                        },
-                        price: true,
-                        area: true
-                    }
-                },
-                ctv: {
-                    select: {
-                        fullName: true,
-                        phone: true,
-                        email: true
+                        }
                     }
                 },
                 commissions: {
@@ -73,13 +68,13 @@ export async function GET(request: NextRequest) {
             orderBy: {
                 createdAt: 'desc'
             },
-            take: 50 // Limit to last 50 deposits
+            take: 100 // Limit to last 100 deposits
         })
 
         return NextResponse.json(deposits)
 
     } catch (error) {
-        console.error('Get deposits error:', error)
+        console.error('Get all deposits error:', error)
         return NextResponse.json(
             { error: 'Đã xảy ra lỗi khi lấy danh sách cọc' },
             { status: 500 }

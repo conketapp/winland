@@ -32,6 +32,7 @@ import { useNavigation } from '@/hooks/useNavigation';
 import { useTheme } from '@/hooks/useTheme';
 import BookingDetailModal from '@/components/BookingDetailModal';
 import ReservationDetailModal from '@/components/ReservationDetailModal';
+import DepositDetailModal from '@/components/DepositDetailModal';
 
 interface Notification {
     id: string;
@@ -59,8 +60,10 @@ export default function NotificationPage(): JSX.Element {
     const [filter, setFilter] = useState<'all' | 'booking' | 'deposit' | 'reservation'>('all');
     const [selectedBooking, setSelectedBooking] = useState<any>(null);
     const [selectedReservation, setSelectedReservation] = useState<any>(null);
+    const [selectedDeposit, setSelectedDeposit] = useState<any>(null);
     const [bookingsData, setBookingsData] = useState<any[]>([]);
     const [reservationsData, setReservationsData] = useState<any[]>([]);
+    const [depositsData, setDepositsData] = useState<any[]>([]);
     const [currentUserPhone, setCurrentUserPhone] = useState<string>('');
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -101,7 +104,7 @@ export default function NotificationPage(): JSX.Element {
                     headers: { 'x-user-phone': userPhone || '' },
                     cache: 'no-store'
                 }),
-                fetch('/api/deposits', {
+                fetch('/api/deposits/all', {
                     headers: { 'x-user-phone': userPhone || '' },
                     cache: 'no-store'
                 }),
@@ -115,9 +118,10 @@ export default function NotificationPage(): JSX.Element {
             const deposits = depositsRes.ok ? await depositsRes.json() : [];
             const reservations = reservationsRes.ok ? await reservationsRes.json() : [];
 
-            // Store full bookings and reservations data for detail modal and user check
+            // Store full bookings, reservations, and deposits data for detail modal and user check
             setBookingsData(bookings);
             setReservationsData(reservations);
+            setDepositsData(deposits);
 
             // Combine and format notifications
             const allNotifications: Notification[] = [
@@ -218,7 +222,7 @@ export default function NotificationPage(): JSX.Element {
     const getStatusText = (status: string, type?: string) => {
         switch (status) {
             case 'COMPLETED':
-                return 'Hoàn thành';
+                return type === 'deposit' ? 'Hoàn thành - Đã bán' : 'Hoàn thành';
             case 'CONFIRMED':
                 return 'Đã xác nhận';
             case 'PENDING_APPROVAL':
@@ -379,8 +383,10 @@ export default function NotificationPage(): JSX.Element {
                                                     } else if (notification.type === 'reservation') {
                                                         const fullReservation = reservationsData.find(r => r.id === notification.id);
                                                         isCurrentUser = fullReservation?.ctv?.phone === currentUserPhone;
+                                                    } else if (notification.type === 'deposit') {
+                                                        const fullDeposit = depositsData.find(d => d.id === notification.id);
+                                                        isCurrentUser = fullDeposit?.ctv?.phone === currentUserPhone;
                                                     }
-                                                    // For deposits, we can add similar logic if needed
 
                                                     return (
                                                         <div className={`flex items-center gap-2 text-sm p-2 rounded-lg ${isCurrentUser
@@ -467,6 +473,26 @@ export default function NotificationPage(): JSX.Element {
                                                                     }
                                                                 }}
                                                                 className="text-[#cc8400] text-sm font-medium hover:underline"
+                                                            >
+                                                                Xem chi tiết
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })()}
+
+                                                {/* View Details Button for Deposits - Only show for deposit owner */}
+                                                {notification.type === 'deposit' && (() => {
+                                                    const fullDeposit = depositsData.find(d => d.id === notification.id);
+                                                    const isOwner = fullDeposit?.ctv?.phone === currentUserPhone;
+                                                    return isOwner && (
+                                                        <div className="mt-3 text-right">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (fullDeposit) {
+                                                                        setSelectedDeposit(fullDeposit);
+                                                                    }
+                                                                }}
+                                                                className="text-[#ff6b00] text-sm font-medium hover:underline"
                                                             >
                                                                 Xem chi tiết
                                                             </button>
@@ -566,6 +592,19 @@ export default function NotificationPage(): JSX.Element {
                         fetchNotifications();
                     }}
                     readOnly={selectedReservation.ctv?.phone !== currentUserPhone}
+                />
+            )}
+
+            {/* Deposit Detail Modal */}
+            {selectedDeposit && (
+                <DepositDetailModal
+                    deposit={selectedDeposit}
+                    onClose={() => setSelectedDeposit(null)}
+                    onComplete={() => {
+                        setSelectedDeposit(null);
+                        fetchNotifications();
+                    }}
+                    readOnly={selectedDeposit.ctv?.phone !== currentUserPhone}
                 />
             )}
         </div>

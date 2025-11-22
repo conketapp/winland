@@ -12,7 +12,7 @@ type ConfirmDialogProps = {
     cancelText?: string;
     onConfirm: () => void;
     onCancel: () => void;
-    type?: 'warning' | 'danger' | 'info';
+    type?: 'warning' | 'danger' | 'info' | 'success';
 };
 
 export default function ConfirmDialog({
@@ -33,6 +33,8 @@ export default function ConfirmDialog({
                 return 'text-red-600';
             case 'info':
                 return 'text-blue-600';
+            case 'success':
+                return 'text-green-600';
             default:
                 return 'text-orange-600';
         }
@@ -44,6 +46,8 @@ export default function ConfirmDialog({
                 return 'bg-red-100';
             case 'info':
                 return 'bg-blue-100';
+            case 'success':
+                return 'bg-green-100';
             default:
                 return 'bg-orange-100';
         }
@@ -95,6 +99,8 @@ export default function ConfirmDialog({
                                     ? 'bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800'
                                     : type === 'info'
                                     ? 'bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800'
+                                    : type === 'success'
+                                    ? 'bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800'
                                     : 'bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800'
                             }`}
                         >

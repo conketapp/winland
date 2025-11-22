@@ -147,7 +147,7 @@ export default function MyTransactionsPage(): JSX.Element {
                     buildingName: d.unit?.building?.name || 'N/A',
                     customerName: d.customerName,
                     amount: d.depositAmount,
-                    commission: d.depositAmount * 0.02, // 2% commission
+                    commission: d.commissions?.amount || (d.depositAmount * 0.02), // Use actual commission or fallback to 2%
                     status: d.status,
                     createdAt: d.createdAt
                 }))
@@ -160,11 +160,11 @@ export default function MyTransactionsPage(): JSX.Element {
             // Calculate stats
             const totalCommission = deposits
                 .filter((d: any) => d.status === 'CONFIRMED' || d.status === 'COMPLETED')
-                .reduce((sum: number, d: any) => sum + (d.depositAmount * 0.02), 0);
+                .reduce((sum: number, d: any) => sum + (d.commissions?.amount || (d.depositAmount * 0.02)), 0);
 
             const pendingCommission = deposits
                 .filter((d: any) => d.status === 'PENDING_APPROVAL')
-                .reduce((sum: number, d: any) => sum + (d.depositAmount * 0.02), 0);
+                .reduce((sum: number, d: any) => sum + (d.commissions?.amount || (d.depositAmount * 0.02)), 0);
 
             setStats({
                 totalTransactions: allTransactions.length,
@@ -239,7 +239,7 @@ export default function MyTransactionsPage(): JSX.Element {
     const getStatusText = (status: string, type?: string) => {
         switch (status) {
             case 'COMPLETED':
-                return 'Hoàn thành';
+                return type === 'deposit' ? 'Hoàn thành - Đã bán' : 'Hoàn thành';
             case 'CONFIRMED':
                 return 'Đã xác nhận';
             case 'PENDING_APPROVAL':

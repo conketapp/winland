@@ -53,6 +53,7 @@ export default function DepositModal({ unit, onClose, onBack }: DepositModalProp
     const [agreed, setAgreed] = useState(false);
     const [phoneError, setPhoneError] = useState("");
     const [cccdError, setCccdError] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -392,17 +393,75 @@ export default function DepositModal({ unit, onClose, onBack }: DepositModalProp
 
                         {/* Submit Button */}
                         <button
-                            disabled={!isFormValid()}
-                            onClick={() => {
-                                toastNotification.success("Đặt cọc đã được xác nhận thành công!");
-                                onClose();
+                            disabled={!isFormValid() || isSubmitting}
+                            onClick={async () => {
+                                if (isSubmitting) return;
+
+                                setIsSubmitting(true);
+                                try {
+                                    // Get user ID from session
+                                    const userPhone = sessionStorage.getItem('login:userPhone');
+                                    if (!userPhone) {
+                                        toastNotification.error('Vui lòng đăng nhập lại');
+                                        return;
+                                    }
+
+                                    // Get user info
+                                    const userResponse = await fetch('/api/user/me', {
+                                        headers: {
+                                            'x-user-phone': userPhone
+                                        }
+                                    });
+                                    if (!userResponse.ok) {
+                                        throw new Error('Không thể lấy thông tin người dùng');
+                                    }
+                                    const userData = await userResponse.json();
+
+                                    // Create deposit
+                                    const response = await fetch('/api/deposits/create', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            unitId: unit.id,
+                                            ctvId: userData.id,
+                                            customerName: form.name,
+                                            customerPhone: form.phone,
+                                            customerEmail: form.email,
+                                            customerIdCard: form.id,
+                                            customerAddress: form.address,
+                                            depositAmount: unit.depositMoney || (unit.price * 0.1),
+                                            depositPercentage: 10,
+                                        }),
+                                    });
+
+                                    const data = await response.json();
+
+                                    if (response.ok) {
+                                        toastNotification.success("Đặt cọc đã được xác nhận thành công!");
+                                        onClose();
+                                        // Reload page to update unit status
+                                        window.location.reload();
+                                    } else {
+                                        toastNotification.error(data.error || 'Đã xảy ra lỗi khi tạo đặt cọc');
+                                    }
+                                } catch (error) {
+                                    console.error('Deposit error:', error);
+                                    toastNotification.error('Đã xảy ra lỗi khi tạo đặt cọc');
+                                } finally {
+                                    setIsSubmitting(false);
+                                }
                             }}
-                            className={`w-full py-3.5 rounded-xl font-semibold text-white text-base transition ${isFormValid()
+                            className={`w-full py-3.5 rounded-xl font-semibold text-white text-base transition ${isFormValid() && !isSubmitting
                                 ? "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
                                 : "bg-gray-300 cursor-not-allowed"
                                 }`}
                         >
-                            Thanh toán - {formatCurrency(unit.depositMoney || (unit.price * 0.1), { style: 'standard', locale: 'en-US' })}
+                            {isSubmitting 
+                                ? 'Đang xử lý...' 
+                                : `Thanh toán - ${formatCurrency(unit.depositMoney || (unit.price * 0.1), { style: 'standard', locale: 'en-US' })}`
+                            }
                         </button>
                     </div>
                 </div>

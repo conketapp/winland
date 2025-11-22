@@ -31,6 +31,7 @@ import ReservedModal from "@/components/ReservedModal";
 import BookingModal from "@/components/BookingModal";
 import BookingDetailModal from "@/components/BookingDetailModal";
 import ReservationDetailModal from "@/components/ReservationDetailModal";
+import DepositDetailModal from "@/components/DepositDetailModal";
 import { formatCurrency } from "@/lib/utils";
 import { toastNotification } from '@/app/utils/toastNotification';
 import { ToastContainer } from 'react-toastify';
@@ -84,22 +85,22 @@ const mapDatabaseStatus = (dbStatus: string, hasActiveBooking: boolean, hasActiv
             // 2. Active booking (CONFIRMED, PENDING) shows as booking
             // 3. Expired booking shows as booking (until user deletes it)
             // 4. Active reservation shows as reserved
-            
+
             // If has active reservation and booking is expired, show as reserved
             if (hasActiveReservation && bookingStatus === 'EXPIRED') {
                 return 'reserved';
             }
-            
+
             // If unit has active booking (including EXPIRED), show as booking
             if (hasActiveBooking) {
                 return 'booking';
             }
-            
+
             // If unit has active reservation, show as reserved
             if (hasActiveReservation) {
                 return 'reserved';
             }
-            
+
             // Default to reserved if status is RESERVED_BOOKING but no active records found
             return 'reserved';
         case 'DEPOSITED':
@@ -159,6 +160,7 @@ export default function DashboardScreen(): JSX.Element {
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [selectedBookingDetail, setSelectedBookingDetail] = useState<any>(null);
     const [selectedReservationDetail, setSelectedReservationDetail] = useState<any>(null);
+    const [selectedDepositDetail, setSelectedDepositDetail] = useState<any>(null);
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [autoRefresh, setAutoRefresh] = useState(true);
@@ -335,7 +337,29 @@ export default function DashboardScreen(): JSX.Element {
                 toastNotification.info("Căn này đang trong quá trình booking");
             }
         } else if (unit.status === "deposit") {
-            toastNotification.warning("Căn này đã được đặt cọc");
+            // Fetch deposit details for this unit
+            try {
+                const userPhone = sessionStorage.getItem('login:userPhone');
+                const response = await fetch('/api/deposits', {
+                    headers: { 'x-user-phone': userPhone || '' }
+                });
+
+                if (response.ok) {
+                    const deposits = await response.json();
+                    // Find the deposit for this unit
+                    const deposit = deposits.find((d: any) => d.unitId === unit.id);
+                    if (deposit) {
+                        setSelectedDepositDetail(deposit);
+                    } else {
+                        toastNotification.info("Căn này đã được đặt cọc");
+                    }
+                } else {
+                    toastNotification.info("Căn này đã được đặt cọc");
+                }
+            } catch (error) {
+                console.error('Error fetching deposit:', error);
+                toastNotification.info("Căn này đã được đặt cọc");
+            }
         } else if (unit.status === "reserved") {
             // Fetch reservation details for this unit
             try {
@@ -875,6 +899,17 @@ export default function DashboardScreen(): JSX.Element {
                     onClose={() => setSelectedReservationDetail(null)}
                     onComplete={() => {
                         setSelectedReservationDetail(null);
+                        fetchProjects();
+                    }}
+                    readOnly={true}
+                />
+            )}
+            {selectedDepositDetail && (
+                <DepositDetailModal
+                    deposit={selectedDepositDetail}
+                    onClose={() => setSelectedDepositDetail(null)}
+                    onComplete={() => {
+                        setSelectedDepositDetail(null);
                         fetchProjects();
                     }}
                     readOnly={true}

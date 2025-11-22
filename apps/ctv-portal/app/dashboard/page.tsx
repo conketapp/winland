@@ -33,6 +33,7 @@ import { useNavigation } from '@/hooks/useNavigation';
 import { useTheme } from '@/hooks/useTheme';
 import BookingDetailModal from '@/components/BookingDetailModal';
 import ReservationDetailModal from '@/components/ReservationDetailModal';
+import DepositDetailModal from '@/components/DepositDetailModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { toastNotification } from '@/app/utils/toastNotification';
 
@@ -50,10 +51,13 @@ export default function DashboardScreen(): JSX.Element {
     const [greeting, setGreeting] = useState<string>("Chào buổi");
     const [selectedBooking, setSelectedBooking] = useState<any>(null);
     const [selectedReservation, setSelectedReservation] = useState<any>(null);
+    const [selectedDeposit, setSelectedDeposit] = useState<any>(null);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showDeleteReservationDialog, setShowDeleteReservationDialog] = useState(false);
+    const [showDeleteDepositDialog, setShowDeleteDepositDialog] = useState(false);
     const [bookingToDelete, setBookingToDelete] = useState<string | null>(null);
     const [reservationToDelete, setReservationToDelete] = useState<string | null>(null);
+    const [depositToDelete, setDepositToDelete] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     // Fetch all dashboard data
@@ -141,8 +145,9 @@ export default function DashboardScreen(): JSX.Element {
 
             setRecentBookings(recent);
 
-            // Get recent deposits (last 4)
+            // Get recent deposits (last 4) - exclude hidden ones
             const recentDeps = deposits
+                .filter((d: any) => !d.notes?.includes('[HIDDEN_FROM_DASHBOARD]'))
                 .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 4);
 
@@ -156,7 +161,9 @@ export default function DashboardScreen(): JSX.Element {
                 bookings: bookings.filter((b: any) =>
                     b.status !== 'CANCELLED' && !b.notes?.includes('[HIDDEN_FROM_DASHBOARD]')
                 ).length,
-                deposits: deposits.filter((d: any) => d.status !== 'CANCELLED').length
+                deposits: deposits.filter((d: any) =>
+                    d.status !== 'CANCELLED' && !d.notes?.includes('[HIDDEN_FROM_DASHBOARD]')
+                ).length
             });
 
         } catch (err) {
@@ -192,6 +199,12 @@ export default function DashboardScreen(): JSX.Element {
     const handleDeleteReservationClick = (reservationId: string) => {
         setReservationToDelete(reservationId);
         setShowDeleteReservationDialog(true);
+    };
+
+    // Show delete deposit confirmation dialog
+    const handleDeleteDepositClick = (depositId: string) => {
+        setDepositToDelete(depositId);
+        setShowDeleteDepositDialog(true);
     };
 
     // Delete completed booking
@@ -245,6 +258,34 @@ export default function DashboardScreen(): JSX.Element {
         } catch (error) {
             console.error('Delete reservation error:', error);
             toastNotification.error('Đã xảy ra lỗi khi xóa giữ chỗ');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    // Delete completed/cancelled deposit
+    const confirmDeleteDeposit = async () => {
+        if (!depositToDelete) return;
+
+        setIsDeleting(true);
+        try {
+            const response = await fetch(`/api/deposits/${depositToDelete}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                toastNotification.success('Đã ẩn đặt cọc khỏi dashboard!');
+                setShowDeleteDepositDialog(false);
+                setDepositToDelete(null);
+                // Refresh all dashboard data to update stats
+                await fetchDashboardData();
+            } else {
+                const data = await response.json();
+                toastNotification.error(data.error || 'Không thể ẩn đặt cọc');
+            }
+        } catch (error) {
+            console.error('Delete deposit error:', error);
+            toastNotification.error('Đã xảy ra lỗi khi xóa đặt cọc');
         } finally {
             setIsDeleting(false);
         }
@@ -667,14 +708,37 @@ export default function DashboardScreen(): JSX.Element {
                                                             Đã hủy
                                                         </span>
                                                     )}
+                                                    {deposit.status === 'COMPLETED' && (
+                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'}`}>
+                                                            ✓ Hoàn thành - Đã bán
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <p className="text-xs opacity-70 mt-1">{deposit.customerName}</p>
-                                                <p className="text-xs font-semibold text-green-600 mt-1">{formatCurrency(deposit.depositAmount)}</p>
+                                                <p className="text-xs opacity-70 mt-1">Khách hàng: {deposit.customerName}</p>
+                                                <p className="text-xs font-semibold text-green-600 mt-1">Tiền cọc: {formatCurrency(deposit.depositAmount)}</p>
                                                 <p className="text-xs opacity-70 mt-1">Ngày cọc: {new Date(deposit.depositDate).toLocaleDateString('vi-VN')}</p>
-                                                <div className="mt-2 text-right">
-                                                    <button className="text-[#1224c4] text-sm font-medium hover:underline">
+                                                <div className="mt-2 flex items-center justify-between gap-2">
+                                                    <button
+                                                        onClick={() => setSelectedDeposit(deposit)}
+                                                        className="text-[#ff6b00] text-sm font-medium hover:underline"
+                                                    >
                                                         Xem chi tiết
                                                     </button>
+                                                    {(deposit.status === 'COMPLETED' || deposit.status === 'CANCELLED') && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteDepositClick(deposit.id);
+                                                            }}
+                                                            className={`p-2 rounded-lg transition-colors ${isDark
+                                                                ? 'hover:bg-red-900/30 text-red-400'
+                                                                : 'hover:bg-red-50 text-red-600'
+                                                                }`}
+                                                            title="Xóa đặt cọc"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </motion.div>
@@ -725,6 +789,18 @@ export default function DashboardScreen(): JSX.Element {
                 />
             )}
 
+            {/* Deposit Detail Modal */}
+            {selectedDeposit && (
+                <DepositDetailModal
+                    deposit={selectedDeposit}
+                    onClose={() => setSelectedDeposit(null)}
+                    onComplete={() => {
+                        setSelectedDeposit(null);
+                        fetchDashboardData();
+                    }}
+                />
+            )}
+
             {/* Delete Booking Confirmation Dialog */}
             <ConfirmDialog
                 isOpen={showDeleteDialog}
@@ -752,6 +828,21 @@ export default function DashboardScreen(): JSX.Element {
                 onCancel={() => {
                     setShowDeleteReservationDialog(false);
                     setReservationToDelete(null);
+                }}
+            />
+
+            {/* Delete Deposit Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={showDeleteDepositDialog}
+                title="Ẩn đặt cọc khỏi dashboard"
+                message="Bạn có chắc chắn muốn xóa đặt cọc này khỏi trang này? Đặt cọc vẫn sẽ được lưu trong lịch sử giao dịch."
+                confirmText={isDeleting ? "Đang xóa..." : "Xóa"}
+                cancelText="Hủy"
+                type="warning"
+                onConfirm={confirmDeleteDeposit}
+                onCancel={() => {
+                    setShowDeleteDepositDialog(false);
+                    setDepositToDelete(null);
                 }}
             />
         </div>
