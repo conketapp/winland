@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@/lib/generated/prisma'
+import { logger } from '@/lib/logger'
 
 // Create a new Prisma client instance for this route
 const prisma = new PrismaClient()
@@ -9,10 +10,10 @@ export async function GET(request: NextRequest) {
         // Get user phone from session storage (passed as query param or header)
         const userPhone = request.headers.get('x-user-phone')
 
-        console.log('[API] Fetching user for phone:', userPhone)
+        logger.debug('[API] Fetching user', { phone: userPhone ? '***' : 'none' })
 
         if (!userPhone) {
-            console.log('[API] No phone provided')
+            logger.warn('[API] No phone provided')
             return NextResponse.json(
                 { error: 'Không tìm thấy thông tin người dùng' },
                 { status: 401 }
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Find user by phone
-        console.log('[API] Querying database...')
+        logger.debug('[API] Querying database')
         const user = await prisma.user.findUnique({
             where: { phone: userPhone },
             select: {
@@ -44,10 +45,7 @@ export async function GET(request: NextRequest) {
             }
         })
         
-        console.log('[API] User found:', user ? 'Yes' : 'No')
-        if (user) {
-            console.log('[API] User totalDeals:', user.totalDeals)
-        }
+        logger.debug('[API] User query result', { found: !!user, totalDeals: user?.totalDeals })
 
         if (!user) {
             return NextResponse.json(
@@ -99,18 +97,17 @@ export async function PUT(request: NextRequest) {
         const { fullName, email, avatar, gender, address, birthday, workingPlace } = body
 
         // Debug logging (only in development)
-        if (process.env.NODE_ENV === 'development') {
-            console.log('[API PUT /user/me] Update request received')
-            console.log('[API] User phone:', userPhone)
-            console.log('[API] Request body:', {
-                fullName,
-                email,
-                gender,
-                address,
-                birthday,
-                avatar: avatar ? `${avatar.substring(0, 50)}...` : null,
-            })
-        }
+        logger.debug('[API PUT /user/me] Update request received', {
+            phone: userPhone ? '***' : 'none',
+            fields: {
+                hasFullName: !!fullName,
+                hasEmail: !!email,
+                hasGender: !!gender,
+                hasAddress: !!address,
+                hasBirthday: !!birthday,
+                hasAvatar: !!avatar
+            }
+        })
 
         // Find user first
         const existingUser = await prisma.user.findUnique({
@@ -118,9 +115,7 @@ export async function PUT(request: NextRequest) {
         })
 
         if (!existingUser) {
-            if (process.env.NODE_ENV === 'development') {
-                console.log('[API] User not found:', userPhone)
-            }
+            logger.warn('[API] User not found')
             return NextResponse.json(
                 { error: 'Người dùng không tồn tại' },
                 { status: 404 }
@@ -155,12 +150,11 @@ export async function PUT(request: NextRequest) {
             workingPlace: workingPlace !== undefined ? workingPlace : existingUser.workingPlace,
         }
 
-        if (process.env.NODE_ENV === 'development') {
-            console.log('[API] Updating user with data:', {
-                ...updateData,
-                avatar: updateData.avatar ? `${updateData.avatar.substring(0, 50)}...` : null,
-            })
-        }
+        logger.debug('[API] Updating user', {
+            hasAvatar: !!updateData.avatar,
+            hasEmail: !!updateData.email,
+            hasFullName: !!updateData.fullName
+        })
 
         // Update user
         const updatedUser = await prisma.user.update({
@@ -186,16 +180,7 @@ export async function PUT(request: NextRequest) {
             }
         })
 
-        if (process.env.NODE_ENV === 'development') {
-            console.log('[API] User updated successfully:', {
-                id: updatedUser.id,
-                fullName: updatedUser.fullName,
-                email: updatedUser.email,
-                gender: updatedUser.gender,
-                address: updatedUser.address,
-                birthday: updatedUser.birthday,
-            })
-        }
+        logger.info('[API] User updated successfully')
 
         return NextResponse.json(updatedUser)
 

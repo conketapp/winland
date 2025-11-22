@@ -143,7 +143,6 @@ export default function SignUpPage() {
             const data = await response.json();
 
             if (response.ok && data.success) {
-                console.log('Signup successful:', data.user);
                 toastNotification.success(data.message || 'Đăng ký thành công!');
 
                 // Redirect to login page after successful signup
@@ -425,7 +424,6 @@ export default function SignUpPage() {
                                                         onClick={(e) => {
                                                             e.preventDefault();
                                                             router.replace('/login');
-                                                            console.log("Sign up clicked");
                                                         }}
                                                     >
                                                         Đăng nhập tại đây

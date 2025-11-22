@@ -83,8 +83,6 @@ export default function LoginPage() {
             const data = await response.json();
 
             if (response.ok && data.success) {
-                console.log('Login successful:', data.user);
-
                 // Store user info in sessionStorage
                 try {
                     sessionStorage.setItem('login:userPhone', userPhone);
@@ -224,7 +222,6 @@ export default function LoginPage() {
                                                         onClick={(e) => {
                                                             e.preventDefault();
                                                             router.push('/login/forget-pass');
-                                                            console.log("Forgot userPassword clicked");
                                                         }}
                                                     >
                                                         Quên mật khẩu?
@@ -267,7 +264,6 @@ export default function LoginPage() {
                                                         onClick={(e) => {
                                                             e.preventDefault();
                                                             router.replace('/signup');
-                                                            console.log("Sign up clicked");
                                                         }}
                                                     >
                                                         Đăng ký tài khoản
