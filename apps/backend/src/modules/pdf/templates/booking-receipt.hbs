@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phiếu Đặt chỗ</title>
+  <style>
+    @page {
+      margin: 20mm 15mm;
+    }
+    
+    body {
+      font-family: 'Times New Roman', serif;
+      font-size: 13pt;
+      line-height: 1.6;
+      color: #000;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .company-logo {
+      max-width: 150px;
+      max-height: 80px;
+      margin-bottom: 10px;
+    }
+    
+    .company-name {
+      font-size: 18pt;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    
+    .receipt-title {
+      font-size: 20pt;
+      font-weight: bold;
+      text-align: center;
+      margin: 30px 0;
+      text-transform: uppercase;
+    }
+    
+    .receipt-code {
+      text-align: right;
+      margin-bottom: 20px;
+      font-size: 14pt;
+      font-weight: bold;
+    }
+    
+    .info-group {
+      margin: 15px 0;
+    }
+    
+    .info-label {
+      font-weight: bold;
+      display: inline-block;
+      min-width: 150px;
+    }
+    
+    .amount-highlight {
+      background-color: #fff3cd;
+      border: 2px solid #ffc107;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 5px;
+      text-align: center;
+    }
+    
+    .amount-highlight strong {
+      color: #856404;
+      font-size: 16pt;
+    }
+    
+    .payment-info {
+      background-color: #e7f3ff;
+      border: 2px solid #2196F3;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+    
+    .qr-code-section {
+      text-align: center;
+      margin: 30px 0;
+    }
+    
+    .qr-code-section img {
+      max-width: 200px;
+      max-height: 200px;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    
+    .status-pending {
+      background-color: #ffc107;
+      color: #000;
+    }
+    
+    .status-approved {
+      background-color: #28a745;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    {{#if companyLogo}}
+    <img src="{{companyLogo}}" alt="Logo" class="company-logo" />
+    {{/if}}
+    <div class="company-name">{{companyName}}</div>
+    <div>Địa chỉ: {{companyAddress}}</div>
+  </div>
+
+  <h1 class="receipt-title">Phiếu Đặt chỗ</h1>
+  
+  <div class="receipt-code">
+    Mã phiếu: <strong>{{bookingCode}}</strong>
+    <span class="status-badge status-{{lowercase status}}">{{status}}</span>
+  </div>
+
+  <div class="info-group">
+    <div style="font-weight: bold; font-size: 14pt; margin-bottom: 10px;">Thông tin Căn hộ</div>
+    <div><span class="info-label">Dự án:</span> {{projectName}}</div>
+    <div><span class="info-label">Mã căn:</span> {{unitCode}}</div>
+    <div><span class="info-label">Diện tích:</span> {{unitArea}} m²</div>
+    <div><span class="info-label">Giá bán:</span> {{formatCurrency unitPrice}}</div>
+  </div>
+
+  <div class="info-group">
+    <div style="font-weight: bold; font-size: 14pt; margin-bottom: 10px;">Thông tin Khách hàng</div>
+    <div><span class="info-label">Họ tên:</span> {{customerName}}</div>
+    <div><span class="info-label">SĐT:</span> {{customerPhone}}</div>
+    <div><span class="info-label">CMND/CCCD:</span> {{customerIdCard}}</div>
+  </div>
+
+  <div class="amount-highlight">
+    <div>Số tiền đặt chỗ:</div>
+    <strong>{{formatCurrencyText bookingAmount}}<br>({{formatCurrency bookingAmount}})</strong>
+  </div>
+
+  {{#if qrCode}}
+  <div class="payment-info">
+    <div style="font-weight: bold; margin-bottom: 10px;">Thông tin thanh toán:</div>
+    <div><span class="info-label">Ngân hàng:</span> {{bankName}}</div>
+    <div><span class="info-label">Số tài khoản:</span> {{bankAccount}}</div>
+    <div><span class="info-label">Tên tài khoản:</span> {{bankAccountName}}</div>
+    <div><span class="info-label">Nội dung:</span> {{transferContent}}</div>
+    
+    <div class="qr-code-section">
+      <p><strong>Quét mã QR để thanh toán</strong></p>
+      <img src="{{qrCode}}" alt="QR Code" />
+    </div>
+  </div>
+  {{/if}}
+
+  <div style="margin-top: 30px; font-size: 11pt; text-align: center; color: #666;">
+    <p><strong>Lưu ý:</strong> Vui lòng thanh toán đúng số tiền và nội dung chuyển khoản như trên.</p>
+    <p>Mọi thắc mắc vui lòng liên hệ: {{companyPhone}}</p>
+  </div>
+</body>
+</html>

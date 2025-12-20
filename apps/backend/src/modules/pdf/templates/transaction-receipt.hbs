@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phiếu Nhận Tiền</title>
+  <style>
+    @page {
+      margin: 20mm 15mm;
+    }
+    
+    body {
+      font-family: 'Times New Roman', serif;
+      font-size: 13pt;
+      line-height: 1.6;
+      color: #000;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .company-logo {
+      max-width: 150px;
+      max-height: 80px;
+      margin-bottom: 10px;
+    }
+    
+    .company-name {
+      font-size: 18pt;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    
+    .receipt-title {
+      font-size: 20pt;
+      font-weight: bold;
+      text-align: center;
+      margin: 30px 0;
+      text-transform: uppercase;
+    }
+    
+    .receipt-code {
+      text-align: right;
+      margin-bottom: 20px;
+      font-size: 12pt;
+    }
+    
+    .amount-box {
+      background-color: #fff3cd;
+      border: 3px solid #ffc107;
+      padding: 30px;
+      margin: 30px 0;
+      border-radius: 10px;
+      text-align: center;
+    }
+    
+    .amount-box .label {
+      font-size: 14pt;
+      margin-bottom: 10px;
+    }
+    
+    .amount-box .amount {
+      font-size: 24pt;
+      font-weight: bold;
+      color: #856404;
+      margin: 10px 0;
+    }
+    
+    .amount-box .amount-text {
+      font-size: 16pt;
+      font-weight: bold;
+      color: #856404;
+      margin-top: 10px;
+    }
+    
+    .info-section {
+      margin: 20px 0;
+    }
+    
+    .info-row {
+      display: flex;
+      margin: 12px 0;
+      padding: 8px 0;
+      border-bottom: 1px dotted #ccc;
+    }
+    
+    .info-label {
+      font-weight: bold;
+      min-width: 200px;
+    }
+    
+    .info-value {
+      flex: 1;
+    }
+    
+    .signature-section {
+      margin-top: 60px;
+      page-break-inside: avoid;
+    }
+    
+    .signature-box {
+      text-align: center;
+      margin-top: 80px;
+    }
+    
+    .signature-line {
+      border-top: 2px solid #000;
+      width: 300px;
+      margin: 0 auto;
+      padding-top: 5px;
+      font-weight: bold;
+    }
+    
+    .footer {
+      margin-top: 40px;
+      font-size: 10pt;
+      text-align: center;
+      color: #666;
+      border-top: 1px solid #ccc;
+      padding-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    {{#if companyLogo}}
+    <img src="{{companyLogo}}" alt="Logo" class="company-logo" />
+    {{/if}}
+    <div class="company-name">{{companyName}}</div>
+    <div>Địa chỉ: {{companyAddress}}</div>
+    <div>MST: {{companyTaxCode}}</div>
+  </div>
+
+  <h1 class="receipt-title">Phiếu Nhận Tiền</h1>
+  
+  <div class="receipt-code">
+    Mã phiếu: <strong>{{transactionCode}}</strong><br>
+    Ngày: {{formatDate transactionDate 'DD/MM/YYYY HH:mm'}}
+  </div>
+
+  <div class="amount-box">
+    <div class="label">Số tiền đã nhận</div>
+    <div class="amount">{{formatCurrency amount}}</div>
+    <div class="amount-text">({{formatCurrencyText amount}})</div>
+  </div>
+
+  <div class="info-section">
+    <div class="info-row">
+      <div class="info-label">Bên nhận tiền:</div>
+      <div class="info-value">{{companyName}}</div>
+    </div>
+    
+    <div class="info-row">
+      <div class="info-label">Bên thanh toán:</div>
+      <div class="info-value">{{customerName}}</div>
+    </div>
+    
+    <div class="info-row">
+      <div class="info-label">CMND/CCCD:</div>
+      <div class="info-value">{{customerIdCard}}</div>
+    </div>
+    
+    <div class="info-row">
+      <div class="info-label">Nội dung thanh toán:</div>
+      <div class="info-value">{{paymentContent}}</div>
+    </div>
+    
+    {{#if depositCode}}
+    <div class="info-row">
+      <div class="info-label">Mã hợp đồng:</div>
+      <div class="info-value">{{depositCode}}</div>
+    </div>
+    {{/if}}
+    
+    {{#if unitCode}}
+    <div class="info-row">
+      <div class="info-label">Căn hộ:</div>
+      <div class="info-value">{{unitCode}} - {{projectName}}</div>
+    </div>
+    {{/if}}
+    
+    {{#if installment}}
+    <div class="info-row">
+      <div class="info-label">Đợt thanh toán:</div>
+      <div class="info-value">Đợt {{installment}}</div>
+    </div>
+    {{/if}}
+    
+    <div class="info-row">
+      <div class="info-label">Phương thức thanh toán:</div>
+      <div class="info-value">{{paymentMethod}}</div>
+    </div>
+    
+    {{#if referenceNumber}}
+    <div class="info-row">
+      <div class="info-label">Mã tham chiếu:</div>
+      <div class="info-value">{{referenceNumber}}</div>
+    </div>
+    {{/if}}
+    
+    <div class="info-row">
+      <div class="info-label">Ngày giờ nhận tiền:</div>
+      <div class="info-value">{{formatDate transactionDate 'DD/MM/YYYY HH:mm'}}</div>
+    </div>
+  </div>
+
+  <div class="signature-section">
+    <div class="signature-box">
+      <div><strong>NGƯỜI NHẬN TIỀN</strong></div>
+      <div class="signature-line">{{receiverName}}</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Phiếu này được in từ hệ thống và có giá trị pháp lý.</p>
+    <p>Mọi thắc mắc vui lòng liên hệ: {{companyPhone}}</p>
+  </div>
+</body>
+</html>

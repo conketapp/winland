@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lịch Trả góp</title>
+  <style>
+    @page {
+      margin: 20mm 15mm;
+    }
+    
+    body {
+      font-family: 'Times New Roman', serif;
+      font-size: 13pt;
+      line-height: 1.6;
+      color: #000;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .company-logo {
+      max-width: 150px;
+      max-height: 80px;
+      margin-bottom: 10px;
+    }
+    
+    .company-name {
+      font-size: 18pt;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    
+    .document-title {
+      font-size: 20pt;
+      font-weight: bold;
+      text-align: center;
+      margin: 30px 0;
+      text-transform: uppercase;
+    }
+    
+    .info-section {
+      margin: 20px 0;
+    }
+    
+    .info-row {
+      margin: 10px 0;
+    }
+    
+    .info-label {
+      font-weight: bold;
+      display: inline-block;
+      min-width: 150px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 25px 0;
+      font-size: 12pt;
+    }
+    
+    th, td {
+      border: 1px solid #000;
+      padding: 10px;
+      text-align: left;
+    }
+    
+    th {
+      background-color: #f0f0f0;
+      font-weight: bold;
+      text-align: center;
+    }
+    
+    td:nth-child(2),
+    td:nth-child(3) {
+      text-align: right;
+    }
+    
+    td:nth-child(4) {
+      text-align: center;
+    }
+    
+    .summary-row {
+      font-weight: bold;
+      background-color: #fff3cd;
+    }
+    
+    .footer {
+      margin-top: 40px;
+      font-size: 10pt;
+      text-align: center;
+      color: #666;
+      border-top: 1px solid #ccc;
+      padding-top: 15px;
+    }
+    
+    .note-section {
+      margin-top: 30px;
+      font-size: 11pt;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-left: 4px solid #007bff;
+    }
+    
+    .note-section strong {
+      color: #007bff;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    {{#if companyLogo}}
+    <img src="{{companyLogo}}" alt="Logo" class="company-logo" />
+    {{/if}}
+    <div class="company-name">{{companyName}}</div>
+    <div>Địa chỉ: {{companyAddress}}</div>
+    <div>MST: {{companyTaxCode}}</div>
+  </div>
+
+  <h1 class="document-title">Lịch Trả góp</h1>
+
+  <div class="info-section">
+    <div class="info-row">
+      <span class="info-label">Mã hợp đồng:</span> {{contractCode}}
+    </div>
+    <div class="info-row">
+      <span class="info-label">Ngày lập:</span> {{formatDateFull createdAt}}
+    </div>
+    <div class="info-row">
+      <span class="info-label">Khách hàng:</span> {{customerName}}
+    </div>
+    <div class="info-row">
+      <span class="info-label">CMND/CCCD:</span> {{customerIdCard}}
+    </div>
+    <div class="info-row">
+      <span class="info-label">SĐT:</span> {{customerPhone}}
+    </div>
+    <div class="info-row">
+      <span class="info-label">Căn hộ:</span> {{unitCode}} - {{projectName}}
+    </div>
+    <div class="info-row">
+      <span class="info-label">Diện tích:</span> {{unitArea}} m²
+    </div>
+    <div class="info-row">
+      <span class="info-label">Tổng giá trị:</span> {{formatCurrency totalPrice}} ({{formatCurrencyText totalPrice}})
+    </div>
+    {{#if depositAmount}}
+    <div class="info-row">
+      <span class="info-label">Đã đặt cọc:</span> {{formatCurrency depositAmount}}
+    </div>
+    {{/if}}
+    <div class="info-row">
+      <span class="info-label">Còn lại:</span> <strong>{{formatCurrency remainingAmount}} ({{formatCurrencyText remainingAmount}})</strong>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Đợt</th>
+        <th style="width: 25%;">Số tiền (VNĐ)</th>
+        <th style="width: 30%;">Bằng chữ</th>
+        <th style="width: 20%;">Hạn thanh toán</th>
+        <th style="width: 15%;">Trạng thái</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each paymentSchedules}}
+      <tr>
+        <td style="text-align: center; font-weight: bold;">Đợt {{this.installment}}</td>
+        <td style="text-align: right; font-weight: bold;">{{formatCurrency this.amount}}</td>
+        <td style="text-align: right;">{{formatCurrencyText this.amount}}</td>
+        <td style="text-align: center;">{{formatDate this.dueDate 'DD/MM/YYYY'}}</td>
+        <td style="text-align: center;">
+          {{#if this.paid}}
+            <span style="color: #28a745; font-weight: bold;">Đã thanh toán</span>
+          {{else}}
+            {{#if this.overdue}}
+              <span style="color: #dc3545; font-weight: bold;">Quá hạn</span>
+            {{else}}
+              <span style="color: #ffc107;">Chờ thanh toán</span>
+            {{/if}}
+          {{/if}}
+        </td>
+      </tr>
+      {{/each}}
+      <tr class="summary-row">
+        <td colspan="2" style="text-align: right;">TỔNG CỘNG:</td>
+        <td colspan="3" style="text-align: right; font-size: 14pt;">
+          {{formatCurrency totalAmount}}<br>
+          <span style="font-size: 11pt;">({{formatCurrencyText totalAmount}})</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note-section">
+    <div><strong>Lưu ý:</strong></div>
+    <ul style="margin: 10px 0; padding-left: 20px;">
+      <li>Khách hàng vui lòng thanh toán đúng hạn theo lịch trả góp trên.</li>
+      <li>Khi thanh toán, vui lòng ghi rõ nội dung: <strong>{{contractCode}} - Đợt X</strong></li>
+      <li>Thanh toán chuyển khoản vào tài khoản: <strong>{{bankAccount}}</strong> - {{bankName}}</li>
+      <li>Chủ tài khoản: <strong>{{bankAccountName}}</strong></li>
+      <li>Quá hạn thanh toán sẽ có phạt theo điều khoản hợp đồng.</li>
+      <li>Mọi thắc mắc vui lòng liên hệ: {{companyPhone}}</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    <p>Đây là lịch trả góp chính thức và là một phần của hợp đồng đặt cọc.</p>
+    <p>Mọi thắc mắc vui lòng liên hệ: {{companyPhone}} - {{companyEmail}}</p>
+  </div>
+</body>
+</html>
+

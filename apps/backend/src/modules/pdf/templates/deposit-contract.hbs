@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hợp đồng Đặt cọc</title>
+  <style>
+    @page {
+      margin: 20mm 15mm;
+    }
+    
+    body {
+      font-family: 'Times New Roman', serif;
+      font-size: 13pt;
+      line-height: 1.6;
+      color: #000;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .company-logo {
+      max-width: 150px;
+      max-height: 80px;
+      margin-bottom: 10px;
+    }
+    
+    .company-name {
+      font-size: 18pt;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    
+    .company-info {
+      font-size: 11pt;
+      margin: 5px 0;
+    }
+    
+    .contract-title {
+      font-size: 20pt;
+      font-weight: bold;
+      text-align: center;
+      margin: 30px 0;
+      text-transform: uppercase;
+    }
+    
+    .contract-meta {
+      text-align: right;
+      margin-bottom: 20px;
+      font-size: 12pt;
+    }
+    
+    .section {
+      margin: 20px 0;
+    }
+    
+    .section-title {
+      font-size: 14pt;
+      font-weight: bold;
+      margin: 15px 0 10px 0;
+      text-transform: uppercase;
+    }
+    
+    .info-group {
+      margin: 10px 0;
+    }
+    
+    .info-label {
+      font-weight: bold;
+      display: inline-block;
+      min-width: 150px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 12pt;
+    }
+    
+    th, td {
+      border: 1px solid #000;
+      padding: 8px;
+      text-align: left;
+    }
+    
+    th {
+      background-color: #f0f0f0;
+      font-weight: bold;
+      text-align: center;
+    }
+    
+    .signature-section {
+      margin-top: 50px;
+      page-break-inside: avoid;
+    }
+    
+    .signature-table {
+      width: 100%;
+      border: none;
+      margin-top: 30px;
+    }
+    
+    .signature-table td {
+      border: none;
+      padding: 10px;
+      width: 50%;
+      vertical-align: top;
+    }
+    
+    .signature-line {
+      margin-top: 80px;
+      border-top: 1px solid #000;
+      padding-top: 5px;
+      text-align: center;
+    }
+    
+    .footer {
+      margin-top: 30px;
+      font-size: 10pt;
+      text-align: center;
+      color: #666;
+    }
+    
+    .qr-code-section {
+      text-align: center;
+      margin: 20px 0;
+    }
+    
+    .qr-code-section img {
+      max-width: 200px;
+      max-height: 200px;
+    }
+    
+    @media print {
+      body {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    {{#if companyLogo}}
+    <img src="{{companyLogo}}" alt="Logo" class="company-logo" />
+    {{/if}}
+    <div class="company-name">{{companyName}}</div>
+    <div class="company-info">Địa chỉ: {{companyAddress}}</div>
+    <div class="company-info">MST: {{companyTaxCode}}</div>
+    {{#if companyPhone}}
+    <div class="company-info">Điện thoại: {{companyPhone}}</div>
+    {{/if}}
+  </div>
+
+  <h1 class="contract-title">Hợp đồng Đặt cọc</h1>
+  
+  <div class="contract-meta">
+    <div><strong>Mã hợp đồng:</strong> {{contractNumber}}</div>
+    <div><strong>Ngày ký:</strong> {{formatDateFull contractDate}}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Phần 1: Thông tin các bên</div>
+    
+    <div class="info-group">
+      <div><strong>Bên A (Bên bán):</strong></div>
+      <div class="company-info">{{companyName}}</div>
+      <div>Địa chỉ: {{companyAddress}}</div>
+      <div>MST: {{companyTaxCode}}</div>
+      {{#if companyRepresentative}}
+      <div>Đại diện: {{companyRepresentative}}</div>
+      {{/if}}
+    </div>
+
+    <div class="info-group" style="margin-top: 15px;">
+      <div><strong>Bên B (Bên mua):</strong></div>
+      <div>Họ tên: {{customerName}}</div>
+      <div>CMND/CCCD: {{customerIdCard}}</div>
+      <div>Địa chỉ: {{customerAddress}}</div>
+      <div>SĐT: {{customerPhone}}</div>
+      {{#if customerEmail}}
+      <div>Email: {{customerEmail}}</div>
+      {{/if}}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Phần 2: Đối tượng hợp đồng</div>
+    
+    <div class="info-group">
+      <div><span class="info-label">Căn hộ:</span> {{unitCode}}</div>
+      <div><span class="info-label">Dự án:</span> {{projectName}}</div>
+      {{#if buildingName}}
+      <div><span class="info-label">Tòa:</span> {{buildingName}}</div>
+      {{/if}}
+      {{#if floorNumber}}
+      <div><span class="info-label">Tầng:</span> {{floorNumber}}</div>
+      {{/if}}
+      <div><span class="info-label">Diện tích:</span> {{unitArea}} m²</div>
+      <div><span class="info-label">Giá bán:</span> {{formatCurrencyText unitPrice}} ({{formatCurrency unitPrice}})</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Phần 3: Số tiền đặt cọc</div>
+    
+    <div class="info-group">
+      <div>Số tiền đặt cọc: <strong>{{formatCurrencyText depositAmount}} ({{formatCurrency depositAmount}})</strong></div>
+      <div>Bằng {{depositPercentage}}% giá trị căn hộ</div>
+    </div>
+  </div>
+
+  {{#if paymentSchedules}}
+  <div class="section">
+    <div class="section-title">Phần 4: Lịch thanh toán</div>
+    
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 15%;">Đợt</th>
+          <th style="width: 35%;">Số tiền</th>
+          <th style="width: 25%;">Bằng chữ</th>
+          <th style="width: 25%;">Hạn thanh toán</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each paymentSchedules}}
+        <tr>
+          <td style="text-align: center;">Đợt {{this.installment}}</td>
+          <td style="text-align: right;">{{formatCurrency this.amount}}</td>
+          <td>{{formatCurrencyText this.amount}}</td>
+          <td style="text-align: center;">{{formatDate this.dueDate 'DD/MM/YYYY'}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{/if}}
+
+  {{#if qrCode}}
+  <div class="section">
+    <div class="section-title">Thông tin thanh toán</div>
+    
+    <div class="info-group">
+      <div><span class="info-label">Ngân hàng:</span> {{bankName}}</div>
+      <div><span class="info-label">Số tài khoản:</span> {{bankAccount}}</div>
+      <div><span class="info-label">Tên tài khoản:</span> {{bankAccountName}}</div>
+      <div><span class="info-label">Nội dung:</span> {{transferContent}}</div>
+    </div>
+    
+    <div class="qr-code-section">
+      <p><strong>Quét mã QR để thanh toán</strong></p>
+      <img src="{{qrCode}}" alt="QR Code" />
+    </div>
+  </div>
+  {{/if}}
+
+  <div class="signature-section">
+    <table class="signature-table">
+      <tr>
+        <td>
+          <div><strong>BÊN A (Bên bán)</strong></div>
+          <div class="signature-line">
+            <div>{{companyRepresentative}}</div>
+          </div>
+        </td>
+        <td>
+          <div><strong>BÊN B (Bên mua)</strong></div>
+          <div class="signature-line">
+            <div>{{customerName}}</div>
+          </div>
+        </td>
+      </tr>
+      {{#if ctvName}}
+      <tr>
+        <td colspan="2" style="text-align: center; padding-top: 30px;">
+          <div><strong>NGƯỜI CHỨNG KIẾN</strong></div>
+          <div class="signature-line" style="margin-top: 80px;">
+            <div>{{ctvName}}</div>
+            <div style="font-size: 10pt;">CTV</div>
+          </div>
+        </td>
+      </tr>
+      {{/if}}
+    </table>
+  </div>
+
+  <div class="footer">
+    <p>Hợp đồng này có hiệu lực kể từ ngày ký và được lập thành 02 bản, mỗi bên giữ 01 bản có giá trị pháp lý như nhau.</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phiếu Giữ chỗ</title>
+  <style>
+    @page {
+      margin: 20mm 15mm;
+    }
+    
+    body {
+      font-family: 'Times New Roman', serif;
+      font-size: 13pt;
+      line-height: 1.6;
+      color: #000;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .company-logo {
+      max-width: 150px;
+      max-height: 80px;
+      margin-bottom: 10px;
+    }
+    
+    .company-name {
+      font-size: 18pt;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    
+    .company-info {
+      font-size: 11pt;
+      margin: 5px 0;
+    }
+    
+    .receipt-title {
+      font-size: 20pt;
+      font-weight: bold;
+      text-align: center;
+      margin: 30px 0;
+      text-transform: uppercase;
+    }
+    
+    .receipt-code {
+      text-align: right;
+      margin-bottom: 20px;
+      font-size: 14pt;
+      font-weight: bold;
+    }
+    
+    .info-section {
+      margin: 20px 0;
+    }
+    
+    .info-group {
+      margin: 15px 0;
+    }
+    
+    .info-label {
+      font-weight: bold;
+      display: inline-block;
+      min-width: 150px;
+    }
+    
+    .validity-period {
+      background-color: #fff3cd;
+      border: 2px solid #ffc107;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+    
+    .validity-period strong {
+      color: #856404;
+      font-size: 14pt;
+    }
+    
+    .footer {
+      margin-top: 40px;
+      font-size: 10pt;
+      text-align: center;
+      color: #666;
+      border-top: 1px solid #ccc;
+      padding-top: 15px;
+    }
+    
+    .terms {
+      margin-top: 30px;
+      font-size: 11pt;
+      text-align: justify;
+    }
+    
+    .terms-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .qr-code-section {
+      text-align: center;
+      margin: 30px 0;
+    }
+    
+    .qr-code-section img {
+      max-width: 150px;
+      max-height: 150px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    {{#if companyLogo}}
+    <img src="{{companyLogo}}" alt="Logo" class="company-logo" />
+    {{/if}}
+    <div class="company-name">{{companyName}}</div>
+    <div class="company-info">Địa chỉ: {{companyAddress}}</div>
+    {{#if companyPhone}}
+    <div class="company-info">Điện thoại: {{companyPhone}}</div>
+    {{/if}}
+    {{#if companyEmail}}
+    <div class="company-info">Email: {{companyEmail}}</div>
+    {{/if}}
+  </div>
+
+  <h1 class="receipt-title">Phiếu Giữ chỗ</h1>
+  
+  <div class="receipt-code">
+    Mã phiếu: <strong>{{reservationCode}}</strong>
+  </div>
+
+  <div class="info-section">
+    <div class="info-group">
+      <div class="section-title" style="font-weight: bold; font-size: 14pt; margin-bottom: 10px;">Thông tin Dự án</div>
+      <div><span class="info-label">Tên dự án:</span> {{projectName}}</div>
+      {{#if projectAddress}}
+      <div><span class="info-label">Địa chỉ:</span> {{projectAddress}}</div>
+      {{/if}}
+    </div>
+
+    <div class="info-group">
+      <div class="section-title" style="font-weight: bold; font-size: 14pt; margin-bottom: 10px;">Thông tin Căn hộ</div>
+      <div><span class="info-label">Mã căn:</span> {{unitCode}}</div>
+      {{#if buildingName}}
+      <div><span class="info-label">Tòa:</span> {{buildingName}}</div>
+      {{/if}}
+      {{#if floorNumber}}
+      <div><span class="info-label">Tầng:</span> {{floorNumber}}</div>
+      {{/if}}
+      <div><span class="info-label">Diện tích:</span> {{unitArea}} m²</div>
+      <div><span class="info-label">Giá bán:</span> {{formatCurrency unitPrice}}</div>
+    </div>
+
+    <div class="info-group">
+      <div class="section-title" style="font-weight: bold; font-size: 14pt; margin-bottom: 10px;">Thông tin Khách hàng</div>
+      <div><span class="info-label">Họ tên:</span> {{customerName}}</div>
+      <div><span class="info-label">SĐT:</span> {{customerPhone}}</div>
+      {{#if customerEmail}}
+      <div><span class="info-label">Email:</span> {{customerEmail}}</div>
+      {{/if}}
+      <div><span class="info-label">CMND/CCCD:</span> {{customerIdCard}}</div>
+    </div>
+
+    {{#if ctvName}}
+    <div class="info-group">
+      <div class="section-title" style="font-weight: bold; font-size: 14pt; margin-bottom: 10px;">Thông tin CTV</div>
+      <div><span class="info-label">Tên CTV:</span> {{ctvName}}</div>
+      {{#if ctvPhone}}
+      <div><span class="info-label">SĐT:</span> {{ctvPhone}}</div>
+      {{/if}}
+    </div>
+    {{/if}}
+
+    <div class="validity-period">
+      <strong>⏰ Thời hạn hiệu lực:</strong><br>
+      Từ: <strong>{{formatDate validFrom 'DD/MM/YYYY HH:mm'}}</strong><br>
+      Đến: <strong>{{formatDate validTo 'DD/MM/YYYY HH:mm'}}</strong><br>
+      ({{validityHours}} giờ)
+    </div>
+  </div>
+
+  {{#if qrCode}}
+  <div class="qr-code-section">
+    <p><strong>Quét mã QR để xác minh phiếu</strong></p>
+    <img src="{{qrCode}}" alt="QR Code" />
+  </div>
+  {{/if}}
+
+  <div class="terms">
+    <div class="terms-title">Điều khoản và điều kiện:</div>
+    <ol style="padding-left: 20px;">
+      <li>Phiếu giữ chỗ có giá trị trong thời gian quy định trên phiếu.</li>
+      <li>Khách hàng cần thanh toán đặt chỗ trước khi hết hạn để chuyển sang giai đoạn booking.</li>
+      <li>Phiếu này không thể chuyển nhượng cho người khác.</li>
+      <li>Mọi thắc mắc vui lòng liên hệ: {{companyPhone}}</li>
+    </ol>
+  </div>
+
+  <div class="footer">
+    <p><strong>Lưu ý:</strong> Đây là phiếu giữ chỗ tạm thời, không phải hợp đồng chính thức.</p>
+    <p>Mọi thắc mắc vui lòng liên hệ: {{companyPhone}} - {{companyEmail}}</p>
+  </div>
+</body>
+</html>
