@@ -6,13 +6,10 @@ import * as Handlebars from 'handlebars';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { registerHelpers } from './handlebars-helpers';
+import { TemplateContext } from '../types/pdf.types';
 
 // Register custom helpers
 registerHelpers(Handlebars);
-
-export interface TemplateContext {
-  [key: string]: any;
-}
 
 export class TemplateRenderer {
   private static templateCache: Map<string, Handlebars.TemplateDelegate> = new Map();

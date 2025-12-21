@@ -60,7 +60,9 @@ export function registerHelpers(handlebars: typeof Handlebars): void {
    * Compare values
    * Usage: {{#if (eq value1 value2)}}...{{/if}}
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handlebars.registerHelper('eq', (a: any, b: any) => a === b);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handlebars.registerHelper('ne', (a: any, b: any) => a !== b);
   handlebars.registerHelper('gt', (a: number, b: number) => a > b);
   handlebars.registerHelper('gte', (a: number, b: number) => a >= b);
@@ -71,6 +73,7 @@ export function registerHelpers(handlebars: typeof Handlebars): void {
    * Default value
    * Usage: {{default value 'default text'}}
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handlebars.registerHelper('default', (value: any, defaultValue: any) => {
     return value != null ? value : defaultValue;
   });

@@ -29,6 +29,8 @@ export interface PdfStorageResult {
   generatedAt: Date;
 }
 
+// Template context can contain any values for Handlebars templates
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface TemplateContext {
   [key: string]: any;
 }

@@ -3,9 +3,12 @@
  * Integrates with QRCode service to embed QR codes in PDF templates
  */
 
+import { Logger } from '@nestjs/common';
 import { QrcodeService } from '../../qrcode/qrcode.service';
 
 export class QrcodeEmbedder {
+  private static readonly logger = new Logger(QrcodeEmbedder.name);
+
   /**
    * Get QR code data URL for deposit
    */
@@ -13,7 +16,7 @@ export class QrcodeEmbedder {
     try {
       return await qrcodeService.generateDepositQR(depositId);
     } catch (error) {
-      console.error(`Failed to generate QR code for deposit ${depositId}:`, error);
+      this.logger.warn(`Failed to generate QR code for deposit ${depositId}:`, error);
       return null;
     }
   }
@@ -25,7 +28,7 @@ export class QrcodeEmbedder {
     try {
       return await qrcodeService.generateBookingQR(bookingId);
     } catch (error) {
-      console.error(`Failed to generate QR code for booking ${bookingId}:`, error);
+      this.logger.warn(`Failed to generate QR code for booking ${bookingId}:`, error);
       return null;
     }
   }
@@ -37,7 +40,7 @@ export class QrcodeEmbedder {
     try {
       return await qrcodeService.generateTransactionQR(transactionId);
     } catch (error) {
-      console.error(`Failed to generate QR code for transaction ${transactionId}:`, error);
+      this.logger.warn(`Failed to generate QR code for transaction ${transactionId}:`, error);
       return null;
     }
   }

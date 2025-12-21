@@ -5,6 +5,7 @@ import { TemplateRenderer } from './utils/template-renderer.util';
 import { PdfGenerator } from './utils/pdf-generator.util';
 import { PdfStorage } from './utils/storage.util';
 import { WatermarkUtil } from './utils/watermark.util';
+import { TemplateContext } from './types/pdf.types';
 import moment from 'moment';
 
 /**
@@ -122,7 +123,7 @@ export class PdfService implements OnModuleDestroy {
       .toDate();
 
     // Build template context
-    const context: any = {
+    const context: TemplateContext = {
       // Company info
       companyName: configs.company_name,
       companyAddress: configs.company_address,
@@ -241,7 +242,7 @@ export class PdfService implements OnModuleDestroy {
     ]);
 
     // Build template context
-    const context: any = {
+    const context: TemplateContext = {
       // Company info
       companyName: configs.company_name,
       companyAddress: configs.company_address,
@@ -296,7 +297,7 @@ export class PdfService implements OnModuleDestroy {
       const qrCode = await this.qrcodeService.generateDepositQR(depositId);
       context.qrCode = qrCode;
     } catch (error) {
-      console.error('Failed to generate QR code for deposit:', error);
+      this.logger.warn(`Failed to generate QR code for deposit ${depositId}:`, error);
       // Continue without QR code
     }
 
@@ -380,7 +381,7 @@ export class PdfService implements OnModuleDestroy {
     ]);
 
     // Build template context
-    const context: any = {
+    const context: TemplateContext = {
       // Company info
       companyName: configs.company_name,
       companyAddress: configs.company_address,
@@ -493,7 +494,7 @@ export class PdfService implements OnModuleDestroy {
     const deposit = transaction.deposit;
 
     // Build template context
-    const context: any = {
+    const context: TemplateContext = {
       // Company info
       companyName: configs.company_name,
       companyAddress: configs.company_address,
@@ -627,7 +628,7 @@ export class PdfService implements OnModuleDestroy {
     ]);
 
     // Build template context
-    const context: any = {
+    const context: TemplateContext = {
       // Company info
       companyName: configs.company_name,
       companyAddress: configs.company_address,
@@ -718,7 +719,12 @@ export class PdfService implements OnModuleDestroy {
       this.logger.log(`Generating commission report PDF for CTV: ${ctv.fullName}`);
       
       // Build date filter
-    const dateFilter: any = {};
+    const dateFilter: {
+      createdAt?: {
+        gte?: Date;
+        lte?: Date;
+      };
+    } = {};
     if (periodFrom || periodTo) {
       dateFilter.createdAt = {};
       if (periodFrom) {
@@ -800,7 +806,7 @@ export class PdfService implements OnModuleDestroy {
     ]);
 
     // Build template context
-    const context: any = {
+    const context: TemplateContext = {
       // Company info
       companyName: configs.company_name,
       companyAddress: configs.company_address,
