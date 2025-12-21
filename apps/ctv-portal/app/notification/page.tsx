@@ -19,36 +19,27 @@ import {
     Calendar,
     DollarSign,
     Clock,
-    User,
     Loader2,
-    CheckCircle,
-    XCircle,
-    AlertCircle
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { formatCurrency } from '@/lib/utils';
 import { AnimatedBottomNavigation } from '@/components/AnimatedBottomNavigation';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useTheme } from '@/hooks/useTheme';
 import BookingDetailModal from '@/components/BookingDetailModal';
 import ReservationDetailModal from '@/components/ReservationDetailModal';
 import DepositDetailModal from '@/components/DepositDetailModal';
+import type { Booking, Reservation, Deposit } from '@/lib/types/api.types';
 
 interface Notification {
     id: string;
-    type: 'booking' | 'deposit' | 'reservation';
-    code: string;
-    customerName: string;
-    customerPhone: string;
-    unitCode: string;
-    ctvName?: string;
-    amount?: number;
-    status: string;
+    type: string;
+    title: string;
+    message: string;
+    entityType?: string | null;
+    entityId?: string | null;
+    metadata?: Record<string, unknown> | null;
+    isRead: boolean;
     createdAt: string;
-    expiresAt?: string;
-    visitDate?: string;
-    visitStartTime?: string;
-    visitEndTime?: string;
 }
 
 export default function NotificationPage(): JSX.Element {
@@ -58,17 +49,13 @@ export default function NotificationPage(): JSX.Element {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'booking' | 'deposit' | 'reservation'>('all');
-    const [selectedBooking, setSelectedBooking] = useState<any>(null);
-    const [selectedReservation, setSelectedReservation] = useState<any>(null);
-    const [selectedDeposit, setSelectedDeposit] = useState<any>(null);
-    const [bookingsData, setBookingsData] = useState<any[]>([]);
-    const [reservationsData, setReservationsData] = useState<any[]>([]);
-    const [depositsData, setDepositsData] = useState<any[]>([]);
+    const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+    const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+    const [selectedDeposit, setSelectedDeposit] = useState<Deposit | null>(null);
     const [currentUserPhone, setCurrentUserPhone] = useState<string>('');
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 3;
-
     useEffect(() => {
         const userPhone = sessionStorage.getItem('login:userPhone');
         if (!userPhone) {
@@ -84,111 +71,42 @@ export default function NotificationPage(): JSX.Element {
             setIsLoading(true);
             const userPhone = sessionStorage.getItem('login:userPhone');
 
-            // Check and update expired bookings first
-            try {
-                await fetch('/api/bookings/check-expired', { method: 'POST' });
-            } catch (error) {
-                console.error('Error checking expired bookings:', error);
-            }
-            // Check and update expired reservation first
-            try {
-                await fetch('/api/reservations/check-expired', { method: 'POST' });
-            } catch (error) {
-                console.error('Error checking expired reservations:', error);
-            }
+            const res = await fetch('/api/notifications/my?unreadOnly=false', {
+                headers: { 'x-user-phone': userPhone || '' },
+                cache: 'no-store'
+            });
 
+            const data = res.ok ? await res.json() : [];
 
-            // Fetch all notifications (including other users) with cache-busting
-            const [bookingsRes, depositsRes, reservationsRes] = await Promise.all([
-                fetch('/api/bookings/all', {
-                    headers: { 'x-user-phone': userPhone || '' },
-                    cache: 'no-store'
-                }),
-                fetch('/api/deposits/all', {
-                    headers: { 'x-user-phone': userPhone || '' },
-                    cache: 'no-store'
-                }),
-                fetch('/api/reservations/all', {
-                    headers: { 'x-user-phone': userPhone || '' },
-                    cache: 'no-store'
-                })
-            ]);
-
-            const bookings = bookingsRes.ok ? await bookingsRes.json() : [];
-            const deposits = depositsRes.ok ? await depositsRes.json() : [];
-            const reservations = reservationsRes.ok ? await reservationsRes.json() : [];
-
-            // Store full bookings, reservations, and deposits data for detail modal and user check
-            setBookingsData(bookings);
-            setReservationsData(reservations);
-            setDepositsData(deposits);
-
-            // Combine and format notifications
-            const allNotifications: Notification[] = [
-                ...bookings.map((b: any) => {
-                    // Try to extract schedule from notes if fields are null (backward compatibility)
-                    let visitDate = b.visitDate;
-                    let visitStartTime = b.visitStartTime;
-                    let visitEndTime = b.visitEndTime;
-
-                    if (!visitDate && b.notes) {
-                        // Parse from notes: "Lịch xem nhà: 2025-11-17 từ 14:30 đến 15:30"
-                        const match = b.notes.match(/Lịch xem nhà: (\S+) từ (\S+) đến (\S+)/);
-                        if (match) {
-                            visitDate = match[1];
-                            visitStartTime = match[2];
-                            visitEndTime = match[3];
-                        }
-                    }
-
-                    return {
-                        id: b.id,
-                        type: 'booking' as const,
-                        code: b.code,
-                        customerName: b.customerName,
-                        customerPhone: b.customerPhone,
-                        unitCode: b.unit?.code || 'N/A',
-                        ctvName: b.ctv?.fullName || 'N/A',
-                        status: b.status,
-                        createdAt: b.createdAt,
-                        expiresAt: b.expiresAt,
-                        visitDate,
-                        visitStartTime,
-                        visitEndTime
-                    };
-                }),
-                ...deposits.map((d: any) => ({
-                    id: d.id,
-                    type: 'deposit' as const,
-                    code: d.code,
-                    customerName: d.customerName,
-                    customerPhone: d.customerPhone,
-                    unitCode: d.unit?.code || 'N/A',
-                    ctvName: d.ctv?.fullName || 'N/A',
-                    amount: d.depositAmount,
-                    status: d.status,
-                    createdAt: d.createdAt
-                })),
-                ...reservations.map((r: any) => ({
-                    id: r.id,
-                    type: 'reservation' as const,
-                    code: r.code,
-                    customerName: r.customerName,
-                    ctvName: r.ctv?.fullName || 'N/A',
-                    customerPhone: r.customerPhone,
-                    unitCode: r.unit?.code || 'N/A',
-                    status: r.status,
-                    createdAt: r.createdAt,
-                    expiresAt: r.reservedUntil
-                }))
-            ];
+            type ApiNotification = {
+                id: string;
+                type: string;
+                title: string;
+                message: string;
+                entityType: string;
+                entityId: string;
+                metadata?: string | null;
+                isRead: boolean;
+                createdAt: string;
+            };
+            const mapped: Notification[] = (data as ApiNotification[]).map((n) => ({
+                id: n.id,
+                type: n.type,
+                title: n.title,
+                message: n.message,
+                entityType: n.entityType,
+                entityId: n.entityId,
+                metadata: n.metadata ? JSON.parse(n.metadata) : undefined,
+                isRead: n.isRead,
+                createdAt: n.createdAt
+            }));
 
             // Sort by creation date (newest first)
-            allNotifications.sort((a, b) =>
+            mapped.sort((a, b) =>
                 new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             );
 
-            setNotifications(allNotifications);
+            setNotifications(mapped);
             setLastUpdated(new Date());
         } catch (error) {
             console.error('Error fetching notifications:', error);
@@ -202,65 +120,31 @@ export default function NotificationPage(): JSX.Element {
         router.push("/login");
     };
 
-    const getStatusColor = (status: string, type?: string) => {
-        if (status === 'COMPLETED') {
-            return 'text-green-600 bg-green-50';
-        } else if (status === 'CONFIRMED') {
-            return 'text-blue-600 bg-blue-50';
-        } else if (status === 'ACTIVE') {
-            return 'text-green-600 bg-green-50';
-        } else if (status.includes('PENDING')) {
-            return 'text-yellow-600 bg-yellow-50';
-        } else if (status === 'EXPIRED') {
-            return 'text-gray-600 bg-gray-50';
-        } else if (status === 'CANCELLED') {
-            return 'text-red-600 bg-red-50';
-        }
-        return 'text-gray-600 bg-gray-50';
-    };
-
-    const getStatusText = (status: string, type?: string) => {
-        switch (status) {
-            case 'COMPLETED':
-                return type === 'deposit' ? 'Hoàn thành - Đã bán' : 'Hoàn thành';
-            case 'CONFIRMED':
-                return 'Đã xác nhận';
-            case 'PENDING_APPROVAL':
-                return 'Chờ duyệt';
-            case 'PENDING_PAYMENT':
-                return 'Chờ thanh toán';
-            case 'EXPIRED':
-                return 'Hết hạn';
-            case 'CANCELLED':
-                return 'Đã hủy';
-            case 'ACTIVE':
-                return 'Đang hoạt động';
-            default:
-                return status;
-        }
-    };
-
     const getTypeIcon = (type: string) => {
-        switch (type) {
-            case 'booking': return <Calendar className="w-5 h-5" />;
-            case 'deposit': return <DollarSign className="w-5 h-5" />;
-            case 'reservation': return <Clock className="w-5 h-5" />;
-            default: return <Bell className="w-5 h-5" />;
-        }
+        if (type.includes('RESERVATION')) return <Clock className="w-5 h-5" />;
+        if (type.includes('BOOKING')) return <Calendar className="w-5 h-5" />;
+        if (type.includes('DEPOSIT') || type.includes('COMMISSION') || type.includes('PAYMENT')) return <DollarSign className="w-5 h-5" />;
+        return <Bell className="w-5 h-5" />;
     };
 
     const getTypeLabel = (type: string) => {
-        switch (type) {
-            case 'booking': return 'Booking';
-            case 'deposit': return 'Cọc';
-            case 'reservation': return 'Giữ chỗ';
-            default: return type;
-        }
+        if (type.startsWith('RESERVATION_')) return 'Giữ chỗ';
+        if (type.startsWith('BOOKING_')) return 'Booking';
+        if (type.startsWith('DEPOSIT_')) return 'Cọc';
+        if (type.startsWith('COMMISSION_')) return 'Hoa hồng';
+        if (type.startsWith('PAYMENT_REQUEST_')) return 'Yêu cầu thanh toán';
+        if (type.startsWith('PAYMENT_')) return 'Thanh toán';
+        return type;
     };
 
     const filteredNotifications = filter === 'all'
         ? notifications
-        : notifications.filter(n => n.type === filter);
+        : notifications.filter(n => {
+            if (filter === 'booking') return n.type.startsWith('BOOKING_');
+            if (filter === 'deposit') return n.type.startsWith('DEPOSIT_') || n.type.startsWith('COMMISSION_') || n.type.startsWith('PAYMENT_');
+            if (filter === 'reservation') return n.type.startsWith('RESERVATION_');
+            return true;
+        });
 
     // Pagination
     const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage);
@@ -318,7 +202,7 @@ export default function NotificationPage(): JSX.Element {
                     ].map((tab) => (
                         <button
                             key={tab.key}
-                            onClick={() => setFilter(tab.key as any)}
+                            onClick={() => setFilter(tab.key as 'all' | 'booking' | 'deposit' | 'reservation')}
                             className={`px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${filter === tab.key
                                 ? 'bg-blue-600 text-white'
                                 : isDark
@@ -364,141 +248,21 @@ export default function NotificationPage(): JSX.Element {
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <span className="font-semibold text-lg">{getTypeLabel(notification.type)}</span>
-                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(notification.status, notification.type)}`}>
-                                                    {getStatusText(notification.status, notification.type)}
+                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${notification.isRead ? 'text-gray-600 bg-gray-100' : 'text-blue-700 bg-blue-50'}`}>
+                                                    {notification.isRead ? 'Đã đọc' : 'Mới'}
                                                 </span>
                                             </div>
 
                                             <div className="space-y-2">
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <span className="font-medium">Mã:</span>
-                                                    <span className="font-mono">{notification.code}</span>
+                                                <div className="text-sm text-gray-800 whitespace-pre-line">
+                                                    {notification.message}
                                                 </div>
-                                                {notification.ctvName && (() => {
-                                                    // Check if this notification belongs to current user
-                                                    let isCurrentUser = false;
-                                                    if (notification.type === 'booking') {
-                                                        const fullBooking = bookingsData.find(b => b.id === notification.id);
-                                                        isCurrentUser = fullBooking?.ctv?.phone === currentUserPhone;
-                                                    } else if (notification.type === 'reservation') {
-                                                        const fullReservation = reservationsData.find(r => r.id === notification.id);
-                                                        isCurrentUser = fullReservation?.ctv?.phone === currentUserPhone;
-                                                    } else if (notification.type === 'deposit') {
-                                                        const fullDeposit = depositsData.find(d => d.id === notification.id);
-                                                        isCurrentUser = fullDeposit?.ctv?.phone === currentUserPhone;
-                                                    }
-
-                                                    return (
-                                                        <div className={`flex items-center gap-2 text-sm p-2 rounded-lg ${isCurrentUser
-                                                            ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-700'
-                                                            : 'bg-purple-50 dark:bg-purple-900/20'
-                                                            }`}>
-                                                            <User className={`w-4 h-4 ${isCurrentUser ? 'text-blue-600' : 'text-purple-600'}`} />
-                                                            <span className={`font-medium ${isCurrentUser
-                                                                ? 'text-blue-700 dark:text-blue-400'
-                                                                : 'text-purple-700 dark:text-purple-400'
-                                                                }`}>
-                                                                CTV: {notification.ctvName} {isCurrentUser}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })()}
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <User className="w-4 h-4" />
-                                                    <span>{notification.customerName}</span>
-                                                    <span className="text-gray-500">•</span>
-                                                    <span>{notification.customerPhone}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <span className="font-medium">Căn hộ:</span>
-                                                    <span className="font-semibold text-blue-600">{notification.unitCode}</span>
-                                                </div>
-                                                {notification.visitDate && notification.visitStartTime && notification.visitEndTime && (
-                                                    <div className="flex items-center gap-2 text-sm bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg">
-                                                        <Calendar className="w-4 h-4 text-blue-600" />
-                                                        <span className="font-medium text-blue-700 dark:text-blue-400">
-                                                            Lịch xem: {notification.visitDate} từ {notification.visitStartTime} đến {notification.visitEndTime}
-                                                        </span>
+                                                <div className="flex items-center justify-between gap-2 text-sm text-gray-500">
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="w-4 h-4" />
+                                                        <span>Tạo lúc: {new Date(notification.createdAt).toLocaleString('vi-VN')}</span>
                                                     </div>
-                                                )}
-                                                {notification.amount !== undefined && notification.amount > 0 && (
-                                                    <div className="flex items-center gap-2 text-sm">
-                                                        <DollarSign className="w-4 h-4" />
-                                                        <span className="font-semibold text-green-600">
-                                                            {formatCurrency(notification.amount)}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                                    <Clock className="w-4 h-4" />
-                                                    <span>Tạo lúc: {new Date(notification.createdAt).toLocaleString('vi-VN')}</span>
                                                 </div>
-                                                {notification.expiresAt && (
-                                                    <div className="flex items-center gap-2 text-sm text-orange-600">
-                                                        <AlertCircle className="w-4 h-4" />
-                                                        <span>Hết hạn: {new Date(notification.expiresAt).toLocaleString('vi-VN')}</span>
-                                                    </div>
-                                                )}
-
-                                                {/* View Details Button for Bookings - Only show for booking owner */}
-                                                {notification.type === 'booking' && (() => {
-                                                    const fullBooking = bookingsData.find(b => b.id === notification.id);
-                                                    const isOwner = fullBooking?.ctv?.phone === currentUserPhone;
-                                                    return isOwner && (
-                                                        <div className="mt-3 text-right">
-                                                            <button
-                                                                onClick={() => {
-                                                                    if (fullBooking) {
-                                                                        setSelectedBooking(fullBooking);
-                                                                    }
-                                                                }}
-                                                                className="text-[#1224c4] text-sm font-medium hover:underline"
-                                                            >
-                                                                Xem chi tiết
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                })()}
-
-                                                {/* View Details Button for Reservations - Only show for reservation owner */}
-                                                {notification.type === 'reservation' && (() => {
-                                                    const fullReservation = reservationsData.find(r => r.id === notification.id);
-                                                    const isOwner = fullReservation?.ctv?.phone === currentUserPhone;
-                                                    return isOwner && (
-                                                        <div className="mt-3 text-right">
-                                                            <button
-                                                                onClick={() => {
-                                                                    if (fullReservation) {
-                                                                        setSelectedReservation(fullReservation);
-                                                                    }
-                                                                }}
-                                                                className="text-[#cc8400] text-sm font-medium hover:underline"
-                                                            >
-                                                                Xem chi tiết
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                })()}
-
-                                                {/* View Details Button for Deposits - Only show for deposit owner */}
-                                                {notification.type === 'deposit' && (() => {
-                                                    const fullDeposit = depositsData.find(d => d.id === notification.id);
-                                                    const isOwner = fullDeposit?.ctv?.phone === currentUserPhone;
-                                                    return isOwner && (
-                                                        <div className="mt-3 text-right">
-                                                            <button
-                                                                onClick={() => {
-                                                                    if (fullDeposit) {
-                                                                        setSelectedDeposit(fullDeposit);
-                                                                    }
-                                                                }}
-                                                                className="text-[#ff6b00] text-sm font-medium hover:underline"
-                                                            >
-                                                                Xem chi tiết
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                })()}
                                             </div>
                                         </div>
                                     </div>

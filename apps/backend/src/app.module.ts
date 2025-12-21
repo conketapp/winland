@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -11,15 +12,22 @@ import { BookingsModule } from './modules/bookings/bookings.module';
 import { DepositsModule } from './modules/deposits/deposits.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { PaymentRequestsModule } from './modules/payment-requests/payment-requests.module';
+import { CommissionsModule } from './modules/commissions/commissions.module';
 import { QrcodeModule } from './modules/qrcode/qrcode.module';
 import { PdfModule } from './modules/pdf/pdf.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { UsersModule } from './modules/users/users.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { AuditLogModule } from './modules/audit-log/audit-log.module';
+import { CommonModule } from './modules/common/common.module';
+import { QueryAnalysisModule } from './modules/query-analysis/query-analysis.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     PrismaModule,
+    CommonModule, // Global module for shared services
     AuthModule,
     DashboardModule,
     // Model B Modules (Complete MVP Flow)
@@ -31,10 +39,14 @@ import { UsersModule } from './modules/users/users.module';
     DepositsModule,
     TransactionsModule,
     PaymentRequestsModule,
+    CommissionsModule,
     QrcodeModule,
     PdfModule,
     SystemConfigModule,
     UsersModule,
+    NotificationsModule,
+    AuditLogModule,
+    QueryAnalysisModule,
   ],
   controllers: [AppController],
   providers: [AppService],

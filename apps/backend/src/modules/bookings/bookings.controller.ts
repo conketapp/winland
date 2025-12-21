@@ -56,13 +56,36 @@ export class BookingsController {
   }
 
   /**
-   * Get all bookings (Admin)
-   * GET /api/bookings
+   * Get all bookings (Admin) with pagination
+   * GET /api/bookings?page=1&pageSize=20&status=...
    */
   @Get()
   @UseGuards(JwtAuthGuard)
-  findAll(@Query() query: { status?: string; projectId?: string }) {
-    return this.bookingsService.findAll(query);
+  async findAll(
+    @Query() query: { 
+      status?: string; 
+      projectId?: string; 
+      ctvId?: string;
+      page?: string;
+      pageSize?: string;
+    }
+  ) {
+    try {
+      const filters = {
+        status: query.status,
+        projectId: query.projectId,
+        ctvId: query.ctvId,
+      };
+      const pagination = {
+        page: query.page ? parseInt(query.page) : undefined,
+        pageSize: query.pageSize ? parseInt(query.pageSize) : undefined,
+      };
+      return await this.bookingsService.findAll(filters, pagination);
+    } catch (error: any) {
+      console.error('BookingsController.findAll error:', error);
+      console.error('Error stack:', error.stack);
+      throw error;
+    }
   }
 
   /**
@@ -73,6 +96,54 @@ export class BookingsController {
   @UseGuards(JwtAuthGuard)
   getMyBookings(@Request() req) {
     return this.bookingsService.getMyBookings(req.user.userId);
+  }
+
+  /**
+   * Get trash bookings (Admin)
+   * GET /api/bookings/trash
+   */
+  @Get('trash')
+  @UseGuards(JwtAuthGuard)
+  getTrash() {
+    return this.bookingsService.findTrash();
+  }
+
+  /**
+   * Cleanup booking: release unit back to AVAILABLE (Admin)
+   * PATCH /api/bookings/:id/cleanup
+   */
+  @Patch(':id/cleanup')
+  @UseGuards(JwtAuthGuard)
+  cleanup(@Param('id') id: string, @Request() req) {
+    return this.bookingsService.cleanup(id, req.user.userId);
+  }
+
+  /**
+   * Update payment proof for a booking (Admin)
+   * PATCH /api/bookings/:id/payment-proof
+   */
+  @Patch(':id/payment-proof')
+  @UseGuards(JwtAuthGuard)
+  updatePaymentProof(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() body: { paymentProof: any },
+  ) {
+    return this.bookingsService.updatePaymentProof(id, req.user.userId, body.paymentProof);
+  }
+
+  /**
+   * Check and process expired bookings (Admin or System)
+   * POST /api/bookings/check-expired
+   */
+  @Post('check-expired')
+  @UseGuards(JwtAuthGuard)
+  async checkExpired() {
+    try {
+      return await this.bookingsService.processExpiredBookings();
+    } catch (error: any) {
+      throw error; // Let NestJS error filter handle it
+    }
   }
 }
 

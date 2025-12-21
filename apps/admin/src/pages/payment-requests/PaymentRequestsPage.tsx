@@ -3,7 +3,7 @@
  * Admin approves CTV commission withdrawal requests
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '../../components/ui/PageHeader';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -16,15 +16,19 @@ import {
 } from '../../components/ui/select';
 import StatusBadge from '../../components/shared/StatusBadge';
 import LoadingState from '../../components/ui/LoadingState';
+import { ErrorState } from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { CheckCircle, XCircle, Eye } from 'lucide-react';
 import { paymentRequestsApi, type PaymentRequest } from '../../api/payment-requests.api';
+import { ReasonDialog } from '../../components/ui/ReasonDialog';
+import { useToast } from '../../components/ui/toast';
 
 export default function PaymentRequestsPage() {
   const [requests, setRequests] = useState<PaymentRequest[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     status: 'all',
   });
@@ -35,15 +39,18 @@ export default function PaymentRequestsPage() {
     requestId: '',
     action: '' as 'approve' | 'reject' | 'markPaid',
   });
+  const [rejectDialog, setRejectDialog] = useState({
+    open: false,
+    requestId: '',
+    reason: '',
+  });
+  const { success: toastSuccess, error: toastError } = useToast();
 
-  useEffect(() => {
-    loadRequests();
-  }, [filters]);
-
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     try {
       setLoading(true);
-      const params: any = {};
+      setError(null);
+      const params: Record<string, string> = {};
       
       if (filters.status !== 'all') {
         params.status = filters.status;
@@ -51,73 +58,102 @@ export default function PaymentRequestsPage() {
       
       const data = await paymentRequestsApi.getAll(params);
       setRequests(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to load payment requests:', error);
-      alert(error.message || 'Lỗi tải yêu cầu!');
+      const errorMessage = error instanceof Error ? error.message : 'Không thể tải danh sách yêu cầu rút hoa hồng';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
+
+  useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
 
   const handleAction = async () => {
     try {
       switch (actionDialog.action) {
         case 'approve':
           await paymentRequestsApi.approve(actionDialog.requestId);
-          alert('✅ Duyệt yêu cầu thành công!');
           break;
         case 'reject':
-          const reason = prompt('Lý do từ chối:');
-          if (!reason) return;
-          await paymentRequestsApi.reject(actionDialog.requestId, reason);
-          alert('✅ Từ chối yêu cầu thành công!');
+          if (!rejectDialog.reason.trim()) {
+            toastError('Vui lòng nhập lý do từ chối');
+            return;
+          }
+          await paymentRequestsApi.reject(rejectDialog.requestId, rejectDialog.reason.trim());
           break;
         case 'markPaid':
           await paymentRequestsApi.markAsPaid(actionDialog.requestId);
-          alert('✅ Đánh dấu đã thanh toán thành công!');
           break;
       }
       setActionDialog({ open: false, requestId: '', action: 'approve' });
+      setRejectDialog({ open: false, requestId: '', reason: '' });
+      toastSuccess('Xử lý yêu cầu thành công');
       loadRequests();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to process payment request:', error);
-      alert(error.message || 'Lỗi xử lý yêu cầu!');
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi xử lý yêu cầu!';
+      setError(errorMessage);
     }
   };
 
-  if (loading && requests.length === 0) {
+  if (loading && !error && requests.length === 0) {
     return <LoadingState />;
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 space-y-4">
+        <PageHeader
+          title="Yêu cầu Rút hoa hồng"
+          description="Duyệt và xử lý yêu cầu rút tiền của CTV"
+        />
+        <ErrorState
+          title="Lỗi tải danh sách yêu cầu"
+          description={error}
+          onRetry={loadRequests}
+        />
+      </div>
+    );
   }
 
   return (
     <div className="p-6 space-y-6">
+      <ReasonDialog
+        open={rejectDialog.open}
+        title="Từ chối yêu cầu rút tiền"
+        description="Nhập lý do từ chối yêu cầu rút hoa hồng của CTV. Lý do này sẽ được lưu lại để đối soát sau."
+        reason={rejectDialog.reason}
+        onReasonChange={(value) =>
+          setRejectDialog((prev) => ({ ...prev, reason: value }))
+        }
+        onConfirm={handleAction}
+        onCancel={() => setRejectDialog({ open: false, requestId: '', reason: '' })}
+        confirmText="Từ chối"
+      />
       {/* Action Dialog */}
       <ConfirmDialog
-        open={actionDialog.open}
+        open={actionDialog.open && actionDialog.action !== 'reject'}
         onOpenChange={(open) => setActionDialog({ ...actionDialog, open })}
         title={
           actionDialog.action === 'approve'
             ? 'Duyệt yêu cầu rút tiền'
-            : actionDialog.action === 'reject'
-            ? 'Từ chối yêu cầu'
             : 'Xác nhận đã thanh toán'
         }
         description={
           actionDialog.action === 'approve'
             ? 'Xác nhận duyệt yêu cầu rút hoa hồng của CTV?'
-            : actionDialog.action === 'reject'
-            ? 'Từ chối yêu cầu này? CTV sẽ cần tạo yêu cầu mới.'
             : 'Xác nhận đã chuyển tiền cho CTV? Hệ thống sẽ cập nhật trạng thái hoa hồng.'
         }
         onConfirm={handleAction}
         confirmText={
           actionDialog.action === 'approve'
             ? 'Duyệt'
-            : actionDialog.action === 'reject'
-            ? 'Từ chối'
             : 'Đã thanh toán'
         }
-        variant={actionDialog.action === 'reject' ? 'destructive' : 'default'}
+        variant="default"
       />
 
       {/* Page Header */}
@@ -275,10 +311,10 @@ export default function PaymentRequestsPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() =>
-                                  setActionDialog({
+                                  setRejectDialog({
                                     open: true,
                                     requestId: request.id,
-                                    action: 'reject',
+                                    reason: '',
                                   })
                                 }
                               >
@@ -305,7 +341,12 @@ export default function PaymentRequestsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => console.log('View request:', request.id)}
+                            // TODO: Implement request detail drawer/modal
+                            onClick={() => {
+                              if (process.env.NODE_ENV !== 'production') {
+                                console.log('View request (stub):', request.id);
+                              }
+                            }}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>

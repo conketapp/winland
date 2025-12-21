@@ -46,9 +46,14 @@ export interface Reservation {
   ctvId: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   status: ReservationStatus;
+  priority: number;
   reservedUntil: string;
+  depositDeadline?: string;
+  notifiedAt?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Booking {

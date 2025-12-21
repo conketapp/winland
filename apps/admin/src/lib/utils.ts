@@ -20,3 +20,10 @@ export function formatDate(date: string | Date): string {
   }).format(new Date(date));
 }
 
+// Ví dụ: 10_000_000 -> "10tr", 125_000_000 -> "125tr"
+export function formatShortAmount(amount: number): string {
+  if (!amount || isNaN(amount)) return '0';
+  const millions = Math.round(amount / 1_000_000);
+  return `${millions}tr`;
+}
+

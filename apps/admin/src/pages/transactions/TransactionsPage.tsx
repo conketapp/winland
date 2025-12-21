@@ -3,7 +3,7 @@
  * List and manage all payment transactions
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '../../components/ui/PageHeader';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -16,15 +16,19 @@ import {
 } from '../../components/ui/select';
 import StatusBadge from '../../components/shared/StatusBadge';
 import LoadingState from '../../components/ui/LoadingState';
+import { ErrorState } from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { CheckCircle, XCircle, Eye } from 'lucide-react';
 import { transactionsApi, type Transaction } from '../../api/transactions.api';
+import { ReasonDialog } from '../../components/ui/ReasonDialog';
+import { useToast } from '../../components/ui/toast';
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     status: 'all',
   });
@@ -35,15 +39,18 @@ export default function TransactionsPage() {
     transactionId: '',
     action: '' as 'confirm' | 'reject',
   });
+  const [rejectDialog, setRejectDialog] = useState({
+    open: false,
+    transactionId: '',
+    reason: '',
+  });
+  const { success: toastSuccess, error: toastError } = useToast();
 
-  useEffect(() => {
-    loadTransactions();
-  }, [filters]);
-
-  const loadTransactions = async () => {
+  const loadTransactions = useCallback(async () => {
     try {
       setLoading(true);
-      const params: any = {};
+      setError(null);
+      const params: Record<string, string> = {};
       
       if (filters.status !== 'all') {
         params.status = filters.status;
@@ -51,65 +58,94 @@ export default function TransactionsPage() {
       
       const data = await transactionsApi.getAll(params);
       setTransactions(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to load transactions:', error);
-      alert(error.message || 'Lỗi tải giao dịch!');
+      const errorMessage = error instanceof Error ? error.message : 'Không thể tải danh sách giao dịch';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
+
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
 
   const handleConfirm = async () => {
     try {
       await transactionsApi.confirm(confirmDialog.transactionId);
       setConfirmDialog({ open: false, transactionId: '', action: 'confirm' });
-      alert('✅ Xác nhận giao dịch thành công!');
+      toastSuccess('✅ Xác nhận giao dịch thành công!');
       loadTransactions();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to confirm transaction:', error);
-      alert(error.message || 'Lỗi xác nhận transaction!');
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi xác nhận giao dịch!';
+      setError(errorMessage);
     }
   };
 
   const handleReject = async () => {
     try {
-      const reason = prompt('Lý do từ chối:');
-      if (!reason) return;
-      
-      // Note: Need to add reject endpoint to API
-      console.log('Rejecting transaction:', confirmDialog.transactionId, reason);
+      if (!rejectDialog.reason.trim()) {
+        toastError('Vui lòng nhập lý do từ chối');
+        return;
+      }
+
+      await transactionsApi.reject(rejectDialog.transactionId, rejectDialog.reason.trim());
       setConfirmDialog({ open: false, transactionId: '', action: 'reject' });
-      alert('✅ Từ chối giao dịch thành công!');
+      setRejectDialog({ open: false, transactionId: '', reason: '' });
+      toastSuccess('Đã từ chối giao dịch thành công');
       loadTransactions();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to reject transaction:', error);
-      alert(error.message || 'Lỗi từ chối transaction!');
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi từ chối giao dịch!';
+      setError(errorMessage);
     }
   };
 
-  if (loading && transactions.length === 0) {
+  if (loading && !error && transactions.length === 0) {
     return <LoadingState />;
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 space-y-4">
+        <PageHeader
+          title="Quản lý Giao dịch"
+          description="Xác nhận và quản lý các giao dịch thanh toán"
+        />
+        <ErrorState
+          title="Lỗi tải danh sách giao dịch"
+          description={error}
+          onRetry={loadTransactions}
+        />
+      </div>
+    );
   }
 
   return (
     <div className="p-6 space-y-6">
+      <ReasonDialog
+        open={rejectDialog.open}
+        title="Từ chối giao dịch"
+        description="Nhập lý do từ chối thanh toán. Lý do này sẽ được lưu lại để đối soát sau."
+        reason={rejectDialog.reason}
+        onReasonChange={(value) =>
+          setRejectDialog((prev) => ({ ...prev, reason: value }))
+        }
+        onConfirm={handleReject}
+        onCancel={() => setRejectDialog({ open: false, transactionId: '', reason: '' })}
+        confirmText="Từ chối"
+      />
       {/* Confirm Dialog */}
       <ConfirmDialog
-        open={confirmDialog.open}
+        open={confirmDialog.open && confirmDialog.action === 'confirm'}
         onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
-        title={
-          confirmDialog.action === 'confirm'
-            ? 'Xác nhận thanh toán'
-            : 'Từ chối thanh toán'
-        }
-        description={
-          confirmDialog.action === 'confirm'
-            ? 'Xác nhận đã nhận thanh toán? Hệ thống sẽ cập nhật lịch thanh toán và tính hoa hồng.'
-            : 'Từ chối thanh toán này? Khách hàng sẽ cần thanh toán lại.'
-        }
-        onConfirm={confirmDialog.action === 'confirm' ? handleConfirm : handleReject}
-        confirmText={confirmDialog.action === 'confirm' ? 'Xác nhận' : 'Từ chối'}
-        variant={confirmDialog.action === 'confirm' ? 'default' : 'destructive'}
+        title="Xác nhận thanh toán"
+        description="Xác nhận đã nhận thanh toán? Hệ thống sẽ cập nhật lịch thanh toán và tính hoa hồng."
+        onConfirm={handleConfirm}
+        confirmText="Xác nhận"
+        variant="default"
       />
 
       {/* Page Header */}

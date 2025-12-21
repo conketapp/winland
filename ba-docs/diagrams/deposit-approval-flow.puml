@@ -1,0 +1,45 @@
+@startuml
+!theme plain
+title Quy Trình Duyệt Phiếu Đặt Cọc
+
+skinparam activity {
+  BackgroundColor #E8F4F8
+  BorderColor #2E86AB
+}
+
+start
+
+:CTV tạo phiếu Đặt cọc;
+:Thông tin khách hàng đầy đủ;
+:Số tiền cọc (>= 5% giá căn);
+:Tải lên chứng từ;
+
+:Phiếu Đặt cọc\nTình trạng = Chờ duyệt;
+
+:Admin nhận thông báo;
+
+:Admin kiểm tra;
+
+if (Duyệt?) then (Có)
+  :Phiếu Đặt cọc = Đã duyệt;
+  :Căn hộ = Đã đặt cọc;
+  
+  :Hệ thống tự động tạo\n4 đợt thanh toán:
+  :Đợt 1 (Cọc): 5% - Đã thanh toán ✅;
+  :Đợt 2: 30% - Hạn +30 ngày;
+  :Đợt 3: 30% - Hạn +60 ngày;
+  :Đợt 4 (Bàn giao): 35% - Hạn +90 ngày;
+  
+  :Thông báo cho CTV\nvề lịch trả góp;
+  
+  stop
+else (Không)
+  :Nhập lý do từ chối;
+  :Phiếu Đặt cọc = Đã hủy;
+  :Căn hộ = Còn trống;
+  :Thông báo cho CTV;
+  
+  stop
+endif
+
+@enduml

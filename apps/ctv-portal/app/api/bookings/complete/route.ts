@@ -38,14 +38,20 @@ export async function POST(request: NextRequest) {
                     cancelledReason: 'Đã hoàn thành xem nhà'
                 }
             })
-        } catch (enumError: any) {
+        } catch (enumError: unknown) {
             // If COMPLETED enum not available, use raw query
-            if (enumError.code === 'P2000' || enumError.message?.includes('COMPLETED')) {
-                await prisma.$executeRaw`
-                    UPDATE "Booking" 
-                    SET status = 'COMPLETED', cancelled_reason = 'Đã hoàn thành xem nhà'
-                    WHERE id = ${bookingId}
-                `
+            const isPrismaError = enumError && typeof enumError === 'object' && 'code' in enumError && 'message' in enumError;
+            if (isPrismaError) {
+                const prismaError = enumError as { code?: string; message?: string };
+                if (prismaError.code === 'P2000' || (typeof prismaError.message === 'string' && prismaError.message.includes('COMPLETED'))) {
+                    await prisma.$executeRaw`
+                        UPDATE "Booking" 
+                        SET status = 'COMPLETED', cancelled_reason = 'Đã hoàn thành xem nhà'
+                        WHERE id = ${bookingId}
+                    `
+                } else {
+                    throw enumError
+                }
             } else {
                 throw enumError
             }
@@ -93,12 +99,13 @@ export async function POST(request: NextRequest) {
             message: 'Đã kết thúc booking và trả căn hộ về trạng thái có sẵn'
         })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Complete booking error:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         return NextResponse.json(
             { 
                 error: 'Đã xảy ra lỗi khi kết thúc booking',
-                details: error.message || 'Unknown error'
+                details: errorMessage
             },
             { status: 500 }
         )

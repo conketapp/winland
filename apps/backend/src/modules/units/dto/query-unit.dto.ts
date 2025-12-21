@@ -1,4 +1,5 @@
-import { IsOptional, IsEnum, IsString, IsNumber } from 'class-validator';
+import { IsOptional, IsEnum, IsString, IsNumber, Min } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { UnitStatus } from '@prisma/client';
 
 export class QueryUnitDto {
@@ -20,22 +21,27 @@ export class QueryUnitDto {
 
   @IsOptional()
   @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : undefined))
   priceMin?: number;
 
   @IsOptional()
   @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : undefined))
   priceMax?: number;
 
   @IsOptional()
   @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : undefined))
   areaMin?: number;
 
   @IsOptional()
   @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : undefined))
   areaMax?: number;
 
   @IsOptional()
   @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : undefined))
   bedrooms?: number;
 
   @IsOptional()
@@ -53,5 +59,22 @@ export class QueryUnitDto {
   @IsOptional()
   @IsString()
   sortOrder?: 'asc' | 'desc';
+
+  @IsOptional()
+  @IsString()
+  hasReservation?: 'all' | 'has' | 'empty'; // Filter by reservation status
+
+  // Pagination
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Transform(({ value }) => (value ? Number(value) : undefined))
+  page?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Transform(({ value }) => (value ? Number(value) : undefined))
+  pageSize?: number;
 }
 

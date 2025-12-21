@@ -1,0 +1,52 @@
+@startuml
+!theme plain
+title Tổng Quan Hệ Thống Winland
+
+skinparam rectangle {
+  BackgroundColor #E8F4F8
+  BorderColor #2E86AB
+}
+
+package "Người Dùng" {
+  rectangle "CTV\n(Cộng tác viên)" as CTV
+  rectangle "Admin\n(Quản lý)" as Admin
+  rectangle "Super Admin\n(Quản trị tối cao)" as SuperAdmin
+}
+
+package "Trang Quản Lý" {
+  rectangle "Trang CTV\n(CTV Portal)" as CTVPortal
+  rectangle "Trang Admin\n(Admin Portal)" as AdminPortal
+  rectangle "Trang Công Khai\n(Client Website)" as ClientSite
+}
+
+package "Hệ Thống Backend" {
+  rectangle "API Server\n(NestJS)" as API
+  rectangle "Xác thực & Phân quyền" as Auth
+  rectangle "Business Logic" as Business
+  rectangle "Thông báo" as Notification
+}
+
+database "Cơ Sở Dữ Liệu\n(PostgreSQL)" as DB {
+  rectangle "Dự án & Căn hộ" as ProjectsData
+  rectangle "Giao dịch" as TransactionsData
+  rectangle "Hoa hồng" as CommissionsData
+}
+
+CTV --> CTVPortal
+Admin --> AdminPortal
+SuperAdmin --> AdminPortal
+
+CTVPortal --> API
+AdminPortal --> API
+ClientSite --> API
+
+API --> Auth
+API --> Business
+API --> Notification
+
+Business --> DB
+DB --> ProjectsData
+DB --> TransactionsData
+DB --> CommissionsData
+
+@enduml

@@ -28,13 +28,38 @@ export class ReservationsController {
   }
 
   /**
-   * Get all reservations (Admin)
-   * GET /api/reservations
+   * Get all reservations (Admin) with pagination
+   * GET /api/reservations?page=1&pageSize=20&status=...
    */
   @Get()
   @UseGuards(JwtAuthGuard)
-  findAll(@Query() query: { status?: string; projectId?: string }) {
-    return this.reservationsService.findAll(query);
+  findAll(
+    @Query() query: { 
+      status?: string; 
+      projectId?: string;
+      page?: string;
+      pageSize?: string;
+    }
+  ) {
+    const filters = {
+      status: query.status,
+      projectId: query.projectId,
+    };
+    const pagination = {
+      page: query.page ? parseInt(query.page) : undefined,
+      pageSize: query.pageSize ? parseInt(query.pageSize) : undefined,
+    };
+    return this.reservationsService.findAll(filters, pagination);
+  }
+
+  /**
+   * Get reservation by ID
+   * GET /api/reservations/:id
+   */
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  findOne(@Param('id') id: string) {
+    return this.reservationsService.findOne(id);
   }
 
   /**

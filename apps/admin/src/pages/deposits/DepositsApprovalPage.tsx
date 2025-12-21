@@ -3,17 +3,17 @@
  * Admin duyệt phiếu cọc - CRITICAL FEATURE
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { depositsApi } from '../../api/deposits.api';
 import type { Deposit } from '../../types/deposit.types';
 import LoadingState from '../../components/ui/LoadingState';
+import { ErrorState } from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import DepositDetailModal from '../../components/deposits/DepositDetailModal';
 import { Eye } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
 import { PageHeader } from '../../components/ui/PageHeader';
 import {
   Select,
@@ -22,10 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
+import { formatCurrency, formatDate, formatShortAmount } from '../../lib/utils';
+import { BUSINESS_MESSAGES } from '../../constants/businessMessages';
+import StatusBadge from '../../components/shared/StatusBadge';
 
 const DepositsApprovalPage: React.FC = () => {
-  const [deposits, setDeposits] = useState<any[]>([]);
+  const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -34,31 +38,36 @@ const DepositsApprovalPage: React.FC = () => {
 
   const [detailModal, setDetailModal] = useState<{
     open: boolean;
-    deposit: any | null;
+    deposit: Deposit | null;
   }>({
     open: false,
     deposit: null,
   });
 
-  useEffect(() => {
-    loadDeposits();
-  }, [statusFilter]);
-
-  const loadDeposits = async () => {
+  const loadDeposits = useCallback(async () => {
     try {
       setIsLoading(true);
-      const params: any = {};
+      setError(null);
+      const params: Record<string, string> = {};
       if (statusFilter && statusFilter !== 'all') {
         params.status = statusFilter;
       }
       const data = await depositsApi.getAll(params);
-      setDeposits(data);
-    } catch (err) {
+      // Handle paginated response
+      const deposits = Array.isArray(data) ? data : (data as { items?: Deposit[] })?.items || [];
+      setDeposits(deposits);
+    } catch (err: unknown) {
       console.error('Error loading deposits:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Không thể tải danh sách phiếu cọc';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter]);
+
+  useEffect(() => {
+    loadDeposits();
+  }, [loadDeposits]);
 
   const handleApprove = (id: string) => {
     setConfirmDialog({ open: true, depositId: id });
@@ -67,26 +76,30 @@ const DepositsApprovalPage: React.FC = () => {
   const confirmApprove = async () => {
     try {
       await depositsApi.approve(confirmDialog.depositId);
-      alert('✅ Duyệt phiếu cọc thành công!');
       loadDeposits();
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi duyệt');
+    } catch (err: unknown) {
+      console.error('Error approving deposit:', err);
     }
   };
 
-  const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    const variants: Record<string, any> = {
-      PENDING_APPROVAL: 'secondary',
-      CONFIRMED: 'default',
-      CANCELLED: 'destructive',
-      OVERDUE: 'destructive',
-      COMPLETED: 'outline',
-    };
-    return variants[status] || 'outline';
-  };
-
-  if (isLoading) {
+  if (isLoading && !error) {
     return <LoadingState message="Đang tải danh sách cọc..." />;
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 space-y-4">
+        <PageHeader
+          title="Duyệt Phiếu Cọc"
+          description="Xác nhận và duyệt các phiếu cọc từ CTV"
+        />
+        <ErrorState
+          title="Lỗi tải danh sách phiếu cọc"
+          description={error}
+          onRetry={loadDeposits}
+        />
+      </div>
+    );
   }
 
   return (
@@ -96,7 +109,7 @@ const DepositsApprovalPage: React.FC = () => {
         open={confirmDialog.open}
         onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
         title="Xác nhận duyệt phiếu cọc"
-        description="🔥 CRITICAL: Hệ thống sẽ tự động tạo lịch thanh toán (4 đợt) và hoa hồng cho CTV!"
+        description={BUSINESS_MESSAGES.DEPOSITS.APPROVE_CRITICAL}
         onConfirm={confirmApprove}
         confirmText="Duyệt"
         variant="default"
@@ -157,7 +170,7 @@ const DepositsApprovalPage: React.FC = () => {
                 <tr key={deposit.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{deposit.code}</div>
-                    <div className="text-xs text-gray-500">{new Date(deposit.createdAt).toLocaleDateString('vi-VN')}</div>
+                    <div className="text-xs text-gray-500">{formatDate(deposit.createdAt)}</div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{deposit.unit?.code}</div>
@@ -169,7 +182,7 @@ const DepositsApprovalPage: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-semibold text-gray-900">
-                      {(deposit.depositAmount / 1000000).toFixed(0)}tr
+                      {formatShortAmount(deposit.depositAmount)} ({formatCurrency(deposit.depositAmount)})
                     </div>
                     <div className="text-xs text-gray-500">{deposit.depositPercentage.toFixed(1)}%</div>
                   </td>
@@ -177,9 +190,7 @@ const DepositsApprovalPage: React.FC = () => {
                     <div className="text-sm text-gray-900">{deposit.ctv?.fullName}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <Badge variant={getStatusVariant(deposit.status)}>
-                      {deposit.status}
-                    </Badge>
+                    <StatusBadge status={deposit.status} />
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2">

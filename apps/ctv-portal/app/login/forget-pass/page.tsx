@@ -61,6 +61,7 @@ export default function OTPPage() {
     const { isMobile, isTablet, isDesktop } = useDeviceDetect();
     const [isLoading, setIsLoading] = useState(false);
     // Create a ref for each input box
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     // Read credentials saved temporarily by /login/page.tsx
     useEffect(() => {

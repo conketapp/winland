@@ -9,7 +9,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from 'next/navigation';
 import {
     LogOut,
@@ -38,6 +38,8 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { ToastContainer } from 'react-toastify';
 import { toastNotification } from '@/app/utils/toastNotification';
+import type { Reservation, Booking, Deposit } from '@/lib/types/api.types';
+import { ReservationStatus, BookingStatus, DepositStatus } from '@/lib/types/api.types';
 
 interface UserProfile {
     id: string;
@@ -71,16 +73,7 @@ export default function ProfilePage(): JSX.Element {
     const [totalCommission, setTotalCommission] = useState<number>(0);
     const [completedDeals, setCompletedDeals] = useState<number>(0);
 
-    useEffect(() => {
-        const userPhone = sessionStorage.getItem('login:userPhone');
-        if (!userPhone) {
-            router.push('/login');
-            return;
-        }
-        fetchProfile();
-    }, [router]);
-
-    const fetchProfile = async () => {
+    const fetchProfile = useCallback(async () => {
         try {
             setIsLoading(true);
             const userPhone = sessionStorage.getItem('login:userPhone');
@@ -108,22 +101,23 @@ export default function ProfilePage(): JSX.Element {
                 const bookings = bookingsRes.ok ? await bookingsRes.json() : [];
                 const deposits = depositsRes.ok ? await depositsRes.json() : [];
                 const commissionsData = commissionsRes.ok ? await commissionsRes.json() : { commissions: [], summary: { totalCommission: 0 } };
-                const commissions = commissionsData.commissions || [];
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const _commissions = commissionsData.commissions || [];
 
                 // Active deals (đang hoạt động)
                 const totalDeals =
-                    reservations.filter((r: any) => r.status === 'ACTIVE').length +
-                    bookings.filter((b: any) => 
-                        b.status !== 'CANCELLED' && 
-                        b.status !== 'EXPIRED' && 
-                        b.status !== 'COMPLETED'
+                    (reservations as Reservation[]).filter((r) => r.status === ReservationStatus.ACTIVE).length +
+                    (bookings as Booking[]).filter((b) => 
+                        b.status !== BookingStatus.CANCELLED && 
+                        b.status !== BookingStatus.EXPIRED && 
+                        b.status !== BookingStatus.UPGRADED
                     ).length +
-                    deposits.filter((d: any) => d.status !== 'CANCELLED').length;
+                    (deposits as Deposit[]).filter((d) => d.status !== DepositStatus.CANCELLED).length;
 
                 // Completed deals (đã hoàn thành)
                 const completed =
-                    bookings.filter((b: any) => b.status === 'COMPLETED').length +
-                    deposits.filter((d: any) => d.status === 'CONFIRMED').length;
+                    (bookings as Booking[]).filter((b) => b.status === BookingStatus.CONFIRMED).length +
+                    (deposits as Deposit[]).filter((d) => d.status === DepositStatus.CONFIRMED || d.status === DepositStatus.COMPLETED).length;
 
                 // Total commission (tổng hoa hồng đã nhận) - use summary from API
                 const totalComm = commissionsData.summary?.totalCommission || 0;
@@ -145,7 +139,16 @@ export default function ProfilePage(): JSX.Element {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [router]);
+
+    useEffect(() => {
+        const userPhone = sessionStorage.getItem('login:userPhone');
+        if (!userPhone) {
+            router.push('/login');
+            return;
+        }
+        fetchProfile();
+    }, [router, fetchProfile]);
 
     const handleSave = async () => {
         try {

@@ -2,7 +2,6 @@
  * Loading State Component using shadcn Skeleton
  */
 
-import React from 'react';
 import { Skeleton } from './skeleton';
 import { Card } from './card';
 

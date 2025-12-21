@@ -96,5 +96,20 @@ export class PaymentRequestsController {
     return this.paymentRequestsService.reject(id, rejectDto, req.user.userId);
   }
 
+  /**
+   * Admin marks payment request as PAID
+   * POST /api/payment-requests/:id/mark-paid
+   */
+  @Post(':id/mark-paid')
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  @UseGuards(RolesGuard)
+  markAsPaid(
+    @Param('id') id: string,
+    @Body() payload: { paidProof?: string },
+    @Request() req,
+  ) {
+    return this.paymentRequestsService.markAsPaid(id, payload, req.user.userId);
+  }
+
 }
 

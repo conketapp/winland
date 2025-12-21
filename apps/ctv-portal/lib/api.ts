@@ -2,7 +2,7 @@
  * API Client Configuration (CTV Portal)
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
 
 class APIClient {
   baseURL = API_BASE_URL;
@@ -33,14 +33,14 @@ class APIClient {
     return this.fetch(endpoint, { method: 'GET' });
   }
 
-  post(endpoint: string, data: any) {
+  post(endpoint: string, data: unknown) {
     return this.fetch(endpoint, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  patch(endpoint: string, data: any) {
+  patch(endpoint: string, data: unknown) {
     return this.fetch(endpoint, {
       method: 'PATCH',
       body: JSON.stringify(data),

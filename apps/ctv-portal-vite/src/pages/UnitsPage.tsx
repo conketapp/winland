@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Home,
   MapPin,
@@ -11,7 +11,6 @@ import {
   Maximize2,
   Bed,
   Bath,
-  ArrowRight,
   AlertCircle,
   CheckCircle
 } from 'lucide-react';

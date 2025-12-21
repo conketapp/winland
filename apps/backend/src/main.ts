@@ -15,7 +15,7 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
+      forbidNonWhitelisted: false, // Allow extra properties in query params
       transform: true,
       transformOptions: {
         enableImplicitConversion: true,
@@ -26,7 +26,7 @@ async function bootstrap() {
   // API prefix
   app.setGlobalPrefix('api');
 
-  const port = process.env.BACKEND_PORT || 3001;
+  const port = process.env.BACKEND_PORT || 3002;
   await app.listen(port);
   console.log(`🚀 Backend API is running on: http://localhost:${port}/api`);
 }

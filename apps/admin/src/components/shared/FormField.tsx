@@ -3,7 +3,6 @@
  * Reusable form field with label, input, and error message
  */
 
-import React from 'react';
 import { Input } from '../ui/input';
 
 interface FormFieldProps {
@@ -17,11 +16,12 @@ interface FormFieldProps {
   disabled?: boolean;
   error?: string;
   className?: string;
-  step?: string;
-  min?: number;
-  max?: number;
+  step?: string | number;
+  min?: string | number;
+  max?: string | number;
   multiline?: boolean;
   rows?: number;
+  helperText?: string;
 }
 
 export default function FormField({
@@ -40,6 +40,7 @@ export default function FormField({
   max,
   multiline = false,
   rows = 3,
+  helperText,
 }: FormFieldProps) {
   const fieldId = name || label.toLowerCase().replace(/\s+/g, '-');
 
@@ -77,6 +78,9 @@ export default function FormField({
           max={max}
           className={error ? 'border-red-500' : ''}
         />
+      )}
+      {helperText && !error && (
+        <p className="text-xs text-muted-foreground">{helperText}</p>
       )}
       {error && (
         <p className="text-sm text-red-600">{error}</p>

@@ -56,7 +56,6 @@ const useDeviceDetect = () => {
 export default function OTPPage() {
     const router = useRouter();
     const [userPhone, setUserPhone] = useState('');
-    const [userPassword, setUserPassword] = useState('');
     const { isMobile, isTablet, isDesktop } = useDeviceDetect();
     const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
     const [isLoading, setIsLoading] = useState(false);
@@ -66,24 +65,19 @@ export default function OTPPage() {
     useEffect(() => {
         try {
             const phone = sessionStorage.getItem('login:userPhone');
-            const pass = sessionStorage.getItem('login:userPassword');
             if (phone) {
                 setUserPhone(phone);
             }
-            if (pass) {
-                setUserPassword(pass);
-            }
             // Log retrieved credentials
-            if ((phone && phone !== '') || (pass && pass !== '')) {
+            if (phone && phone !== '') {
                 try {
-                    console.log('Received credentials on OTP page:', { userPhone: phone, userPassword: pass });
+                    console.log('Received credentials on OTP page:', { userPhone: phone });
                 } catch (logErr) {
                     console.warn('Failed to log credentials on OTP page', logErr);
                 }
             }
             // Keep userPhone in sessionStorage for dashboard use
-            // Only remove password for security
-            sessionStorage.removeItem('login:userPassword');
+            // Password is not stored for security
         } catch (err) {
             console.warn('Unable to read credentials from sessionStorage', err);
         }

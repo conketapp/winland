@@ -27,6 +27,38 @@ export interface Unit {
   commissionRate?: number | null;
   createdAt: string;
   updatedAt: string;
+  // Optional relations for richer Admin views
+  project?: {
+    id: string;
+    name: string;
+    code: string;
+    status: string;
+  };
+  building?: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  floor?: {
+    id: string;
+    number: number;
+  };
+  // Additional optional fields for display
+  notes?: string | null;
+  actualPrice?: number | null;
+  reservedAt?: string | null;
+  bookedAt?: string | null;
+  depositedAt?: string | null;
+  soldAt?: string | null;
+  _count?: {
+    reservations: number;
+    bookings: number;
+  };
+  statusDetails?: {
+    hasActiveReservation: boolean;
+    hasActiveBooking: boolean;
+    actualStatus: 'RESERVED' | 'BOOKED' | 'RESERVED_BOOKING';
+  };
 }
 
 export interface BulkUnitRow {
@@ -67,5 +99,15 @@ export interface BulkImportResult {
       data: BulkUnitRow;
     }>;
   };
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 

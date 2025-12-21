@@ -3,7 +3,7 @@
  * Reusable modal for viewing details
  */
 
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import {
   Dialog,
   DialogContent,

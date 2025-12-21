@@ -3,14 +3,16 @@
  * Shows full deposit information with payment schedules
  */
 
-import React from 'react';
+import { useMemo, useState } from 'react';
 import DetailModal from '../shared/DetailModal';
 import DetailRow from '../shared/DetailRow';
 import StatusBadge from '../shared/StatusBadge';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import type { Deposit } from '../../types/deposit.types';
+import { pdfApi } from '../../api/pdf.api';
+import { formatCurrency, formatDate } from '../../lib/utils';
 
 interface DepositDetailModalProps {
   open: boolean;
@@ -27,17 +29,42 @@ export default function DepositDetailModal({
   onApprove,
   onReject,
 }: DepositDetailModalProps) {
+  const [downloading, setDownloading] = useState(false);
+
+  const schedules = useMemo(() => deposit?.paymentSchedules || [], [deposit?.paymentSchedules]);
+
+  const paymentSummary = useMemo(() => {
+    if (!schedules.length) {
+      return null;
+    }
+    const totalAmount = schedules.reduce((sum: number, s) => sum + (s.amount || 0), 0);
+    const totalPaid = schedules.reduce((sum: number, s) => sum + (s.paidAmount || 0), 0);
+    const remaining = totalAmount - totalPaid;
+    const ratio = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
+    return {
+      totalAmount,
+      totalPaid,
+      remaining,
+      percent: Math.round(ratio * 100) / 100,
+    };
+  }, [schedules]);
+
   if (!deposit) return null;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
-  };
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleString('vi-VN');
+  const handleDownloadPdf = async () => {
+    if (!deposit) return;
+    try {
+      setDownloading(true);
+      const res = await pdfApi.getDepositPdf(deposit.id);
+      if (res.pdfUrl) {
+        window.open(res.pdfUrl, '_blank', 'noopener,noreferrer');
+      }
+    } catch (error) {
+       
+      console.error('Error downloading deposit PDF', error);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -47,21 +74,30 @@ export default function DepositDetailModal({
       title={`Chi tiết Cọc - ${deposit.code}`}
       description="Thông tin đầy đủ phiếu cọc và lịch thanh toán"
       footer={
-        deposit.status === 'PENDING_APPROVAL' && onApprove && onReject ? (
-          <>
-            <Button variant="outline" onClick={onClose}>
-              Đóng
-            </Button>
-            <Button variant="destructive" onClick={() => onReject(deposit)}>
-              Từ chối
-            </Button>
-            <Button onClick={() => onApprove(deposit)}>
-              Duyệt ngay
-            </Button>
-          </>
-        ) : (
-          <Button onClick={onClose}>Đóng</Button>
-        )
+        <div className="flex flex-wrap gap-2 justify-end">
+          <Button
+            variant="outline"
+            onClick={handleDownloadPdf}
+            disabled={downloading}
+          >
+            {downloading ? 'Đang tạo PDF...' : '📄 Tải PDF'}
+          </Button>
+          {deposit.status === 'PENDING_APPROVAL' && onApprove && onReject ? (
+            <>
+              <Button variant="outline" onClick={onClose}>
+                Đóng
+              </Button>
+              <Button variant="destructive" onClick={() => onReject(deposit)}>
+                Từ chối
+              </Button>
+              <Button onClick={() => onApprove(deposit)}>
+                Duyệt ngay
+              </Button>
+            </>
+          ) : (
+            <Button onClick={onClose}>Đóng</Button>
+          )}
+        </div>
       }
     >
       <div className="space-y-6">
@@ -107,10 +143,42 @@ export default function DepositDetailModal({
           </dl>
         </div>
 
-        {/* Payment Schedules */}
-        {deposit.paymentSchedules && deposit.paymentSchedules.length > 0 && (
+        {/* Payment Schedules Timeline */}
+        {schedules.length > 0 && (
           <div>
             <h3 className="font-semibold mb-3">Lịch thanh toán</h3>
+
+            {paymentSummary && (
+              <Card className="mb-3">
+                <CardContent className="py-3 px-4">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Tổng giá trị lịch thanh toán</span>
+                      <span className="font-semibold">{formatCurrency(paymentSummary.totalAmount)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Đã thanh toán</span>
+                      <span className="font-semibold text-emerald-700">
+                        {formatCurrency(paymentSummary.totalPaid)} ({paymentSummary.percent}%)
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Còn lại</span>
+                      <span className="font-semibold text-amber-700">
+                        {formatCurrency(paymentSummary.remaining)}
+                      </span>
+                    </div>
+                    <div className="mt-1 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full"
+                        style={{ width: `${Math.min(paymentSummary.percent, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardContent className="p-0">
                 <table className="w-full">
@@ -121,26 +189,63 @@ export default function DepositDetailModal({
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Số tiền</th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">%</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Hạn TT</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Đã trả</th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">Trạng thái</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {deposit.paymentSchedules.map((schedule) => (
-                      <tr key={schedule.id} className="border-t">
-                        <td className="px-4 py-3 text-sm">{schedule.installment}</td>
-                        <td className="px-4 py-3 text-sm">{schedule.name}</td>
-                        <td className="px-4 py-3 text-sm text-right font-medium">
-                          {formatCurrency(schedule.amount)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right">{schedule.percentage}%</td>
-                        <td className="px-4 py-3 text-sm">
-                          {schedule.dueDate ? formatDate(schedule.dueDate) : 'TBD'}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <StatusBadge status={schedule.status} />
-                        </td>
-                      </tr>
-                    ))}
+                    {schedules.map((schedule) => {
+                      const isOverdue =
+                        schedule.status === 'OVERDUE' ||
+                        (schedule.status === 'PENDING' &&
+                          schedule.dueDate &&
+                          new Date(schedule.dueDate) < new Date());
+                      const remainingAmount =
+                        (schedule.amount || 0) - (schedule.paidAmount || 0);
+
+                      return (
+                        <tr
+                          key={schedule.id}
+                          className={`border-t ${isOverdue ? 'bg-red-50' : ''}`}
+                        >
+                          <td className="px-4 py-3 text-sm font-medium">
+                            Đợt {schedule.installment}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {schedule.installment === 1 ? 'Cọc' : `Đợt ${schedule.installment}`}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-right font-medium">
+                            {formatCurrency(schedule.amount)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-right">
+                            {deposit?.unit?.price ? `${Math.round((schedule.amount / deposit.unit.price) * 100)}%` : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {schedule.dueDate ? formatDate(schedule.dueDate) : 'TBD'}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <div className="flex flex-col text-right">
+                              <span className="text-emerald-700 font-medium">
+                                {formatCurrency(schedule.paidAmount || 0)}
+                              </span>
+                              {remainingAmount > 0 && (
+                                <span className="text-xs text-gray-500">
+                                  Còn lại: {formatCurrency(remainingAmount)}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <StatusBadge status={schedule.status as 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED'} />
+                            {isOverdue && (
+                              <Badge variant="destructive" className="mt-1 text-[10px]">
+                                Quá hạn
+                              </Badge>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </CardContent>

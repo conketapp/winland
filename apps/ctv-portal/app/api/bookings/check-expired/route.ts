@@ -7,13 +7,13 @@ export async function POST() {
     try {
         const now = new Date()
 
-        // Find all confirmed bookings where visit end time has passed
+        // Find all confirmed bookings where expiresAt has passed
         // Only check CONFIRMED bookings (not COMPLETED or already EXPIRED)
         const expiredBookings = await prisma.booking.findMany({
             where: {
                 status: 'CONFIRMED',
-                visitDate: {
-                    lte: now.toISOString().split('T')[0] // Today or earlier
+                expiresAt: {
+                    lte: now // Expired if expiresAt is in the past
                 }
             },
             include: {
@@ -21,16 +21,8 @@ export async function POST() {
             }
         })
 
-        // Filter bookings where current time is past the visit end time + 30 minutes
-        const bookingsToExpire = expiredBookings.filter(booking => {
-            const visitDateTime = new Date(`${booking.visitDate}T${booking.visitEndTime}`)
-            // Add 30 minutes grace period
-            visitDateTime.setMinutes(visitDateTime.getMinutes() + 30)
-            return now > visitDateTime
-        })
-
         // Update expired bookings
-        const updatePromises = bookingsToExpire.map(async (booking) => {
+        const updatePromises = expiredBookings.map(async (booking) => {
             // Update booking status to EXPIRED with reason
             // Unit stays in RESERVED_BOOKING status until user clicks Trash button
             // This preserves the booking history and allows user to manually clean up

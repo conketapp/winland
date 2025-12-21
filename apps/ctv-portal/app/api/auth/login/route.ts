@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import bcrypt from 'bcrypt'
+
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
     const { userPhone, userPassword } = await request.json()
+    // Only log basic payload info in non-production for debugging
+    if (process.env.NODE_ENV !== 'production') {
+      // Không log password, chỉ log thông tin tối thiểu để debug
+      console.log('CTV login payload:', {
+        userPhone,
+        hasPassword: Boolean(userPassword),
+      })
+    }
 
     // Validate input
     if (!userPhone || !userPassword) {
@@ -13,9 +23,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find user by phone
-    const user = await prisma.user.findUnique({
-      where: { phone: userPhone }
+    // Find user by phone (exclude soft-deleted)
+    const user = await prisma.user.findFirst({
+      where: { 
+        phone: userPhone,
+        deletedAt: null, // Exclude soft-deleted users
+      },
+      select: {
+        id: true,
+        phone: true,
+        email: true,
+        password: true,
+        fullName: true,
+        avatar: true,
+        role: true,
+        isActive: true,
+        totalDeals: true,
+        deletedAt: true,
+        createdAt: true,
+        updatedAt: true,
+      }
     })
 
     // Check if user exists
@@ -34,11 +61,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: In production, use bcrypt to compare hashed passwords
-    // const isPasswordValid = await bcrypt.compare(userPassword, user.password)
-    
-    // For now, direct comparison (NOT SECURE - use bcrypt in production!)
-    if (user.password !== userPassword) {
+    const isHashedPassword = user.password.startsWith('$2')
+    const isPasswordValid = isHashedPassword
+      ? await bcrypt.compare(userPassword, user.password)
+      : user.password === userPassword
+
+    if (!isPasswordValid) {
       return NextResponse.json(
         { error: 'Số điện thoại hoặc mật khẩu không đúng' },
         { status: 401 }
@@ -46,17 +74,39 @@ export async function POST(request: NextRequest) {
     }
 
     // Return user data (exclude password)
-    const { password, ...userWithoutPassword } = user
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _, ...userWithoutPassword } = user
 
     return NextResponse.json({
       success: true,
       user: userWithoutPassword
     })
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Login error:', error)
+    
+    // Better error logging for debugging
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : ''
+    
+    const errorName = error instanceof Error ? error.name : 'Error'
+    console.error('Error details:', {
+      message: errorMessage,
+      stack: errorStack,
+      name: errorName,
+    })
+    
+    // Return more detailed error in development
+    const isDevelopment = process.env.NODE_ENV !== 'production'
+    
     return NextResponse.json(
-      { error: 'Đã xảy ra lỗi khi đăng nhập' },
+      { 
+        error: 'Đã xảy ra lỗi khi đăng nhập',
+        ...(isDevelopment && { 
+          details: errorMessage,
+          hint: 'Check server logs for more information'
+        })
+      },
       { status: 500 }
     )
   }

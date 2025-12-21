@@ -113,23 +113,31 @@ export default function PlanningAreaScreen(): JSX.Element {
         setFullscreenImage(imageUrl);
     };
 
-    const closeFullscreen = () => {
+    const closeFullscreen = useCallback(() => {
         setFullscreenImage(null);
-    };
+    }, []);
 
-    const nextImage = () => {
-        if (currentImageIndex < imageList.length - 1) {
-            setCurrentImageIndex(currentImageIndex + 1);
-            setFullscreenImage(imageList[currentImageIndex + 1]);
-        }
-    };
+    const nextImage = useCallback(() => {
+        setCurrentImageIndex((prevIndex) => {
+            if (prevIndex < imageList.length - 1) {
+                const nextIndex = prevIndex + 1;
+                setFullscreenImage(imageList[nextIndex]);
+                return nextIndex;
+            }
+            return prevIndex;
+        });
+    }, [imageList]);
 
-    const prevImage = () => {
-        if (currentImageIndex > 0) {
-            setCurrentImageIndex(currentImageIndex - 1);
-            setFullscreenImage(imageList[currentImageIndex - 1]);
-        }
-    };
+    const prevImage = useCallback(() => {
+        setCurrentImageIndex((prevIndex) => {
+            if (prevIndex > 0) {
+                const prevIdx = prevIndex - 1;
+                setFullscreenImage(imageList[prevIdx]);
+                return prevIdx;
+            }
+            return prevIndex;
+        });
+    }, [imageList]);
 
     // Keyboard navigation
     useEffect(() => {
@@ -143,7 +151,7 @@ export default function PlanningAreaScreen(): JSX.Element {
 
         window.addEventListener('keydown', handleKeyPress);
         return () => window.removeEventListener('keydown', handleKeyPress);
-    }, [fullscreenImage, currentImageIndex, imageList]);
+    }, [fullscreenImage, nextImage, prevImage, closeFullscreen]);
 
     // Filter projects by search term
     const filteredProjects = projects.filter(project =>

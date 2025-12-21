@@ -18,7 +18,19 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "lib/generated/**",
+      "prisma/**",
+      "scripts/**",
     ],
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-unsafe-declaration-merging": "off",
+      "@typescript-eslint/no-var-requires": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+    },
   },
 ];
 

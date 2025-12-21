@@ -1,8 +1,7 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
-import { QueryProjectDto } from './dto/query-project.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ProjectStatus } from '@prisma/client';
 
@@ -23,15 +22,37 @@ export class ProjectsController {
   /**
    * Get all projects
    * GET /api/projects
+   * Must be before @Get(':id') to avoid route conflict
    */
   @Get()
-  findAll(@Query() query: QueryProjectDto) {
-    return this.projectsService.findAll(query);
+  findAll(
+    @Query('status') status?: ProjectStatus,
+    @Query('city') city?: string,
+    @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    @Query('page', new DefaultValuePipe(1), new ParseIntPipe({ optional: true })) page?: number,
+    @Query('pageSize', new DefaultValuePipe(20), new ParseIntPipe({ optional: true })) pageSize?: number,
+  ) {
+    // Validate page and pageSize manually
+    const validatedPage = page && page > 0 ? page : 1;
+    const validatedPageSize = pageSize && pageSize > 0 && pageSize <= 100 ? pageSize : 20;
+    
+    return this.projectsService.findAll({
+      status,
+      city,
+      search,
+      sortBy,
+      sortOrder,
+      page: validatedPage,
+      pageSize: validatedPageSize,
+    });
   }
 
   /**
    * Get project by ID
    * GET /api/projects/:id
+   * Must be after @Get() to avoid route conflict
    */
   @Get(':id')
   findOne(@Param('id') id: string) {
@@ -44,8 +65,8 @@ export class ProjectsController {
    */
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  update(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
-    return this.projectsService.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateProjectDto, @Request() req) {
+    return this.projectsService.update(id, dto, req.user.userId);
   }
 
   /**
@@ -76,8 +97,31 @@ export class ProjectsController {
    */
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  remove(@Param('id') id: string) {
-    return this.projectsService.remove(id);
+  remove(@Param('id') id: string, @Request() req) {
+    return this.projectsService.remove(id, req.user.userId);
+  }
+
+  /**
+   * Get queue processing logs for a project
+   * GET /api/projects/:id/queue-processing-logs
+   */
+  @Get(':id/queue-processing-logs')
+  @UseGuards(JwtAuthGuard)
+  getQueueProcessingLogs(@Param('id') id: string) {
+    return this.projectsService.getQueueProcessingLogs(id);
+  }
+
+  /**
+   * Retry failed units from queue processing
+   * POST /api/projects/:id/retry-failed-units
+   */
+  @Post(':id/retry-failed-units')
+  @UseGuards(JwtAuthGuard)
+  retryFailedUnits(
+    @Param('id') id: string,
+    @Body() body?: { logId?: string },
+  ) {
+    return this.projectsService.retryFailedUnits(id, body?.logId);
   }
 }
 

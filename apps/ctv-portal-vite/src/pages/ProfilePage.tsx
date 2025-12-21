@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   User, 
   Phone, 
@@ -11,9 +10,7 @@ import {
   Shield,
   HelpCircle,
   LogOut,
-  Edit3,
-  Star,
-  TrendingUp
+  Edit3
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -197,7 +194,7 @@ export default function ProfilePage() {
               <CardTitle className="text-lg text-gray-900">{section.section}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {section.items.map((item, itemIndex) => {
+              {section.items.map((item) => {
                 const Icon = item.icon;
                 return (
                   <button

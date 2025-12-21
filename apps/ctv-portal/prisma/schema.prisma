@@ -20,12 +20,7 @@ model User {
   createdAt            DateTime         @default(now()) @map("created_at")
   updatedAt            DateTime         @updatedAt @map("updated_at")
   totalDeals           Int              @default(0) @map("total_deals")
-  address              String?
-  gender               String?
-  birthday             DateTime?
-  cifNumber            String?          @map("cif_number")
-  sector               String?
-  workingPlace         String?          @map("working_place")
+  deletedAt            DateTime?        @map("deleted_at") // Soft delete
   auditLogs            AuditLog[]
   bookingApprovals     Booking[]        @relation("BookingApprover")
   bookings             Booking[]        @relation("CTVBookings")
@@ -37,6 +32,7 @@ model User {
   paymentRequests      PaymentRequest[]
   projectsCreated      Project[]        @relation("ProjectCreator")
   reservations         Reservation[]    @relation("CTVReservations")
+  notifications        Notification[]
 
   @@map("users")
 }
@@ -143,7 +139,6 @@ model Unit {
   description      String?
   floorPlanImage   String?       @map("floor_plan_image")
   images           String?
-  houseCertificate String?       @map("house_certificate")
   commissionRate   Float?        @map("commission_rate")
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @updatedAt @map("updated_at")
@@ -222,9 +217,6 @@ model Booking {
   approvedAt      DateTime?     @map("approved_at")
   cancelledReason String?       @map("cancelled_reason")
   refundAmount    Float?        @map("refund_amount")
-  visitDate       String?       @map("visit_date")
-  visitStartTime  String?       @map("visit_start_time")
-  visitEndTime    String?       @map("visit_end_time")
   notes           String?
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
@@ -423,6 +415,26 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+model Notification {
+  id          String              @id @default(uuid())
+  userId      String              @map("user_id")
+  type        NotificationType    @map("type")
+  title       String
+  message     String
+  entityType  String?             @map("entity_type")
+  entityId    String?             @map("entity_id")
+  metadata    String?             @map("metadata")
+  channel     NotificationChannel @default(IN_APP)
+  isRead      Boolean             @default(false) @map("is_read")
+  readAt      DateTime?           @map("read_at")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([entityType, entityId])
+  @@map("notifications")
+}
+
 enum UserRole {
   SUPER_ADMIN
   ADMIN
@@ -493,4 +505,33 @@ enum PaymentRequestStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum NotificationType {
+  RESERVATION_CREATED
+  RESERVATION_YOUR_TURN
+  RESERVATION_EXPIRED
+  RESERVATION_MISSED
+  BOOKING_CREATED
+  BOOKING_APPROVED
+  BOOKING_REJECTED
+  BOOKING_CANCELLED
+  BOOKING_EXPIRED
+  DEPOSIT_CREATED
+  DEPOSIT_APPROVED
+  DEPOSIT_CANCELLED
+  DEPOSIT_OVERDUE
+  PAYMENT_OVERDUE
+  PAYMENT_CONFIRMED
+  UNIT_SOLD
+  COMMISSION_CREATED
+  PAYMENT_REQUEST_CREATED
+  PAYMENT_REQUEST_APPROVED
+  PAYMENT_REQUEST_REJECTED
+}
+
+enum NotificationChannel {
+  IN_APP
+  SMS
+  EMAIL
 }

@@ -3,7 +3,6 @@
  * Redirect to login if not authenticated
  */
 
-import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingState from '../ui/LoadingState';

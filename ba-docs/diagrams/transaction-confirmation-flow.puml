@@ -1,0 +1,52 @@
+@startuml
+!theme plain
+title Quy Trình Xác Nhận Giao Dịch Thanh Toán
+
+skinparam activity {
+  BackgroundColor #E8F4F8
+  BorderColor #2E86AB
+}
+
+start
+
+:CTV ghi nhận thanh toán;
+:Chọn phiếu cọc & đợt thanh toán;
+:Nhập: Số tiền, Ngày, Mã tham chiếu;
+:Tải lên chứng từ;
+
+:Giao dịch\nTình trạng = Chờ xác nhận;
+
+:Admin nhận thông báo;
+
+:Admin kiểm tra chứng từ;
+:So sánh với số tiền;
+
+if (Xác nhận?) then (Có)
+  :Giao dịch = Đã xác nhận;
+  
+  :Cập nhật lịch trả góp:\nSố tiền đã thanh toán += Số tiền giao dịch;
+  
+  if (Đợt đã thanh toán đủ?) then (Có)
+    :Đợt = Đã thanh toán;
+    :Ngày thanh toán = Bây giờ;
+    
+    if (Tất cả 4 đợt đã thanh toán?) then (Có)
+      :Phiếu cọc = Đã hoàn thành;
+      :Căn hộ = Đã bán;
+      :Tạo hoa hồng cho CTV;
+    else (Chưa)
+      :Tiếp tục chờ các đợt khác;
+    endif
+  else (Chưa đủ)
+    :Đợt vẫn = Chờ thanh toán;
+  endif
+  
+  :Thông báo cho CTV:\n"Thanh toán đã được xác nhận";
+  
+  stop
+else (Không)
+  :Từ chối hoặc yêu cầu bổ sung;
+  stop
+endif
+
+@enduml

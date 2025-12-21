@@ -1,51 +1,63 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { unitsApi } from '../../api/units.api';
 import type { Unit } from '../../types/unit.types';
 import LoadingState from '../../components/ui/LoadingState';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
 import { ArrowLeft, Edit, Trash2, MapPin, Home, DollarSign, Calendar } from 'lucide-react';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import DetailRow from '../../components/shared/DetailRow';
 import StatusBadge from '../../components/shared/StatusBadge';
+import { useToast } from '../../components/ui/toast';
+import { formatCurrency, formatDate } from '../../lib/utils';
 
 export default function UnitDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { success: showSuccess, error: showError } = useToast();
   const [unit, setUnit] = useState<Unit | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    loadUnitDetail();
-  }, [id]);
-
-  const loadUnitDetail = async () => {
+  const loadUnitDetail = useCallback(async () => {
     try {
       setLoading(true);
       const data = await unitsApi.getById(id!);
       setUnit(data);
     } catch (error) {
       console.error('Failed to load unit:', error);
-      alert('Không thể tải thông tin căn hộ');
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (typeof error === 'object' && error !== null && 'message' in error)
+          ? String(error.message)
+          : 'Không thể tải thông tin căn hộ';
+      showError(errorMessage);
       navigate('/units');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate, showError]);
+
+  useEffect(() => {
+    loadUnitDetail();
+  }, [loadUnitDetail]);
 
   const handleDelete = async () => {
     try {
       setDeleting(true);
       await unitsApi.delete(id!);
-      alert('Xóa căn hộ thành công!');
+      showSuccess('Xóa căn hộ thành công!');
       navigate('/units');
     } catch (error) {
       console.error('Failed to delete unit:', error);
-      alert('Không thể xóa căn hộ');
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (typeof error === 'object' && error !== null && 'message' in error)
+          ? String(error.message)
+          : 'Không thể xóa căn hộ';
+      showError(errorMessage);
     } finally {
       setDeleting(false);
       setDeleteDialogOpen(false);
@@ -63,22 +75,6 @@ export default function UnitDetailPage() {
   if (!unit) {
     return null;
   }
-
-  const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-    AVAILABLE: 'default',
-    RESERVED: 'secondary',
-    BOOKED: 'secondary',
-    DEPOSITED: 'secondary',
-    SOLD: 'destructive',
-  };
-
-  const statusLabels: Record<string, string> = {
-    AVAILABLE: 'Còn trống',
-    RESERVED: 'Đang giữ chỗ',
-    BOOKED: 'Đã booking',
-    DEPOSITED: 'Đã cọc',
-    SOLD: 'Đã bán',
-  };
 
   return (
     <div className="p-6 space-y-6">
@@ -131,18 +127,25 @@ export default function UnitDetailPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <DetailRow label="Mã căn" value={unit.code} />
-            <DetailRow label="Tầng" value={typeof unit.floor === 'object' ? (unit.floor as any).name || 'N/A' : unit.floor.toString()} />
+            <DetailRow 
+              label="Tầng" 
+              value={
+                typeof unit.floor === 'object' && unit.floor !== null
+                  ? unit.floor.number?.toString() || 'N/A'
+                  : unit.floorId || 'N/A'
+              } 
+            />
             <DetailRow 
               label="Diện tích" 
               value={`${unit.area} m²`} 
             />
             <DetailRow 
               label="Số phòng ngủ" 
-              value={unit.bedrooms.toString()} 
+              value={(unit.bedrooms ?? 0).toString()} 
             />
             <DetailRow 
               label="Số phòng tắm" 
-              value={unit.bathrooms.toString()} 
+              value={(unit.bathrooms ?? 0).toString()} 
             />
             <DetailRow 
               label="Hướng" 
@@ -164,24 +167,15 @@ export default function UnitDetailPage() {
           <div className="grid grid-cols-2 gap-4">
             <DetailRow 
               label="Giá niêm yết" 
-              value={new Intl.NumberFormat('vi-VN', {
-                style: 'currency',
-                currency: 'VND',
-              }).format(unit.price || 0)}
+              value={formatCurrency(unit.price || 0)}
             />
             <DetailRow 
               label="Giá bán thực tế" 
-              value={unit.actualPrice ? new Intl.NumberFormat('vi-VN', {
-                style: 'currency',
-                currency: 'VND',
-              }).format(unit.actualPrice) : 'Chưa có'}
+              value={unit.actualPrice ? formatCurrency(unit.actualPrice) : 'Chưa có'}
             />
             <DetailRow 
               label="Giá/m²" 
-              value={new Intl.NumberFormat('vi-VN', {
-                style: 'currency',
-                currency: 'VND',
-              }).format(Math.round((unit.price || 0) / unit.area))}
+              value={formatCurrency(Math.round((unit.price || 0) / unit.area))}
             />
           </div>
         </CardContent>
@@ -207,11 +201,11 @@ export default function UnitDetailPage() {
             />
             <DetailRow 
               label="Địa chỉ" 
-              value={unit.project?.address || 'N/A'} 
+              value={unit.project?.name || 'N/A'} 
             />
             <DetailRow 
               label="Tỉnh/Thành phố" 
-              value={unit.project?.city || 'N/A'} 
+              value={unit.project?.code || 'N/A'} 
             />
           </div>
         </CardContent>
@@ -229,34 +223,34 @@ export default function UnitDetailPage() {
           <div className="grid grid-cols-2 gap-4">
             <DetailRow 
               label="Ngày tạo" 
-              value={new Date(unit.createdAt).toLocaleDateString('vi-VN')} 
+              value={formatDate(unit.createdAt)} 
             />
             <DetailRow 
               label="Cập nhật lần cuối" 
-              value={new Date(unit.updatedAt).toLocaleDateString('vi-VN')} 
+              value={formatDate(unit.updatedAt)} 
             />
             {unit.reservedAt && (
               <DetailRow 
                 label="Ngày giữ chỗ" 
-                value={new Date(unit.reservedAt).toLocaleString('vi-VN')} 
+                value={formatDate(unit.reservedAt)} 
               />
             )}
             {unit.bookedAt && (
               <DetailRow 
                 label="Ngày booking" 
-                value={new Date(unit.bookedAt).toLocaleString('vi-VN')} 
+                value={formatDate(unit.bookedAt)} 
               />
             )}
             {unit.depositedAt && (
               <DetailRow 
                 label="Ngày cọc" 
-                value={new Date(unit.depositedAt).toLocaleString('vi-VN')} 
+                value={formatDate(unit.depositedAt)} 
               />
             )}
             {unit.soldAt && (
               <DetailRow 
                 label="Ngày bán" 
-                value={new Date(unit.soldAt).toLocaleString('vi-VN')} 
+                value={formatDate(unit.soldAt)} 
               />
             )}
           </div>

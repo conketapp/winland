@@ -7,16 +7,30 @@ import { apiRequest } from './client';
 import { API_ENDPOINTS } from '../constants/api';
 import type { Project, CreateProjectDto, ProjectStatistics } from '../types/project.types';
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 export const projectsApi = {
   /**
-   * Get all projects
+   * Get all projects with pagination
    */
   getAll: async (params?: {
     status?: string;
     city?: string;
     search?: string;
-  }): Promise<Project[]> => {
-    return apiRequest<Project[]>({
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<PaginatedResponse<Project>> => {
+    return apiRequest<PaginatedResponse<Project>>({
       method: 'GET',
       url: API_ENDPOINTS.PROJECTS.BASE,
       params,

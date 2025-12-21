@@ -43,10 +43,44 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if unit is available for deposit
+        // Business rule:
+        // - Chỉ cho phép tạo deposit khi unit đang AVAILABLE trong CTV portal
+        // - Nếu unit đã DEPOSITED hoặc SOLD → chặn
+        if (unit.status !== 'AVAILABLE') {
         if (unit.status === 'SOLD') {
             return NextResponse.json(
                 { error: 'Căn hộ đã được bán' },
                 { status: 400 }
+                )
+            }
+
+            if (unit.status === 'DEPOSITED') {
+                return NextResponse.json(
+                    { error: 'Căn hộ đã được đặt cọc' },
+                    { status: 400 }
+                )
+            }
+
+            return NextResponse.json(
+                { error: 'Căn hộ không còn ở trạng thái AVAILABLE, không thể đặt cọc' },
+                { status: 400 }
+            )
+        }
+
+        // Ensure there is no other active deposit for this unit
+        const existingActiveDeposit = await prisma.deposit.findFirst({
+            where: {
+                unitId,
+                status: {
+                    in: ['PENDING_APPROVAL', 'CONFIRMED']
+                }
+            }
+        })
+
+        if (existingActiveDeposit) {
+            return NextResponse.json(
+                { error: 'Căn hộ đã có phiếu đặt cọc đang hoạt động' },
+                { status: 409 }
             )
         }
 
@@ -54,9 +88,21 @@ export async function POST(request: NextRequest) {
         const depositCount = await prisma.deposit.count()
         const depositCode = `DP${String(depositCount + 1).padStart(6, '0')}`
 
-        // Calculate deposit amount if not provided
-        const finalDepositAmount = depositAmount || unit.price * 0.1
-        const finalDepositPercentage = depositPercentage || 10
+        // Calculate minimum deposit (config: min 5% - làm tròn lên)
+        const minPercentage = depositPercentage || 5
+        const minDepositAmount = Math.ceil(unit.price * (minPercentage / 100))
+
+        // If client gửi depositAmount thấp hơn min → lỗi
+        if (depositAmount && depositAmount < minDepositAmount) {
+            return NextResponse.json(
+                { error: `Số tiền cọc tối thiểu là ${minDepositAmount.toLocaleString('vi-VN')} VNĐ (${minPercentage}% giá căn)` },
+                { status: 400 }
+            )
+        }
+
+        // Final deposit amount & percentage
+        const finalDepositAmount = depositAmount || minDepositAmount
+        const finalDepositPercentage = depositPercentage ?? (finalDepositAmount / unit.price * 100)
 
         // Create deposit record
         const deposit = await prisma.deposit.create({
@@ -101,7 +147,9 @@ export async function POST(request: NextRequest) {
             data: { status: 'DEPOSITED' }
         })
 
+        if (process.env.NODE_ENV !== 'production') {
         console.log(`✅ Deposit created: ${depositCode} for unit ${unit.code}`)
+        }
 
         return NextResponse.json({
             success: true,

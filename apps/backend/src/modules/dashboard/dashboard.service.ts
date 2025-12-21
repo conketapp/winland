@@ -28,6 +28,17 @@ export class DashboardService {
       pendingDeposits,
       pendingTransactions,
       pendingPaymentRequests,
+      totalReservations,
+      activeReservations,
+      yourTurnReservations,
+      expiredReservations,
+      totalBookings,
+      confirmedBookings,
+      totalDeposits,
+      confirmedDeposits,
+      cancelledDeposits,
+      overdueDeposits,
+      overdueSchedules,
     ] = await Promise.all([
       this.prisma.project.count(),
       this.prisma.project.count({ where: { status: 'UPCOMING' } }),
@@ -42,7 +53,40 @@ export class DashboardService {
       this.prisma.deposit.count({ where: { status: 'PENDING_APPROVAL' } }),
       this.prisma.transaction.count({ where: { status: 'PENDING_CONFIRMATION' } }),
       this.prisma.paymentRequest.count({ where: { status: 'PENDING' } }),
+      this.prisma.reservation.count(),
+      this.prisma.reservation.count({
+        where: { status: { in: ['ACTIVE', 'YOUR_TURN'] } as any },
+      }),
+      this.prisma.reservation.count({
+        where: { status: 'YOUR_TURN' as any },
+      }),
+      this.prisma.reservation.count({
+        where: { status: { in: ['EXPIRED', 'MISSED'] } as any },
+      }),
+      this.prisma.booking.count(),
+      this.prisma.booking.count({
+        where: { status: 'CONFIRMED' as any },
+      }),
+      this.prisma.deposit.count(),
+      this.prisma.deposit.count({
+        where: { status: 'CONFIRMED' as any },
+      }),
+      this.prisma.deposit.count({
+        where: { status: 'CANCELLED' as any },
+      }),
+      this.prisma.deposit.count({
+        where: { status: 'OVERDUE' as any },
+      }),
+      this.prisma.paymentSchedule.count({
+        where: { status: 'OVERDUE' as any },
+      }),
     ]);
+
+    const revenue = await this.prisma.transaction.aggregate({
+      where: { status: 'CONFIRMED' as any },
+      _sum: { amount: true },
+      _count: true,
+    });
 
     return {
       projects: {
@@ -63,6 +107,42 @@ export class DashboardService {
         deposits: pendingDeposits,
         transactions: pendingTransactions,
         paymentRequests: pendingPaymentRequests,
+      },
+      revenue: {
+        totalRevenue: revenue._sum.amount || 0,
+        totalTransactions: revenue._count,
+      },
+      funnel: {
+        reservations: {
+          total: totalReservations,
+          active: activeReservations,
+          yourTurn: yourTurnReservations,
+          expiredOrMissed: expiredReservations,
+        },
+        bookings: {
+          total: totalBookings,
+          confirmed: confirmedBookings,
+        },
+        deposits: {
+          total: totalDeposits,
+          confirmed: confirmedDeposits,
+          cancelled: cancelledDeposits,
+          overdue: overdueDeposits,
+        },
+        conversionRates: {
+          reservationToBooking:
+            totalReservations > 0 ? Number(((confirmedBookings / totalReservations) * 100).toFixed(1)) : 0,
+          reservationToDeposit:
+            totalReservations > 0 ? Number(((confirmedDeposits / totalReservations) * 100).toFixed(1)) : 0,
+        },
+      },
+      risks: {
+        overdueSchedules,
+        overdueDeposits,
+        reservations: {
+          yourTurn: yourTurnReservations,
+          expiredOrMissed: expiredReservations,
+        },
       },
     };
   }

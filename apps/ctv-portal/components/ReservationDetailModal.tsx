@@ -4,22 +4,21 @@ import { useState } from "react";
 import { X, User, Phone, Mail, Calendar, Clock, FileText, CheckCircle, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
 import { useDeviceDetect } from "@/hooks/useDeviceDetect";
 import { getModalResponsiveClasses } from "@/app/utils/responsive";
 import { toastNotification } from '@/app/utils/toastNotification';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
+import type { Reservation } from '@/lib/types/api.types';
+
 type ReservationDetailModalProps = {
-    reservation: any;
+    reservation: Reservation;
     onClose: () => void;
     onComplete?: () => void;
     readOnly?: boolean;
 };
 
 export default function ReservationDetailModal({ reservation, onClose, onComplete, readOnly = false }: ReservationDetailModalProps) {
-    if (!reservation) return null;
-
     const deviceInfo = useDeviceDetect();
     const responsive = getModalResponsiveClasses(deviceInfo);
     const [isCompleting, setIsCompleting] = useState(false);
@@ -28,6 +27,8 @@ export default function ReservationDetailModal({ reservation, onClose, onComplet
     const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    if (!reservation) return null;
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -218,18 +219,37 @@ export default function ReservationDetailModal({ reservation, onClose, onComplet
                                 Thời gian giữ chỗ
                             </h4>
                             <div className="space-y-3">
+                                {/* Queue Position - Highlighted */}
+                                {reservation.priority !== undefined && ['ACTIVE', 'YOUR_TURN'].includes(reservation.status) && (
+                                    <div className="bg-yellow-200 rounded-lg p-3 border-2 border-yellow-400">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-xs text-yellow-700 font-medium">Vị trí trong hàng chờ</p>
+                                                <p className="text-2xl font-bold text-yellow-800 mt-1">#{reservation.priority}</p>
+                                            </div>
+                                            {reservation.status === 'YOUR_TURN' && (
+                                                <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+                                                    ĐẾN LƯỢT BẠN
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-3">
                                     <Clock className="w-4 h-4 text-yellow-600" />
                                     <div>
-                                        <p className="text-xs text-yellow-600">Hết hạn</p>
+                                        <p className="text-xs text-yellow-600">Hết hạn giữ chỗ</p>
                                         <p className="font-semibold text-yellow-700">{new Date(reservation.reservedUntil).toLocaleString('vi-VN')}</p>
                                     </div>
                                 </div>
-                                {reservation.priority !== undefined && (
-                                    <div className="flex items-center gap-3">
-                                        <div>
-                                            <p className="text-xs text-yellow-600">Độ ưu tiên</p>
-                                            <p className="font-semibold text-yellow-700">#{reservation.priority}</p>
+                                {reservation.status === 'YOUR_TURN' && reservation.depositDeadline && (
+                                    <div className="bg-red-50 rounded-lg p-3 border-2 border-red-300">
+                                        <div className="flex items-center gap-3">
+                                            <Clock className="w-4 h-4 text-red-600" />
+                                            <div>
+                                                <p className="text-xs text-red-600 font-medium">⚠️ Hạn nộp cọc</p>
+                                                <p className="font-bold text-red-700">{new Date(reservation.depositDeadline).toLocaleString('vi-VN')}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 )}

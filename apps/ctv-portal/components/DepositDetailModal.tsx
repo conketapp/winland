@@ -10,16 +10,16 @@ import { getModalResponsiveClasses } from "@/app/utils/responsive";
 import { toastNotification } from '@/app/utils/toastNotification';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
+import type { Deposit } from '@/lib/types/api.types';
+
 type DepositDetailModalProps = {
-    deposit: any;
+    deposit: Deposit;
     onClose: () => void;
     onComplete?: () => void;
     readOnly?: boolean;
 };
 
 export default function DepositDetailModal({ deposit, onClose, onComplete, readOnly = false }: DepositDetailModalProps) {
-    if (!deposit) return null;
-
     const deviceInfo = useDeviceDetect();
     const responsive = getModalResponsiveClasses(deviceInfo);
     const [isCancelling, setIsCancelling] = useState(false);
@@ -28,6 +28,8 @@ export default function DepositDetailModal({ deposit, onClose, onComplete, readO
     const [isDeleting, setIsDeleting] = useState(false);
     const [showCompleteDialog, setShowCompleteDialog] = useState(false);
     const [isCompleting, setIsCompleting] = useState(false);
+
+    if (!deposit) return null;
 
     const getStatusColor = (status: string) => {
         switch (status) {

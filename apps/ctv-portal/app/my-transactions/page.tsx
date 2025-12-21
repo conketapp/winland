@@ -19,18 +19,18 @@ import {
     DollarSign,
     Calendar,
     Clock,
-    Filter,
     Search,
     Download,
-    CheckCircle,
-    XCircle,
     AlertCircle,
     Loader2,
+    CheckCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatCurrency } from '@/lib/utils';
 import { AnimatedBottomNavigation } from '@/components/AnimatedBottomNavigation';
 import { useNavigation } from '@/hooks/useNavigation';
+import type { Reservation, Booking, Deposit, Commission } from '@/lib/types/api.types';
+import { DepositStatus } from '@/lib/types/api.types';
 
 type TransactionType = 'all' | 'reservation' | 'booking' | 'deposit' | 'commission';
 
@@ -64,6 +64,7 @@ export default function MyTransactionsPage(): JSX.Element {
     });
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 3;
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
     useEffect(() => {
         const userPhone = sessionStorage.getItem('login:userPhone');
@@ -114,7 +115,7 @@ export default function MyTransactionsPage(): JSX.Element {
 
             // Combine all transactions
             const allTransactions: Transaction[] = [
-                ...reservations.map((r: any) => ({
+                ...(reservations as Reservation[]).map((r) => ({
                     id: r.id,
                     type: 'reservation' as const,
                     code: r.code,
@@ -126,7 +127,7 @@ export default function MyTransactionsPage(): JSX.Element {
                     status: r.status,
                     createdAt: r.createdAt
                 })),
-                ...bookings.map((b: any) => ({
+                ...(bookings as Booking[]).map((b) => ({
                     id: b.id,
                     type: 'booking' as const,
                     code: b.code,
@@ -138,7 +139,7 @@ export default function MyTransactionsPage(): JSX.Element {
                     status: b.status,
                     createdAt: b.createdAt
                 })),
-                ...deposits.map((d: any) => ({
+                ...(deposits as Deposit[]).map((d) => ({
                     id: d.id,
                     type: 'deposit' as const,
                     code: d.code,
@@ -147,7 +148,7 @@ export default function MyTransactionsPage(): JSX.Element {
                     buildingName: d.unit?.building?.name || 'N/A',
                     customerName: d.customerName,
                     amount: d.depositAmount,
-                    commission: d.commissions?.amount || (d.depositAmount * 0.02), // Use actual commission or fallback to 2%
+                    commission: (d as Deposit & { commissions?: Commission }).commissions?.amount || (d.depositAmount * 0.02), // Use actual commission or fallback to 2%
                     status: d.status,
                     createdAt: d.createdAt
                 }))
@@ -158,13 +159,13 @@ export default function MyTransactionsPage(): JSX.Element {
             setTransactions(allTransactions);
 
             // Calculate stats
-            const totalCommission = deposits
-                .filter((d: any) => d.status === 'CONFIRMED' || d.status === 'COMPLETED')
-                .reduce((sum: number, d: any) => sum + (d.commissions?.amount || (d.depositAmount * 0.02)), 0);
+            const totalCommission = (deposits as (Deposit & { commissions?: Commission })[])
+                .filter((d) => d.status === DepositStatus.CONFIRMED || d.status === DepositStatus.COMPLETED)
+                .reduce((sum: number, d) => sum + (d.commissions?.amount || (d.depositAmount * 0.02)), 0);
 
-            const pendingCommission = deposits
-                .filter((d: any) => d.status === 'PENDING_APPROVAL')
-                .reduce((sum: number, d: any) => sum + (d.commissions?.amount || (d.depositAmount * 0.02)), 0);
+            const pendingCommission = (deposits as (Deposit & { commissions?: Commission })[])
+                .filter((d) => d.status === DepositStatus.PENDING_APPROVAL)
+                .reduce((sum: number, d) => sum + (d.commissions?.amount || (d.depositAmount * 0.02)), 0);
 
             setStats({
                 totalTransactions: allTransactions.length,
@@ -209,17 +210,8 @@ export default function MyTransactionsPage(): JSX.Element {
         }
     };
 
-    const getTypeColor = (type: string) => {
-        switch (type) {
-            case 'reservation': return 'bg-purple-100 text-purple-700';
-            case 'booking': return 'bg-blue-100 text-blue-700';
-            case 'deposit': return 'bg-green-100 text-green-700';
-            case 'commission': return 'bg-orange-100 text-orange-700';
-            default: return 'bg-gray-100 text-gray-700';
-        }
-    };
 
-    const getStatusColor = (status: string, type?: string) => {
+    const getStatusColor = (status: string, _type?: string) => {
         if (status === 'COMPLETED') {
             return 'bg-green-100 text-green-700 border-green-300';
         } else if (status === 'CONFIRMED') {
@@ -260,6 +252,33 @@ export default function MyTransactionsPage(): JSX.Element {
     const handleLogout = () => {
         sessionStorage.removeItem("login:userPhone");
         router.push("/login");
+    };
+
+    const handleDownloadPdf = async (transaction: Transaction) => {
+        try {
+            setDownloadingId(transaction.id);
+            let url = '';
+            if (transaction.type === 'booking') {
+                const res = await fetch(`/api/pdf/bookings/${transaction.id}`);
+                const data = await res.json();
+                url = data.pdfUrl;
+            } else if (transaction.type === 'deposit') {
+                const res = await fetch(`/api/pdf/deposits/${transaction.id}`);
+                const data = await res.json();
+                url = data.pdfUrl;
+            } else if (transaction.type === 'reservation') {
+                const res = await fetch(`/api/pdf/reservations/${transaction.id}`);
+                const data = await res.json();
+                url = data.pdfUrl;
+            }
+            if (url) {
+                window.open(url, '_blank', 'noopener,noreferrer');
+            }
+        } catch (error) {
+            console.error('Error downloading PDF from My Transactions:', error);
+        } finally {
+            setDownloadingId(null);
+        }
     };
 
     return (
@@ -485,9 +504,21 @@ export default function MyTransactionsPage(): JSX.Element {
                                                         </span>
                                                     </div>
                                                 )}
-                                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                                    <Clock className="w-4 h-4" />
-                                                    <span>{new Date(transaction.createdAt).toLocaleString('vi-VN')}</span>
+                                                <div className="flex items-center justify-between gap-2 text-sm text-gray-500">
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="w-4 h-4" />
+                                                        <span>{new Date(transaction.createdAt).toLocaleString('vi-VN')}</span>
+                                                    </div>
+                                                    {transaction.type !== 'commission' && (
+                                                        <button
+                                                            onClick={() => handleDownloadPdf(transaction)}
+                                                            disabled={downloadingId === transaction.id}
+                                                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-medium hover:bg-blue-100 disabled:opacity-50"
+                                                        >
+                                                            <Download className="w-3 h-3" />
+                                                            {downloadingId === transaction.id ? 'Đang tạo PDF...' : 'Tải PDF'}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

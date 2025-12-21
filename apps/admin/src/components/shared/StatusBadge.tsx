@@ -3,7 +3,6 @@
  * Consistent status badges across the app
  */
 
-import React from 'react';
 import { Badge } from '../ui/badge';
 
 const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -20,12 +19,18 @@ const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 
   DEPOSITED: 'secondary',
   SOLD: 'outline',
   
-  // Transaction statuses
+  // Common statuses (used by multiple entities)
   PENDING_APPROVAL: 'secondary',
   CONFIRMED: 'default',
   CANCELLED: 'destructive',
   EXPIRED: 'destructive',
   REJECTED: 'destructive',
+  COMPLETED: 'outline',
+  
+  // Reservation statuses
+  ACTIVE: 'default',
+  YOUR_TURN: 'default',
+  MISSED: 'destructive',
   
   // Commission statuses
   PENDING: 'secondary',
@@ -47,13 +52,18 @@ const STATUS_LABELS: Record<string, string> = {
   DEPOSITED: 'Đã cọc',
   SOLD: 'Đã bán',
   
-  // Transaction
+  // Common statuses (used by multiple entities)
   PENDING_APPROVAL: 'Chờ duyệt',
   CONFIRMED: 'Đã xác nhận',
   CANCELLED: 'Đã hủy',
   EXPIRED: 'Hết hạn',
   REJECTED: 'Bị từ chối',
-  ACTIVE: 'Đang hoạt động',
+  COMPLETED: 'Hoàn thành',
+  
+  // Reservation statuses
+  ACTIVE: 'Đang chờ',
+  YOUR_TURN: 'Đến lượt',
+  MISSED: 'Bỏ lỡ',
   
   // Commission
   PENDING: 'Chờ thanh toán',

@@ -3,7 +3,6 @@
  * Reusable header với consistent styling
  */
 
-import React from 'react';
 import { Button } from './button';
 import { Separator } from './separator';
 

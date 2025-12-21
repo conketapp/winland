@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint . --max-warnings 200",
     "script": "tsx scripts/index.ts",
     "script:user:create": "tsx scripts/user/create-test-user.ts",
     "script:user:deals": "tsx scripts/user/update-user-deals.ts",

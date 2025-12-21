@@ -3,7 +3,7 @@
  * Wraps form fields in a Card with title
  */
 
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 interface FormSectionProps {

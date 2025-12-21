@@ -1,12 +1,21 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { Prisma, TransactionStatus } from '@prisma/client';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { ConfirmTransactionDto } from './dto/confirm-transaction.dto';
 import { QueryTransactionDto } from './dto/query-transaction.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+import { CommissionsService } from '../commissions/commissions.service';
+import { ErrorMessages } from '../../common/constants/error-messages';
 
 @Injectable()
 export class TransactionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+    @Inject(forwardRef(() => CommissionsService))
+    private commissionsService: CommissionsService,
+  ) {}
 
   /**
    * Create new transaction (payment record)
@@ -19,11 +28,11 @@ export class TransactionsService {
     });
 
     if (!deposit) {
-      throw new NotFoundException('Deposit not found');
+      throw new NotFoundException(ErrorMessages.DEPOSIT.NOT_FOUND);
     }
 
     if (deposit.ctvId !== ctvId) {
-      throw new BadRequestException('You can only create transactions for your own deposits');
+      throw new BadRequestException(ErrorMessages.PAYMENT.NOT_OWNER);
     }
 
     // Verify payment schedule if provided
@@ -33,15 +42,15 @@ export class TransactionsService {
       });
 
       if (!schedule) {
-        throw new NotFoundException('Payment schedule not found');
+        throw new NotFoundException(ErrorMessages.PAYMENT.SCHEDULE_NOT_FOUND);
       }
 
       if (schedule.depositId !== createTransactionDto.depositId) {
-        throw new BadRequestException('Payment schedule does not belong to this deposit');
+        throw new BadRequestException(ErrorMessages.PAYMENT.SCHEDULE_MISMATCH);
       }
 
       if (schedule.status === 'PAID') {
-        throw new BadRequestException('This installment has already been paid');
+        throw new BadRequestException(ErrorMessages.PAYMENT.SCHEDULE_ALREADY_PAID);
       }
     }
 
@@ -64,7 +73,7 @@ export class TransactionsService {
    * Get all transactions (with filters)
    */
   async findAll(query: QueryTransactionDto) {
-    const where: any = {};
+    const where: Prisma.TransactionWhereInput = {};
 
     if (query.depositId) {
       where.depositId = query.depositId;
@@ -75,7 +84,8 @@ export class TransactionsService {
     }
 
     if (query.status) {
-      where.status = query.status;
+      // Cast string to enum value - Prisma WhereInput accepts enum values directly
+      where.status = query.status as TransactionStatus;
     }
 
     return this.prisma.transaction.findMany({
@@ -122,7 +132,7 @@ export class TransactionsService {
     });
 
     if (!transaction) {
-      throw new NotFoundException('Transaction not found');
+      throw new NotFoundException(ErrorMessages.PAYMENT.NOT_FOUND);
     }
 
     return transaction;
@@ -131,48 +141,106 @@ export class TransactionsService {
   /**
    * Admin confirms transaction (payment)
    * This updates the payment schedule and checks if unit is fully paid
+   * 
+   * Atomic operation: All updates (transaction, schedule, deposit, unit) are wrapped in transaction
    */
   async confirm(id: string, confirmDto: ConfirmTransactionDto, _adminId: string) {
     const transaction = await this.findOne(id);
 
     if (transaction.status !== 'PENDING_CONFIRMATION') {
-      throw new BadRequestException('Transaction is not pending confirmation');
+      throw new BadRequestException(ErrorMessages.PAYMENT.NOT_PENDING);
     }
 
-    // Update transaction
-    await this.prisma.transaction.update({
-      where: { id },
-      data: {
-        status: 'CONFIRMED',
-        confirmedAt: new Date(),
-        notes: confirmDto.notes || transaction.notes,
-      },
-    });
-
-    // Update payment schedule if linked
-    if (transaction.paymentScheduleId) {
-      const schedule = await this.prisma.paymentSchedule.findUnique({
-        where: { id: transaction.paymentScheduleId },
-      });
-
-      if (schedule) {
-        const newPaidAmount = schedule.paidAmount + transaction.amount;
-
-        await this.prisma.paymentSchedule.update({
-          where: { id: transaction.paymentScheduleId },
+    // Wrap all updates in transaction to ensure atomicity
+    return await this.prisma.$transaction(
+      async (tx) => {
+        // Update transaction status (atomic)
+        await tx.transaction.update({
+          where: { id },
           data: {
-            paidAmount: newPaidAmount,
-            status: newPaidAmount >= schedule.amount ? 'PAID' : 'PENDING',
-            paidAt: newPaidAmount >= schedule.amount ? new Date() : null,
+            status: 'CONFIRMED',
+            confirmedAt: new Date(),
+            notes: confirmDto.notes || transaction.notes,
           },
         });
+
+        // Update payment schedule if linked (atomic)
+        if (transaction.paymentScheduleId) {
+          const schedule = await tx.paymentSchedule.findUnique({
+            where: { id: transaction.paymentScheduleId },
+          });
+
+          if (schedule) {
+            const newPaidAmount = schedule.paidAmount + transaction.amount;
+
+            await tx.paymentSchedule.update({
+              where: { id: transaction.paymentScheduleId },
+              data: {
+                paidAmount: newPaidAmount,
+                status: newPaidAmount >= schedule.amount ? 'PAID' : 'PENDING',
+                paidAt: newPaidAmount >= schedule.amount ? new Date() : null,
+              },
+            });
+          }
+        }
+
+        // Check if all schedules are paid → Mark deposit as COMPLETED and unit as SOLD (atomic)
+        await this.checkAndMarkUnitAsSold(transaction.depositId, tx);
+
+        // Return depositId for notification (fetched after transaction commit)
+        return transaction.depositId;
+      },
+      {
+        isolationLevel: 'Serializable',
+        timeout: 15000,
       }
-    }
+    ).then(async (depositId) => {
+      // Fetch updated transaction and deposit after transaction commit
+      const updated = await this.findOne(id);
+      const deposit = await this.prisma.deposit.findUnique({
+        where: { id: depositId },
+        include: {
+          unit: true,
+          paymentSchedules: true,
+        },
+      });
 
-    // Check if all schedules are paid → Mark unit as SOLD
-    await this.checkAndMarkUnitAsSold(transaction.depositId);
+      // If unit was marked as SOLD, create commission if it doesn't exist
+      if (deposit?.unit.status === 'SOLD') {
+        const existingCommission = await this.prisma.commission.findUnique({
+          where: { depositId: deposit.id },
+        });
 
-    return this.findOne(id);
+        if (!existingCommission) {
+          try {
+            // Create commission using CommissionsService (non-critical)
+            await this.commissionsService.createCommission(deposit.id);
+          } catch (error) {
+            console.error(`[Non-critical] Failed to create commission:`, error);
+          }
+        }
+      }
+
+      // Notify CTV about payment confirmation (non-critical: fire and forget)
+      this.notificationsService.createNotification({
+        userId: updated.deposit.ctvId,
+        type: 'PAYMENT_CONFIRMED',
+        title: 'Thanh toán đã được xác nhận',
+        message: `Khoản thanh toán cho phiếu cọc ${updated.deposit.code} đã được xác nhận.`,
+        entityType: 'TRANSACTION',
+        entityId: updated.id,
+        metadata: {
+          transactionId: updated.id,
+          depositId: updated.depositId,
+          unitId: updated.deposit.unit.id,
+          unitCode: updated.deposit.unit.code,
+        },
+      }).catch((error) => {
+        console.error(`[Non-critical] Failed to send payment confirmation notification:`, error);
+      });
+
+      return updated;
+    });
   }
 
   /**
@@ -182,7 +250,7 @@ export class TransactionsService {
     const transaction = await this.findOne(id);
 
     if (transaction.status !== 'PENDING_CONFIRMATION') {
-      throw new BadRequestException('Transaction is not pending confirmation');
+      throw new BadRequestException(ErrorMessages.PAYMENT.NOT_PENDING);
     }
 
     await this.prisma.transaction.update({
@@ -193,15 +261,16 @@ export class TransactionsService {
       },
     });
 
-    return this.findOne(id);
-  }
+      return this.findOne(id);
+    }
 
   /**
    * Check if all payment schedules are paid
    * If yes, mark unit as SOLD and create commission
    */
-  private async checkAndMarkUnitAsSold(depositId: string) {
-    const deposit = await this.prisma.deposit.findUnique({
+  private async checkAndMarkUnitAsSold(depositId: string, tx?: Prisma.TransactionClient) {
+    const prisma = tx || this.prisma;
+    const deposit = await prisma.deposit.findUnique({
       where: { id: depositId },
       include: {
         unit: true,
@@ -217,34 +286,39 @@ export class TransactionsService {
     const allPaid = deposit.paymentSchedules.every((schedule) => schedule.status === 'PAID');
 
     if (allPaid && deposit.unit.status !== 'SOLD') {
-      // Update unit to SOLD
-      await this.prisma.unit.update({
-        where: { id: deposit.unitId },
+      // Update deposit status to COMPLETED (atomic)
+      await prisma.deposit.update({
+        where: { id: depositId },
         data: {
-          status: 'SOLD',
+          status: 'COMPLETED',
         },
       });
 
-      // Check if commission already exists
-      const existingCommission = await this.prisma.commission.findUnique({
+      // Update unit to SOLD (atomic)
+      await prisma.unit.update({
+        where: { id: deposit.unitId },
+        data: {
+          status: 'SOLD',
+          soldAt: new Date(),
+        },
+      });
+
+      // Check if commission already exists (within transaction if tx provided)
+      const existingCommission = await prisma.commission.findUnique({
         where: { depositId },
       });
 
       if (!existingCommission) {
-        // Create commission
-        const commissionRate = deposit.unit.commissionRate || 2.0; // default 2%
-        const commissionAmount = (deposit.unit.price * commissionRate) / 100;
-
-        await this.prisma.commission.create({
-          data: {
-            unitId: deposit.unitId,
-            ctvId: deposit.ctvId,
-            depositId: deposit.id,
-            amount: commissionAmount,
-            rate: commissionRate,
-            status: 'PENDING',
-          },
-        });
+        // Create commission using CommissionsService (non-critical: can be done outside transaction)
+        // Note: CommissionsService uses this.prisma, so we create commission after transaction
+        if (!tx) {
+          try {
+            await this.commissionsService.createCommission(deposit.id);
+          } catch (error) {
+            console.error(`[Non-critical] Failed to create commission:`, error);
+          }
+        }
+        // If tx is provided, commission will be created in caller's .then() block
       }
     }
   }
@@ -267,7 +341,7 @@ export class TransactionsService {
     });
 
     if (!deposit) {
-      throw new NotFoundException('Deposit not found');
+      throw new NotFoundException(ErrorMessages.DEPOSIT.NOT_FOUND);
     }
 
     const totalScheduledAmount = deposit.paymentSchedules.reduce((sum, s) => sum + s.amount, 0);

@@ -1,0 +1,48 @@
+@startuml
+!theme plain
+title Tính Toán Hoa Hồng - Commission Calculation
+
+skinparam activity {
+  BackgroundColor #E8F4F8
+  BorderColor #2E86AB
+}
+
+start
+
+:Căn hộ = Đã bán\n(Tất cả đợt đã thanh toán);
+
+:Xác định Tỷ lệ hoa hồng;
+
+if (Căn hộ có tỷ lệ riêng?) then (Có)
+  :Sử dụng tỷ lệ căn hộ;
+else (Không)
+  if (Dự án có tỷ lệ?) then (Có)
+    :Sử dụng tỷ lệ dự án;
+  else (Không)
+    :Sử dụng tỷ lệ mặc định (2%);
+  endif
+endif
+
+:Xác định Giá tính hoa hồng;
+
+if (Có giá thực tế\n(final price)?) then (Có)
+  :Sử dụng giá thực tế;
+else (Không)
+  :Sử dụng giá niêm yết;
+endif
+
+:Tính hoa hồng:\nGiá × Tỷ lệ / 100;
+
+:Tạo hoa hồng\nTình trạng = Chờ xử lý;
+
+:Thông báo cho CTV;
+
+:CTV yêu cầu rút tiền;
+
+:Admin duyệt yêu cầu;
+
+:Đánh dấu đã thanh toán;
+
+stop
+
+@enduml

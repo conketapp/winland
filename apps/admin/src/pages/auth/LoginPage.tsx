@@ -27,8 +27,9 @@ const LoginPage: React.FC = () => {
     try {
       await login(email, password);
       navigate('/');
-    } catch (err: any) {
-      setError(err.message || 'Đăng nhập thất bại');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Đăng nhập thất bại';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -114,6 +115,25 @@ const LoginPage: React.FC = () => {
               )}
             </Button>
           </form>
+
+          {/* Demo Account Helper */}
+          <div className="mt-4 text-center">
+            <p className="text-xs text-gray-500 mb-2">
+              Bạn có thể dùng nhanh tài khoản mẫu để thử hệ thống:
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => {
+                setEmail('admin@batdongsan.com');
+                setPassword('admin123');
+              }}
+            >
+              Dùng tài khoản demo: admin@batdongsan.com / admin123
+            </Button>
+          </div>
 
           {/* Footer */}
           <div className="mt-6 text-center text-sm text-gray-600">

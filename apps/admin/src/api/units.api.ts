@@ -4,7 +4,32 @@
 
 import { apiRequest } from './client';
 import { API_ENDPOINTS } from '../constants/api';
-import type { Unit, BulkImportUnitsDto, BulkImportResult } from '../types/unit.types';
+import type { Unit, BulkImportUnitsDto, BulkImportResult, PaginatedResponse } from '../types/unit.types';
+
+// Type for creating a unit (matches backend DTO)
+export interface CreateUnitInput {
+  projectId: string;
+  buildingId: string;
+  floorId: string;
+  unitNumber: string;
+  price: number;
+  area: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  direction?: string;
+  view?: string;
+  balcony?: boolean;
+  description?: string;
+  commissionRate?: number;
+  unitTypeId?: string;
+  status?: Unit['status'];
+}
+
+// Type for updating a unit (only mutable fields)
+export type UpdateUnitInput = Partial<Pick<Unit, 
+  'price' | 'area' | 'bedrooms' | 'bathrooms' | 'direction' | 'view' | 
+  'balcony' | 'description' | 'commissionRate' | 'unitTypeId' | 'status'
+>>;
 
 export const unitsApi = {
   /**
@@ -19,16 +44,27 @@ export const unitsApi = {
   },
 
   /**
-   * Get all units
+   * Get all units with pagination
    */
   getAll: async (params?: {
     projectId?: string;
     buildingId?: string;
+    floorId?: string;
     status?: string;
     priceMin?: number;
     priceMax?: number;
-  }): Promise<Unit[]> => {
-    return apiRequest<Unit[]>({
+    areaMin?: number;
+    areaMax?: number;
+    bedrooms?: number;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    hasReservation?: 'all' | 'has' | 'empty';
+    page?: number;
+    pageSize?: number;
+  }): Promise<PaginatedResponse<Unit> | Unit[]> => {
+    // Backend may return array (old) or PaginatedResponse (new)
+    return apiRequest<PaginatedResponse<Unit> | Unit[]>({
       method: 'GET',
       url: API_ENDPOINTS.UNITS.BASE,
       params,
@@ -48,7 +84,7 @@ export const unitsApi = {
   /**
    * Create single unit
    */
-  create: async (data: Partial<Unit>): Promise<Unit> => {
+  create: async (data: CreateUnitInput): Promise<Unit> => {
     return apiRequest<Unit>({
       method: 'POST',
       url: API_ENDPOINTS.UNITS.BASE,
@@ -59,7 +95,7 @@ export const unitsApi = {
   /**
    * Update unit
    */
-  update: async (id: string, data: Partial<Unit>): Promise<Unit> => {
+  update: async (id: string, data: UpdateUnitInput): Promise<Unit> => {
     return apiRequest<Unit>({
       method: 'PATCH',
       url: API_ENDPOINTS.UNITS.BY_ID(id),

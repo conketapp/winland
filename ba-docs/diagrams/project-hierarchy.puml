@@ -1,0 +1,36 @@
+@startuml
+!theme plain
+title Cấu Trúc Dự Án Bất Động Sản
+
+skinparam rectangle {
+  BackgroundColor #E8F4F8
+  BorderColor #2E86AB
+}
+
+rectangle "Dự Án\n(Project)" as Project {
+  rectangle "Tòa A1\n(Building)" as Building1 {
+    rectangle "Tầng 8\n(Floor)" as Floor1 {
+      rectangle "Căn 05\n(Unit)\nA1-08-05\n75m² - 2PN\n2.5 tỷ" as Unit1
+      rectangle "Căn 06\n(Unit)\nA1-08-06\n85m² - 3PN\n3.0 tỷ" as Unit2
+    }
+    rectangle "Tầng 9\n(Floor)" as Floor2 {
+      rectangle "Căn 05\n(Unit)" as Unit3
+    }
+  }
+  rectangle "Tòa A2\n(Building)" as Building2
+}
+
+Project --> Building1
+Project --> Building2
+Building1 --> Floor1
+Building1 --> Floor2
+Floor1 --> Unit1
+Floor1 --> Unit2
+Floor2 --> Unit3
+
+note right of Unit1
+  Mã căn: A1-08-05
+  Tình trạng: Còn trống → Đã đặt chỗ → Đã đặt cọc → Đã bán
+end note
+
+@enduml

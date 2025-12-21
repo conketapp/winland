@@ -3,7 +3,7 @@
  * Centralized API endpoints and configuration
  */
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
 
 export const API_ENDPOINTS = {
   // Auth
@@ -72,6 +72,16 @@ export const API_ENDPOINTS = {
   USERS: {
     BASE: '/users',
     BY_ID: (id: string) => `/users/${id}`,
+    SEARCH: '/users/search',
+    SYNC_TOTAL_DEALS: (id: string) => `/users/${id}/sync-total-deals`,
+  },
+  // Commissions
+  COMMISSIONS: {
+    BASE: '/commissions',
+    MY_COMMISSIONS: '/commissions/my-commissions',
+    MY_SUMMARY: '/commissions/my-summary',
+    BY_ID: (id: string) => `/commissions/${id}`,
+    RECALCULATE: (id: string) => `/commissions/${id}/recalculate`,
   },
   // Categories
   CATEGORIES: {

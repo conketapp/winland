@@ -3,7 +3,7 @@
  * Consistent detail display across modals
  */
 
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 
 interface DetailRowProps {
   label: string;

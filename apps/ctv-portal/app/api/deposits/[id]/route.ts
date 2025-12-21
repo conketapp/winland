@@ -5,10 +5,10 @@ const prisma = new PrismaClient()
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const depositId = params.id
+        const { id: depositId } = await params
 
         // Find deposit
         const deposit = await prisma.deposit.findUnique({

@@ -62,9 +62,6 @@ export async function POST(request: NextRequest) {
                 paymentMethod: 'NONE',
                 status: 'CONFIRMED',
                 expiresAt,
-                visitDate,
-                visitStartTime: startTime,
-                visitEndTime: endTime,
                 notes: `Lịch xem nhà: ${visitDate} từ ${startTime} đến ${endTime}`,
                 approvedAt: new Date()
             },

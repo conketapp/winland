@@ -78,12 +78,13 @@ export async function POST(request: NextRequest) {
             message: 'Đã kết thúc giữ chỗ và trả căn hộ về trạng thái có sẵn'
         })
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Complete reservation error:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         return NextResponse.json(
             { 
                 error: 'Đã xảy ra lỗi khi kết thúc giữ chỗ',
-                details: error.message || 'Unknown error'
+                details: errorMessage
             },
             { status: 500 }
         )

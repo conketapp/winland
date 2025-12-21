@@ -1,16 +1,13 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   DollarSign, 
-  TrendingUp, 
   Clock, 
   CheckCircle, 
   XCircle,
-  ArrowUpRight,
-  Calendar,
-  Filter
+  ArrowUpRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { formatCurrency, formatDate } from '@/lib/utils';
 

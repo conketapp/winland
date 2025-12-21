@@ -1,0 +1,43 @@
+@startuml
+!theme plain
+title Hệ Thống Xếp Hàng - Queue Processing
+
+skinparam activity {
+  BackgroundColor #E8F4F8
+  BorderColor #2E86AB
+}
+
+start
+
+:CTV 1 giữ chỗ\nƯu tiên = 1;
+:CTV 2 giữ chỗ\nƯu tiên = 2;
+:CTV 3 giữ chỗ\nƯu tiên = 3;
+
+note right: Nhiều CTV cùng\ngiữ 1 căn hộ
+
+:Dự án chuyển sang\nĐang mở bán;
+
+:Hệ thống xử lý hàng đợi;
+
+:CTV 1: Tình trạng = Đến lượt bạn;
+
+if (CTV 1 đặt cọc\n trong 48h?) then (Có)
+  :Giữ chỗ = Hoàn thành;
+  :Các giữ chỗ khác = Bỏ lỡ;
+  :Tạo phiếu đặt cọc;
+  stop
+else (Không)
+  :CTV 1: Bỏ lỡ cơ hội;
+  :CTV 2: Tình trạng = Đến lượt bạn;
+  
+  if (CTV 2 đặt cọc?) then (Có)
+    :Tạo phiếu đặt cọc;
+    stop
+  else (Không)
+    :CTV 3: Đến lượt bạn;
+    :... (tiếp tục);
+    stop
+  endif
+endif
+
+@enduml

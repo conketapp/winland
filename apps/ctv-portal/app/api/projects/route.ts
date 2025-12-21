@@ -3,13 +3,10 @@ import { PrismaClient } from '@/lib/generated/prisma'
 
 const prisma = new PrismaClient()
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
     try {
-        // Get all projects with their buildings, floors, and units
+        // Get all projects with their buildings, floors, and units (all statuses: UPCOMING, OPEN, CLOSED)
         const projects = await prisma.project.findMany({
-            where: {
-                status: 'OPEN' // Only show open projects
-            },
             include: {
                 buildings: {
                     include: {

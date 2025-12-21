@@ -3,7 +3,7 @@
  * Form to manually create a single unit
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { unitsApi } from '../../api/units.api';
 import { projectsApi } from '../../api/projects.api';
@@ -19,17 +19,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
+import { useToast } from '../../components/ui/toast';
+
+interface Building {
+  id: string;
+  code: string;
+  name: string;
+  floorsData?: Floor[];
+}
+
+interface Floor {
+  id: string;
+  number: number;
+  buildingId: string;
+}
 
 export default function CreateUnitPage() {
   const navigate = useNavigate();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [loading, setLoading] = useState(false);
+  const [loadingBuildings, setLoadingBuildings] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [floors, setFloors] = useState<Floor[]>([]);
   const [formData, setFormData] = useState({
     projectId: '',
-    buildingCode: '',
-    floorNumber: '',
+    buildingId: '',
+    floorId: '',
     unitNumber: '',
-    code: '',
     price: '',
     area: '',
     bedrooms: '2',
@@ -40,66 +57,209 @@ export default function CreateUnitPage() {
     description: '',
     commissionRate: '2.5',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const loadProjects = useCallback(async () => {
+    try {
+      const data = await projectsApi.getAll();
+      setProjects(data.items || []);
+    } catch (error) {
+      console.error('Failed to load projects:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Không thể tải danh sách dự án';
+      toastError(errorMessage);
+    }
+  }, [toastError]);
+
+  const loadBuildingsAndFloors = useCallback(async (projectId: string) => {
+    try {
+      setLoadingBuildings(true);
+      const project = await projectsApi.getById(projectId);
+      // Project type includes buildings with floorsData
+      const projectWithBuildings = project as Project & {
+        buildings?: Array<{
+          id: string;
+          code: string;
+          name: string;
+          floorsData?: Array<{
+            id: string;
+            number: number;
+            buildingId: string;
+          }>;
+        }>;
+      };
+      if (projectWithBuildings.buildings && Array.isArray(projectWithBuildings.buildings)) {
+        setBuildings(projectWithBuildings.buildings as Building[]);
+      } else {
+        setBuildings([]);
+      }
+    } catch (error) {
+      console.error('Failed to load buildings:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (typeof error === 'object' && error !== null && 'message' in error)
+          ? String(error.message)
+          : 'Không thể tải danh sách tòa nhà';
+      toastError(errorMessage);
+      setBuildings([]);
+      setFloors([]);
+    } finally {
+      setLoadingBuildings(false);
+    }
+  }, [toastError]);
 
   useEffect(() => {
     loadProjects();
-  }, []);
+  }, [loadProjects]);
 
-  const loadProjects = async () => {
-    try {
-      const data = await projectsApi.getAll();
-      setProjects(data);
-    } catch (error) {
-      console.error('Failed to load projects:', error);
+  useEffect(() => {
+    if (formData.projectId) {
+      loadBuildingsAndFloors(formData.projectId);
+    } else {
+      setBuildings([]);
+      setFloors([]);
+      setFormData(prev => ({ ...prev, buildingId: '', floorId: '' }));
+      setLoadingBuildings(false);
     }
+  }, [formData.projectId, loadBuildingsAndFloors]);
+
+  useEffect(() => {
+    if (formData.buildingId) {
+      const selectedBuilding = buildings.find(b => b.id === formData.buildingId);
+      if (selectedBuilding?.floorsData) {
+        setFloors(selectedBuilding.floorsData);
+      } else {
+        setFloors([]);
+      }
+      setFormData(prev => ({ ...prev, floorId: '' }));
+    } else {
+      setFloors([]);
+      setFormData(prev => ({ ...prev, floorId: '' }));
+    }
+  }, [formData.buildingId, buildings]);
+
+  // Helper functions for parsing numbers
+  const parseNumber = (value: string | number | undefined, allowEmpty = false): number | undefined => {
+    if (value === '' || value === undefined || value === null) {
+      return allowEmpty ? undefined : 0;
+    }
+    const parsed = typeof value === 'string' ? parseFloat(value) : value;
+    return isNaN(parsed) ? (allowEmpty ? undefined : 0) : parsed;
   };
 
-  const handleChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Auto-generate code when building/floor/unit changes
-    if (field === 'buildingCode' || field === 'floorNumber' || field === 'unitNumber') {
-      const newData = { ...formData, [field]: value };
-      if (newData.buildingCode && newData.floorNumber && newData.unitNumber) {
-        newData.code = `${newData.buildingCode}-${newData.floorNumber.padStart(2, '0')}${newData.unitNumber.padStart(2, '0')}`;
+  const parseInteger = (value: string | number | undefined, allowEmpty = false): number | undefined => {
+    if (value === '' || value === undefined || value === null) {
+      return allowEmpty ? undefined : 0;
+    }
+    const parsed = typeof value === 'string' ? parseInt(value, 10) : Math.floor(value);
+    return isNaN(parsed) ? (allowEmpty ? undefined : 0) : parsed;
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.projectId) {
+      newErrors.projectId = 'Vui lòng chọn dự án';
+    }
+    if (!formData.buildingId) {
+      newErrors.buildingId = 'Vui lòng chọn tòa nhà';
+    }
+    if (!formData.floorId) {
+      newErrors.floorId = 'Vui lòng chọn tầng';
+    }
+    if (!formData.unitNumber || formData.unitNumber.trim() === '') {
+      newErrors.unitNumber = 'Vui lòng nhập số căn';
+    }
+
+    // Validate numeric fields with proper parsing
+    const price = parseNumber(formData.price);
+    if (!price || price <= 0) {
+      newErrors.price = 'Giá phải lớn hơn 0';
+    }
+
+    const area = parseNumber(formData.area);
+    if (!area || area <= 0) {
+      newErrors.area = 'Diện tích phải lớn hơn 0';
+    }
+
+    if (formData.bedrooms) {
+      const bedrooms = parseInteger(formData.bedrooms, true);
+      if (bedrooms !== undefined && bedrooms < 0) {
+        newErrors.bedrooms = 'Số phòng ngủ phải >= 0';
       }
-      setFormData(newData);
+    }
+
+    if (formData.bathrooms) {
+      const bathrooms = parseInteger(formData.bathrooms, true);
+      if (bathrooms !== undefined && bathrooms < 0) {
+        newErrors.bathrooms = 'Số toilet phải >= 0';
+      }
+    }
+
+    if (formData.commissionRate) {
+      const commissionRate = parseNumber(formData.commissionRate, true);
+      if (commissionRate !== undefined && (commissionRate < 0 || commissionRate > 100)) {
+        newErrors.commissionRate = 'Hoa hồng phải từ 0-100%';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleChange = (field: string, value: string | number | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user changes field
+    if (errors[field]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.projectId || !formData.code || !formData.price || !formData.area) {
-      alert('Vui lòng nhập đầy đủ thông tin bắt buộc!');
+    if (!validateForm()) {
+      toastError('Vui lòng kiểm tra lại thông tin!');
       return;
     }
 
     try {
       setLoading(true);
       
-      // Note: Backend expects buildingId and floorId (UUIDs), not codes
-      // In production, you'd need to create/lookup building and floor first
-      await unitsApi.create({
+      // Parse all numeric values properly
+      const submitData = {
         projectId: formData.projectId,
-        code: formData.code,
-        unitNumber: formData.unitNumber,
-        price: parseFloat(formData.price),
-        area: parseFloat(formData.area),
-        bedrooms: parseInt(formData.bedrooms),
-        bathrooms: parseInt(formData.bathrooms),
-        direction: formData.direction || undefined,
-        view: formData.view || undefined,
+        buildingId: formData.buildingId,
+        floorId: formData.floorId,
+        unitNumber: formData.unitNumber.trim(),
+        price: parseNumber(formData.price)!,
+        area: parseNumber(formData.area)!,
+        bedrooms: parseInteger(formData.bedrooms, true),
+        bathrooms: parseInteger(formData.bathrooms, true),
+        direction: formData.direction?.trim() || undefined,
+        view: formData.view?.trim() || undefined,
         balcony: formData.balcony,
-        description: formData.description || undefined,
-        commissionRate: parseFloat(formData.commissionRate),
-      } as any);
+        description: formData.description?.trim() || undefined,
+        commissionRate: parseNumber(formData.commissionRate, true),
+      };
 
-      alert('✅ Tạo căn hộ thành công!');
+      await unitsApi.create(submitData);
+
+      toastSuccess('✅ Tạo căn hộ thành công!');
       navigate('/units');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to create unit:', error);
-      alert(error.message || 'Lỗi tạo căn hộ!');
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (typeof error === 'object' && error !== null && 'message' in error)
+          ? String(error.message)
+          : 'Lỗi tạo căn hộ!';
+      toastError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -127,7 +287,7 @@ export default function CreateUnitPage() {
                   onValueChange={(value) => handleChange('projectId', value)}
                   required
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={errors.projectId ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Chọn dự án" />
                   </SelectTrigger>
                   <SelectContent>
@@ -138,33 +298,85 @@ export default function CreateUnitPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.projectId && (
+                  <p className="text-sm text-red-500">{errors.projectId}</p>
+                )}
               </div>
-              
-              <FormField
-                label="Mã căn"
-                value={formData.code}
-                onChange={(value) => handleChange('code', value)}
-                placeholder="A1-0502"
-                required
-              />
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Tòa nhà <span className="text-red-500">*</span>
+                </label>
+                <Select
+                  value={formData.buildingId}
+                  onValueChange={(value) => handleChange('buildingId', value)}
+                  required
+                  disabled={!formData.projectId || loadingBuildings || buildings.length === 0}
+                >
+                  <SelectTrigger className={errors.buildingId ? 'border-red-500' : ''}>
+                    <SelectValue placeholder={
+                      !formData.projectId 
+                        ? 'Chọn dự án trước' 
+                        : loadingBuildings 
+                          ? 'Đang tải...' 
+                          : buildings.length === 0 
+                            ? 'Chưa có tòa nhà' 
+                            : 'Chọn tòa nhà'
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {buildings.map((building) => (
+                      <SelectItem key={building.id} value={building.id}>
+                        {building.code} - {building.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.buildingId && (
+                  <p className="text-sm text-red-500">{errors.buildingId}</p>
+                )}
+                {loadingBuildings && (
+                  <p className="text-xs text-gray-500">Đang tải danh sách tòa nhà...</p>
+                )}
+              </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <FormField
-                label="Tòa"
-                value={formData.buildingCode}
-                onChange={(value) => handleChange('buildingCode', value)}
-                placeholder="A1"
-                required
-              />
-              
-              <FormField
-                label="Tầng"
-                value={formData.floorNumber}
-                onChange={(value) => handleChange('floorNumber', value)}
-                placeholder="5"
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Tầng <span className="text-red-500">*</span>
+                </label>
+                <Select
+                  value={formData.floorId}
+                  onValueChange={(value) => handleChange('floorId', value)}
+                  required
+                  disabled={!formData.buildingId || loadingBuildings || floors.length === 0}
+                >
+                  <SelectTrigger className={errors.floorId ? 'border-red-500' : ''}>
+                    <SelectValue placeholder={
+                      !formData.buildingId 
+                        ? 'Chọn tòa nhà trước' 
+                        : loadingBuildings
+                          ? 'Đang tải...'
+                          : floors.length === 0 
+                            ? 'Chưa có tầng' 
+                            : 'Chọn tầng'
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {floors
+                      .sort((a, b) => a.number - b.number)
+                      .map((floor) => (
+                        <SelectItem key={floor.id} value={floor.id}>
+                          Tầng {floor.number}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                {errors.floorId && (
+                  <p className="text-sm text-red-500">{errors.floorId}</p>
+                )}
+              </div>
               
               <FormField
                 label="Số căn"
@@ -172,6 +384,7 @@ export default function CreateUnitPage() {
                 onChange={(value) => handleChange('unitNumber', value)}
                 placeholder="02"
                 required
+                error={errors.unitNumber}
               />
             </div>
           </FormSection>
@@ -186,6 +399,9 @@ export default function CreateUnitPage() {
                 onChange={(value) => handleChange('price', value)}
                 placeholder="2500000000"
                 required
+                error={errors.price}
+                min={0.01}
+                step={1000000}
               />
               
               <FormField
@@ -195,6 +411,9 @@ export default function CreateUnitPage() {
                 onChange={(value) => handleChange('area', value)}
                 placeholder="75"
                 required
+                error={errors.area}
+                min={0.01}
+                step={0.1}
               />
             </div>
 
@@ -204,7 +423,8 @@ export default function CreateUnitPage() {
                 type="number"
                 value={formData.bedrooms}
                 onChange={(value) => handleChange('bedrooms', value)}
-                required
+                error={errors.bedrooms}
+                min={0}
               />
               
               <FormField
@@ -212,7 +432,8 @@ export default function CreateUnitPage() {
                 type="number"
                 value={formData.bathrooms}
                 onChange={(value) => handleChange('bathrooms', value)}
-                required
+                error={errors.bathrooms}
+                min={0}
               />
             </div>
 
@@ -250,7 +471,10 @@ export default function CreateUnitPage() {
                 type="number"
                 value={formData.commissionRate}
                 onChange={(value) => handleChange('commissionRate', value)}
-                required
+                error={errors.commissionRate}
+                min={0}
+                max={100}
+                step={0.1}
               />
             </div>
 

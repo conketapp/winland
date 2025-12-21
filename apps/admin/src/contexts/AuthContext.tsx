@@ -57,8 +57,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       localStorage.setItem('accessToken', response.accessToken);
       localStorage.setItem('user', JSON.stringify(response.user));
-    } catch (error: any) {
-      throw new Error(error.message || 'Đăng nhập thất bại');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Đăng nhập thất bại';
+      throw new Error(errorMessage);
     }
   };
 

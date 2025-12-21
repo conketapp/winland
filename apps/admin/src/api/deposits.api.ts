@@ -29,5 +29,25 @@ export const depositsApi = {
       url: `/deposits/${id}/approve`,
     });
   },
+
+  /**
+   * Get trash deposits (CANCELLED / OVERDUE still locking units)
+   */
+  getTrash: async (): Promise<Deposit[]> => {
+    return apiRequest<Deposit[]>({
+      method: 'GET',
+      url: '/deposits/trash',
+    });
+  },
+
+  /**
+   * Cleanup deposit: release unit back to AVAILABLE
+   */
+  cleanup: async (id: string): Promise<{ message: string }> => {
+    return apiRequest<{ message: string }>({
+      method: 'PATCH',
+      url: `/deposits/${id}/cleanup`,
+    });
+  },
 };
 

@@ -23,7 +23,7 @@ import { toastNotification } from '@/app/utils/toastNotification';
 import { useDeviceDetect } from '@/hooks/useDeviceDetect';
 import { useTheme } from '@/hooks/useTheme';
 import { getResponsiveClasses } from '@/app/utils/responsive';
-import { isValidVietnamesePhone, getPhoneErrorMessage } from '@/lib/phone-validation';
+import { getPhoneErrorMessage } from '@/lib/phone-validation';
 import Image from 'next/image'
 import LoginCTVPortalImage from "@/assets/images/login_ctvportal.png"
 import LoginCTVPortalBackground from "@/assets/images/login_ctvportal_background.jpg"
@@ -31,11 +31,12 @@ import LoginCTVPortalFallBackground from "@/assets/images/before_login_ctv_backg
 
 export default function LoginPage() {
     const router = useRouter();
-    const [userPhone, setUserPhone] = useState(''); //0912345678
-    const [userPassword, setUserPassword] = useState(''); //ctv456
+    const [userPhone, setUserPhone] = useState('0912345671');
+    const [userPassword, setUserPassword] = useState('ctv123');
     const [loading, setLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [phoneError, setPhoneError] = useState('');
 
     // Use the optimized hooks
@@ -199,6 +200,23 @@ export default function LoginPage() {
                                                             {showPassword ? <EyeOff size={responsive.eyeIconSize} /> : <Eye size={responsive.eyeIconSize} />}
                                                         </button>
                                                     </div>
+                                                </div>
+                                                {/* Demo account auto-fill */}
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className="text-xs text-slate-500">
+                                                        Dùng nhanh tài khoản demo để thử hệ thống:
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        className="text-xs text-blue-700 hover:text-blue-500 underline"
+                                                        onClick={() => {
+                                                            setUserPhone('0912345671');
+                                                            setUserPassword('ctv123');
+                                                            toastNotification.info('Đã tự động điền tài khoản demo 0912345671 / ctv123');
+                                                        }}
+                                                    >
+                                                        Tự điền tài khoản demo
+                                                    </button>
                                                 </div>
                                                 {/* Remember Me & Forgot Password */}
                                                 <div className="flex items-center justify-between">

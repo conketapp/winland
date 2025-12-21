@@ -3,7 +3,6 @@
  * Reusable confirmation dialog using shadcn/ui
  */
 
-import React from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,11 +17,13 @@ interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  description: string;
-  onConfirm: () => void;
+  description?: string;
+  onConfirm: () => void | Promise<void>;
   confirmText?: string;
   cancelText?: string;
   variant?: 'default' | 'destructive';
+  loading?: boolean;
+  children?: React.ReactNode;
 }
 
 export default function ConfirmDialog({
@@ -34,10 +35,14 @@ export default function ConfirmDialog({
   confirmText = 'Xác nhận',
   cancelText = 'Hủy',
   variant = 'default',
+  loading = false,
+  children,
 }: ConfirmDialogProps) {
-  const handleConfirm = () => {
-    onConfirm();
-    onOpenChange(false);
+  const handleConfirm = async () => {
+    await onConfirm();
+    if (!loading) {
+      onOpenChange(false);
+    }
   };
 
   return (
@@ -45,14 +50,19 @@ export default function ConfirmDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          {description && !children && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
+        {children || (
+          <>
+            {description && <DialogDescription>{description}</DialogDescription>}
+          </>
+        )}
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             {cancelText}
           </Button>
-          <Button variant={variant} onClick={handleConfirm}>
-            {confirmText}
+          <Button variant={variant} onClick={handleConfirm} disabled={loading}>
+            {loading ? 'Đang xử lý...' : confirmText}
           </Button>
         </DialogFooter>
       </DialogContent>

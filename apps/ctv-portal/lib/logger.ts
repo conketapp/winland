@@ -14,6 +14,7 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
 interface LogData {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     [key: string]: any;
 }
 

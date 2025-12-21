@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-    X, ChevronLeft, ChevronRight, BadgeAlert, ArrowLeft,
+    X, ChevronLeft, ChevronRight, ArrowLeft,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -12,17 +12,33 @@ import { toastNotification } from '@/app/utils/toastNotification';
 import { useDeviceDetect } from "@/hooks/useDeviceDetect";
 import { getModalResponsiveClasses } from "@/app/utils/responsive";
 
+import type { Unit } from '@/lib/types/api.types';
+
 type BookingModalProps = {
-    unit: any;
+    unit: Unit;
     onClose: () => void;
     onBack?: () => void;
 };
 
 export default function BookingModal({ unit, onClose, onBack }: BookingModalProps) {
-    if (!unit) return null;
-
     const deviceInfo = useDeviceDetect();
     const responsive = getModalResponsiveClasses(deviceInfo);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [BookingForm, setForm] = useState({
+        name: "",
+        phone: "",
+        id: "",
+        email: "",
+        date: "",
+        startTime: "",
+        endTime: "",
+    });
+    const [phoneError, setPhoneError] = useState("");
+    const [timeError, setTimeError] = useState("");
+    const [dateError, setDateError] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    if (!unit) return null;
 
     // Parse images from database (stored as JSON string) or use default
     const defaultImages = [
@@ -35,28 +51,12 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
     try {
         if (unit.images && typeof unit.images === 'string') {
             unitImages = JSON.parse(unit.images);
-        } else if (unit.image && Array.isArray(unit.image)) {
-            unitImages = unit.image;
+        } else if (unit.images && Array.isArray(unit.images)) {
+            unitImages = unit.images;
         }
     } catch (e) {
         console.error('Error parsing unit images:', e);
     }
-
-    const [currentImageIndex, setCurrentImageIndex] = useState(0);
-    const [BookingForm, setForm] = useState({
-        name: "",
-        phone: "",
-        id: "",
-        email: "",
-        date: "",
-        startTime: "",
-        endTime: "",
-    });
-
-    const [phoneError, setPhoneError] = useState("");
-    const [timeError, setTimeError] = useState("");
-    const [dateError, setDateError] = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Time options for booking
     const allTimeOptions = [
@@ -109,7 +109,7 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
             filteredValue = value.replace(/\D/g, ''); // Remove all non-digit characters
         }
 
-        let updatedForm = { ...BookingForm, [name]: filteredValue };
+        const updatedForm = { ...BookingForm, [name]: filteredValue };
 
         // If date changes, validate it's not in the past
         if (name === 'date') {
@@ -252,7 +252,7 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
                     <div className={`text-center ${deviceInfo.isMobile ? 'px-16' : 'px-12'}`}>
                         <h3 className={`font-bold ${responsive.titleSize}`}>{unit.code}</h3>
                         <p className={`${responsive.subtitleSize} opacity-90`}>
-                            Block {unit.code.slice(0, 3)} · Tầng {unit.floor}
+                            Block {unit.code.slice(0, 3)} · Tầng {unit.floor?.number || 'N/A'}
                         </p>
                     </div>
                 </div>
@@ -304,24 +304,24 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
                             </div>
                             <div className="p-1">
                                 <p className="text-xs">Dự án:</p>
-                                <p className="text-lg font-bold">{unit.project}</p>
+                                <p className="text-lg font-bold">{unit.project?.name || 'N/A'}</p>
                             </div>
                             <div className="p-1">
                                 <p className="text-xs">Căn hộ:</p>
-                                <p className="text-lg font-bold"> {unit.code} (block {unit.code.slice(0, 3)} - tầng {unit.floor})</p>
+                                <p className="text-lg font-bold"> {unit.code} (block {unit.code.slice(0, 3)} - tầng {unit.floor?.number || 'N/A'})</p>
                             </div>
                             <div className="p-1">
                                 <p className="text-xs">Giá căn hộ:</p>
-                                <p className="text-lg font-bold">{formatCurrency(unit.price, { style: 'standard', locale: 'en-US' })}</p>
+                                <p className="text-lg font-bold">{formatCurrency(unit.price)}</p>
                             </div>
                             <div className="grid grid-cols-2 gap-0">
                                 <div className="bg-white p-1 text-center">
                                     <p className="text-xs text-gray-500">Phòng ngủ</p>
-                                    <p className="font-semibold text-lg text-black-500">{unit.bedrooms || unit.numRoom || 0}</p>
+                                    <p className="font-semibold text-lg text-black-500">{unit.bedrooms || 0}</p>
                                 </div>
                                 <div className="bg-white p-1 text-center">
                                     <p className="text-xs text-gray-500">Phòng tắm</p>
-                                    <p className="font-semibold text-lg text-black-500">{unit.bathrooms || unit.numWC || 0}</p>
+                                    <p className="font-semibold text-lg text-black-500">{unit.bathrooms || 0}</p>
                                 </div>
                                 <div className="bg-white p-1 text-center">
                                     <p className="text-xs text-gray-500">Diện tích</p>
@@ -338,12 +338,12 @@ export default function BookingModal({ unit, onClose, onBack }: BookingModalProp
                             </div>
                             <div className="py-2">
                                 <p className="text-lg font-semibold">Thông tin căn hộ</p>
-                                <p className="text-sm opacity-80 py-2">{unit.description || unit.information || 'Thông tin chi tiết đang được cập nhật'}</p>
+                                <p className="text-sm opacity-80 py-2">{unit.description || 'Thông tin chi tiết đang được cập nhật'}</p>
                             </div>
                             <div className="bg-white py-2">
                                 <p className="text-lg font-semibold">Chứng từ</p>
                                 <p className="text-sm opacity-80 py-2">
-                                    {unit.houseCertificate || "Căn hộ này chưa có thông tin chứng từ"}
+                                    {(unit as { houseCertificate?: string }).houseCertificate || "Căn hộ này chưa có thông tin chứng từ"}
                                 </p>
                             </div>
                             {/* Customer Info */}

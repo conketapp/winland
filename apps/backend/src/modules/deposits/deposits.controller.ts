@@ -28,13 +28,34 @@ export class DepositsController {
   }
 
   /**
-   * Get all deposits (Admin)
-   * GET /api/deposits
+   * Get all deposits (Admin) with pagination
+   * GET /api/deposits?page=1&pageSize=20&status=...
    */
   @Get()
   @UseGuards(JwtAuthGuard)
-  findAll(@Query() query: { status?: string; projectId?: string }) {
-    return this.depositsService.findAll(query);
+  findAll(
+    @Query() query: { 
+      status?: string; 
+      projectId?: string;
+      page?: string;
+      pageSize?: string;
+    }
+  ) {
+    try {
+      const filters = {
+        status: query.status,
+        projectId: query.projectId,
+      };
+      const pagination = {
+        page: query.page ? parseInt(query.page) : undefined,
+        pageSize: query.pageSize ? parseInt(query.pageSize) : undefined,
+      };
+      return this.depositsService.findAll(filters, pagination);
+    } catch (error: any) {
+      console.error('DepositsController.findAll error:', error);
+      console.error('Error stack:', error.stack);
+      throw error;
+    }
   }
 
   /**
@@ -45,6 +66,41 @@ export class DepositsController {
   @UseGuards(JwtAuthGuard)
   getMyDeposits(@Request() req) {
     return this.depositsService.getMyDeposits(req.user.userId);
+  }
+
+  /**
+   * Get trash deposits (Admin)
+   * GET /api/deposits/trash
+   */
+  @Get('trash')
+  @UseGuards(JwtAuthGuard)
+  getTrash() {
+    return this.depositsService.findTrash();
+  }
+
+  /**
+   * Cleanup deposit: release unit back to AVAILABLE (Admin)
+   * PATCH /api/deposits/:id/cleanup
+   */
+  @Patch(':id/cleanup')
+  @UseGuards(JwtAuthGuard)
+  cleanup(@Param('id') id: string, @Request() req) {
+    return this.depositsService.cleanup(id, req.user.userId);
+  }
+
+  /**
+   * Update final price for a deposit (Admin)
+   * This will trigger commission recalculation if commission exists and is PENDING
+   * PATCH /api/deposits/:id/final-price
+   */
+  @Patch(':id/final-price')
+  @UseGuards(JwtAuthGuard)
+  updateFinalPrice(
+    @Param('id') id: string,
+    @Body() body: { finalPrice: number },
+    @Request() req,
+  ) {
+    return this.depositsService.updateFinalPrice(id, body.finalPrice, req.user.userId);
   }
 }
 

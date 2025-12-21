@@ -20,22 +20,19 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Find user by phone
+        // Find user by phone (exclude soft-deleted users)
         logger.debug('[API] Querying database')
-        const user = await prisma.user.findUnique({
-            where: { phone: userPhone },
+        const user = await prisma.user.findFirst({
+            where: { 
+                phone: userPhone,
+                deletedAt: null // Exclude soft-deleted users
+            },
             select: {
                 id: true,
                 phone: true,
                 email: true,
                 fullName: true,
                 avatar: true,
-                gender: true,
-                address: true,
-                birthday: true,
-                cifNumber: true,
-                sector: true,
-                workingPlace: true,
                 role: true,
                 isActive: true,
                 totalDeals: true,
@@ -94,7 +91,7 @@ export async function PUT(request: NextRequest) {
 
         // Parse request body
         const body = await request.json()
-        const { fullName, email, avatar, gender, address, birthday, workingPlace } = body
+        const { fullName, email, avatar } = body
 
         // Debug logging (only in development)
         logger.debug('[API PUT /user/me] Update request received', {
@@ -102,16 +99,16 @@ export async function PUT(request: NextRequest) {
             fields: {
                 hasFullName: !!fullName,
                 hasEmail: !!email,
-                hasGender: !!gender,
-                hasAddress: !!address,
-                hasBirthday: !!birthday,
                 hasAvatar: !!avatar
             }
         })
 
-        // Find user first
-        const existingUser = await prisma.user.findUnique({
-            where: { phone: userPhone }
+        // Find user first (exclude soft-deleted users)
+        const existingUser = await prisma.user.findFirst({
+            where: { 
+                phone: userPhone,
+                deletedAt: null // Exclude soft-deleted users
+            }
         })
 
         if (!existingUser) {
@@ -122,32 +119,11 @@ export async function PUT(request: NextRequest) {
             )
         }
 
-        // Generate CIF Number if user doesn't have one
-        let cifNumber = existingUser.cifNumber;
-        if (!cifNumber) {
-            const now = new Date();
-            const year = now.getFullYear().toString().slice(-2);
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const hour = String(now.getHours()).padStart(2, '0');
-            const minute = String(now.getMinutes()).padStart(2, '0');
-            const second = String(now.getSeconds()).padStart(2, '0');
-            cifNumber = `${year}${month}${hour}${minute}${second}`;
-        }
-
-        // Auto-set sector based on role
-        const sector = existingUser.role === 'CTV' ? 'Cộng Tác Viên' : existingUser.sector;
-
         // Prepare update data
         const updateData = {
             fullName: fullName !== undefined ? fullName : existingUser.fullName,
             email: email !== undefined ? email : existingUser.email,
             avatar: avatar !== undefined ? avatar : existingUser.avatar,
-            gender: gender !== undefined ? gender : existingUser.gender,
-            address: address !== undefined ? address : existingUser.address,
-            birthday: birthday !== undefined ? (birthday ? new Date(birthday) : null) : existingUser.birthday,
-            cifNumber: cifNumber,
-            sector: sector,
-            workingPlace: workingPlace !== undefined ? workingPlace : existingUser.workingPlace,
         }
 
         logger.debug('[API] Updating user', {
@@ -166,12 +142,6 @@ export async function PUT(request: NextRequest) {
                 email: true,
                 fullName: true,
                 avatar: true,
-                gender: true,
-                address: true,
-                birthday: true,
-                cifNumber: true,
-                sector: true,
-                workingPlace: true,
                 role: true,
                 isActive: true,
                 totalDeals: true,

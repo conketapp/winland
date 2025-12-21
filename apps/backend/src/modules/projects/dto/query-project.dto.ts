@@ -21,5 +21,9 @@ export class QueryProjectDto {
   @IsOptional()
   @IsString()
   sortOrder?: 'asc' | 'desc';
+
+  // Pagination - not validated in DTO, parsed in controller
+  page?: number;
+  pageSize?: number;
 }
 

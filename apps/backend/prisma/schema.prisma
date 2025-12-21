@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -18,6 +18,8 @@ model User {
   isActive             Boolean          @default(true) @map("is_active")
   createdAt            DateTime         @default(now()) @map("created_at")
   updatedAt            DateTime         @updatedAt @map("updated_at")
+  totalDeals           Int              @default(0) @map("total_deals")
+  deletedAt            DateTime?        @map("deleted_at") // Soft delete
   auditLogs            AuditLog[]
   bookingApprovals     Booking[]        @relation("BookingApprover")
   bookings             Booking[]        @relation("CTVBookings")
@@ -29,7 +31,16 @@ model User {
   paymentRequests      PaymentRequest[]
   projectsCreated      Project[]        @relation("ProjectCreator")
   reservations         Reservation[]    @relation("CTVReservations")
+  notifications        Notification[]
 
+  @@index([role])
+  @@index([role, isActive]) // Composite index for filtering by role and active status
+  @@index([isActive])
+  @@index([createdAt]) // For sorting
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([fullName]) // For full-text search
+  @@index([phone]) // For full-text search
+  @@index([email]) // For full-text search
   @@map("users")
 }
 
@@ -72,47 +83,59 @@ model Project {
   openDate       DateTime?     @map("open_date")
   commissionRate Float         @default(2.0) @map("commission_rate")
   createdBy      String        @map("created_by")
+  deletedAt      DateTime?     @map("deleted_at") // Soft delete
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
   buildings      Building[]
   creator        User          @relation("ProjectCreator", fields: [createdBy], references: [id])
   units          Unit[]
+  queueProcessingLogs QueueProcessingLog[]
 
   @@index([code])
+  @@index([status, createdAt]) // Composite index for status filtering with sorting
+  @@index([city, status]) // Composite index for city + status filtering
+  @@index([deletedAt, status]) // Composite index for soft delete + status filtering
   @@index([status])
   @@index([city])
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([name]) // For full-text search
   @@map("projects")
 }
 
 model Building {
-  id          String   @id @default(uuid())
-  projectId   String   @map("project_id")
+  id          String    @id @default(uuid())
+  projectId   String    @map("project_id")
   code        String
   name        String
   floors      Int
   description String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deletedAt   DateTime? @map("deleted_at") // Soft delete
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   floorsData  Floor[]
   units       Unit[]
 
   @@unique([projectId, code])
   @@index([projectId])
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([name]) // For full-text search
   @@map("buildings")
 }
 
 model Floor {
-  id         String   @id @default(uuid())
-  buildingId String   @map("building_id")
+  id         String    @id @default(uuid())
+  buildingId String    @map("building_id")
   number     Int
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  building   Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  deletedAt  DateTime? @map("deleted_at") // Soft delete
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  building   Building  @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   units      Unit[]
 
   @@unique([buildingId, number])
   @@index([buildingId])
+  @@index([deletedAt]) // For soft delete filtering
   @@map("floors")
 }
 
@@ -136,6 +159,7 @@ model Unit {
   floorPlanImage String?       @map("floor_plan_image")
   images         String?
   commissionRate Float?        @map("commission_rate")
+  deletedAt      DateTime?     @map("deleted_at") // Soft delete
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
   bookings       Booking[]
@@ -148,22 +172,34 @@ model Unit {
   project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+  @@index([projectId, status]) // Composite index for filtering by project and status
+  @@index([projectId, status, price]) // Composite index for project + status + price filtering
+  @@index([status, createdAt]) // Composite index for status filtering with sorting
+  @@index([deletedAt, status]) // Composite index for soft delete + status filtering
   @@index([buildingId])
   @@index([floorId])
   @@index([status])
   @@index([unitTypeId])
+  @@index([price]) // For price range queries
+  @@index([createdAt]) // For sorting
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([code]) // For full-text search
+  @@index([unitNumber]) // For full-text search
   @@map("units")
 }
 
 model UnitType {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  code        String   @unique
+  id          String    @id @default(uuid())
+  name        String    @unique
+  code        String    @unique
   description String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at") // Soft delete
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
   units       Unit[]
 
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([name]) // For full-text search
   @@map("unit_types")
 }
 
@@ -184,15 +220,27 @@ model Reservation {
   cancelledReason String?           @map("cancelled_reason")
   notifiedAt      DateTime?         @map("notified_at")
   depositDeadline DateTime?         @map("deposit_deadline")
+  deletedAt       DateTime?         @map("deleted_at") // Soft delete
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
   ctv             User              @relation("CTVReservations", fields: [ctvId], references: [id], onDelete: Cascade)
   unit            Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
   @@index([unitId, priority])
+  @@index([unitId, status]) // Composite index for filtering by unit and status
+  @@index([ctvId, status]) // Composite index for CTV's reservations by status
+  @@index([ctvId, status, createdAt]) // Composite index for CTV's reservations with sorting
+  @@index([status, createdAt]) // Composite index for status filtering with sorting
+  @@index([deletedAt, status]) // Composite index for soft delete + status filtering
   @@index([ctvId])
   @@index([status])
   @@index([code])
+  @@index([reservedUntil]) // For expiry checks
+  @@index([depositDeadline]) // For queue processing
+  @@index([createdAt]) // For sorting
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([customerName]) // For full-text search
+  @@index([customerPhone]) // For full-text search
   @@map("reservations")
 }
 
@@ -214,6 +262,7 @@ model Booking {
   cancelledReason String?       @map("cancelled_reason")
   refundAmount    Float?        @map("refund_amount")
   notes           String?
+  deletedAt       DateTime?     @map("deleted_at") // Soft delete
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
   approver        User?         @relation("BookingApprover", fields: [approvedBy], references: [id])
@@ -221,9 +270,20 @@ model Booking {
   unit            Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
   @@index([unitId])
+  @@index([unitId, status]) // Composite index for filtering by unit and status
+  @@index([ctvId, status]) // Composite index for CTV's bookings by status
+  @@index([ctvId, status, createdAt]) // Composite index for CTV's bookings with sorting
+  @@index([status, createdAt]) // Composite index for status filtering with sorting
+  @@index([deletedAt, status]) // Composite index for soft delete + status filtering
+  @@index([status, expiresAt]) // Composite index for status + expiry checks
   @@index([ctvId])
   @@index([status])
   @@index([code])
+  @@index([expiresAt]) // For expiry checks
+  @@index([createdAt]) // For sorting
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([customerName]) // For full-text search
+  @@index([customerPhone]) // For full-text search
   @@map("bookings")
 }
 
@@ -243,6 +303,7 @@ model Deposit {
   paymentMethod     String            @default("BANK_TRANSFER") @map("payment_method")
   paymentProof      String?           @map("payment_proof")
   contractUrl       String?           @map("contract_url")
+  finalPrice        Float?            @map("final_price") // Giá thực tế chốt deal (sau chiết khấu)
   status            DepositStatus     @default(PENDING_APPROVAL)
   approvedBy        String?           @map("approved_by")
   approvedAt        DateTime?         @map("approved_at")
@@ -250,6 +311,7 @@ model Deposit {
   cancelledReason   String?           @map("cancelled_reason")
   refundAmount      Float?            @map("refund_amount")
   notes             String?
+  deletedAt         DateTime?         @map("deleted_at") // Soft delete
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
   commissions       Commission?
@@ -261,9 +323,19 @@ model Deposit {
   transactions      Transaction[]
 
   @@index([unitId])
+  @@index([unitId, status]) // Composite index for filtering by unit and status
+  @@index([ctvId, status]) // Composite index for CTV's deposits by status
+  @@index([ctvId, status, createdAt]) // Composite index for CTV's deposits with sorting
+  @@index([status, createdAt]) // Composite index for status filtering with sorting
+  @@index([deletedAt, status]) // Composite index for soft delete + status filtering
   @@index([ctvId])
   @@index([status])
   @@index([code])
+  @@index([createdAt]) // For sorting
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([customerName]) // For full-text search
+  @@index([customerPhone]) // For full-text search
+  @@index([customerIdCard]) // For full-text search
   @@map("deposits")
 }
 
@@ -278,13 +350,20 @@ model PaymentSchedule {
   status       PaymentScheduleStatus @default(PENDING)
   paidAmount   Float                 @default(0) @map("paid_amount")
   paidAt       DateTime?             @map("paid_at")
+  deletedAt    DateTime?             @map("deleted_at") // Soft delete
   createdAt    DateTime              @default(now()) @map("created_at")
   updatedAt    DateTime              @updatedAt @map("updated_at")
   deposit      Deposit               @relation(fields: [depositId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 
   @@index([depositId])
+  @@index([depositId, status]) // Composite index for filtering by deposit and status
+  @@index([status, dueDate]) // Composite index for status + overdue checks
+  @@index([status, dueDate, createdAt]) // Composite index for status + dueDate + sorting
+  @@index([deletedAt, status]) // Composite index for soft delete + status filtering
   @@index([status])
+  @@index([dueDate]) // For overdue checks
+  @@index([deletedAt]) // For soft delete filtering
   @@map("payment_schedules")
 }
 
@@ -300,14 +379,25 @@ model Transaction {
   status            TransactionStatus @default(PENDING_CONFIRMATION)
   confirmedAt       DateTime?         @map("confirmed_at")
   notes             String?
+  deletedAt         DateTime?         @map("deleted_at") // Soft delete
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
   paymentSchedule   PaymentSchedule?  @relation(fields: [paymentScheduleId], references: [id])
   deposit           Deposit           @relation(fields: [depositId], references: [id], onDelete: Cascade)
 
   @@index([depositId])
+  @@index([depositId, status]) // Composite index for filtering by deposit and status
+  @@index([depositId, status, paymentDate]) // Composite index for deposit + status + date range
   @@index([paymentScheduleId])
+  @@index([paymentScheduleId, status]) // Composite index for payment schedule transactions
+  @@index([status, paymentDate]) // Composite index for status + date range queries
+  @@index([status, createdAt]) // Composite index for status filtering with sorting
+  @@index([deletedAt, status]) // Composite index for soft delete + status filtering
   @@index([status])
+  @@index([paymentDate]) // For date range queries
+  @@index([createdAt]) // For sorting
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([transactionRef]) // For full-text search
   @@map("transactions")
 }
 
@@ -318,8 +408,11 @@ model Commission {
   depositId       String           @unique @map("deposit_id")
   amount          Float
   rate            Float
+  calculationBase String           @default("final_price") @map("calculation_base") // "final_price" | "list_price"
+  basePrice       Float            @map("base_price") // Giá dùng để tính (finalPrice hoặc listPrice)
   status          CommissionStatus @default(PENDING)
   paidAt          DateTime?        @map("paid_at")
+  deletedAt       DateTime?        @map("deleted_at") // Soft delete
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   deposit         Deposit          @relation(fields: [depositId], references: [id], onDelete: Cascade)
@@ -328,8 +421,13 @@ model Commission {
   paymentRequests PaymentRequest[]
 
   @@index([unitId])
+  @@index([ctvId, status]) // Composite index for CTV's commissions by status
+  @@index([ctvId, status, createdAt]) // Composite index for CTV's commissions with sorting
+  @@index([status, createdAt]) // Composite index for status filtering with sorting
+  @@index([deletedAt, status]) // Composite index for soft delete + status filtering
   @@index([ctvId])
   @@index([status])
+  @@index([deletedAt]) // For soft delete filtering
   @@map("commissions")
 }
 
@@ -347,6 +445,7 @@ model PaymentRequest {
   approvedAt      DateTime?            @map("approved_at")
   rejectedReason  String?              @map("rejected_reason")
   notes           String?
+  deletedAt       DateTime?            @map("deleted_at") // Soft delete
   createdAt       DateTime             @default(now()) @map("created_at")
   updatedAt       DateTime             @updatedAt @map("updated_at")
   approver        User?                @relation("PaymentApprover", fields: [approvedBy], references: [id])
@@ -354,40 +453,52 @@ model PaymentRequest {
   commission      Commission           @relation(fields: [commissionId], references: [id], onDelete: Cascade)
 
   @@index([commissionId])
+  @@index([ctvId, status]) // Composite index for CTV's payment requests by status
+  @@index([ctvId, status, createdAt]) // Composite index for CTV's payment requests with sorting
+  @@index([status, createdAt]) // Composite index for status filtering with sorting
+  @@index([deletedAt, status]) // Composite index for soft delete + status filtering
   @@index([ctvId])
   @@index([status])
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([bankAccount]) // For full-text search
   @@map("payment_requests")
 }
 
 model SystemConfig {
-  id          String   @id @default(uuid())
-  key         String   @unique
+  id          String    @id @default(uuid())
+  key         String    @unique
   value       String
   type        String
   label       String
   category    String
   description String?
-  editableBy  String   @default("ADMIN") @map("editable_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  editableBy  String    @default("ADMIN") @map("editable_by")
+  deletedAt   DateTime? @map("deleted_at") // Soft delete
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   @@index([category])
   @@index([key])
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([label]) // For full-text search
   @@map("system_configs")
 }
 
 model PdfTemplate {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   type        String
   name        String
-  templateUrl String?  @map("template_url")
+  templateUrl String?   @map("template_url")
   variables   String?
-  isDefault   Boolean  @default(false) @map("is_default")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  isDefault   Boolean   @default(false) @map("is_default")
+  isActive    Boolean   @default(true) @map("is_active")
+  deletedAt   DateTime? @map("deleted_at") // Soft delete
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   @@index([type])
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([name]) // For full-text search
   @@map("pdf_templates")
 }
 
@@ -405,10 +516,50 @@ model AuditLog {
   user       User?    @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([userId, createdAt]) // Composite index for user's audit logs with sorting
   @@index([entityType, entityId])
+  @@index([action, createdAt]) // Composite index for action filtering with sorting
+  @@index([entityType, createdAt]) // Composite index for entity type filtering with sorting
   @@index([action])
   @@index([createdAt])
+  @@index([entityType]) // For full-text search
+  @@index([entityId]) // For full-text search
   @@map("audit_logs")
+}
+
+model Notification {
+  id            String                @id @default(uuid())
+  userId        String                @map("user_id")
+  type          NotificationType      @map("type")
+  title         String
+  message       String
+  entityType    String?               @map("entity_type")
+  entityId      String?               @map("entity_id")
+  metadata      String?               @map("metadata")
+  channel       NotificationChannel   @default(IN_APP)
+  status        NotificationStatus    @default(PENDING) // PENDING, SENT, FAILED, QUEUED
+  isRead        Boolean               @default(false) @map("is_read")
+  readAt        DateTime?             @map("read_at")
+  sentAt        DateTime?             @map("sent_at")
+  failedAt      DateTime?             @map("failed_at")
+  errorMessage  String?               @map("error_message")
+  retryCount    Int                   @default(0) @map("retry_count")
+  nextRetryAt   DateTime?             @map("next_retry_at")
+  deletedAt     DateTime?             @map("deleted_at") // Soft delete
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, isRead, createdAt]) // Composite index for user's notifications with sorting
+  @@index([userId, status]) // For filtering by user and status
+  @@index([status, nextRetryAt]) // For finding notifications to retry
+  @@index([entityType, entityId])
+  @@index([deletedAt, isRead]) // Composite index for soft delete + read status
+  @@index([deletedAt]) // For soft delete filtering
+  @@index([status]) // For filtering by status
+  @@index([title]) // For full-text search
+  @@map("notifications")
 }
 
 enum UserRole {
@@ -480,4 +631,78 @@ enum PaymentRequestStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum NotificationType {
+  RESERVATION_CREATED
+  RESERVATION_YOUR_TURN
+  RESERVATION_EXPIRED
+  RESERVATION_MISSED
+  BOOKING_CREATED
+  BOOKING_APPROVED
+  BOOKING_REJECTED
+  BOOKING_CANCELLED
+  BOOKING_EXPIRED
+  DEPOSIT_CREATED
+  DEPOSIT_APPROVED
+  DEPOSIT_CANCELLED
+  DEPOSIT_OVERDUE
+  PAYMENT_OVERDUE
+  PAYMENT_CONFIRMED
+  UNIT_SOLD
+  COMMISSION_CREATED
+  PAYMENT_REQUEST_CREATED
+  PAYMENT_REQUEST_APPROVED
+  PAYMENT_REQUEST_REJECTED
+  QUEUE_PROCESSING_ERRORS
+  QUEUE_PROCESSING_COMPLETE
+}
+
+enum NotificationChannel {
+  IN_APP
+  SMS
+  EMAIL
+}
+
+enum NotificationStatus {
+  PENDING  // Just created, not sent yet
+  QUEUED   // Queued for retry
+  SENT     // Successfully sent
+  FAILED   // Failed after max retries
+}
+
+model Sequence {
+  id        String   @id @default(uuid())
+  type      String   @unique // "RESERVATION", "BOOKING", "DEPOSIT"
+  current   Int      @default(0) // Current sequence number
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("sequences")
+}
+
+model QueueProcessingLog {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  status      String   // "PROCESSING" | "COMPLETED" | "FAILED" | "PARTIAL"
+  totalUnits  Int      @map("total_units")
+  processed   Int      @default(0)
+  skipped     Int      @default(0)
+  failed      Int      @default(0)
+  failedUnits String?  @map("failed_units") // JSON array of { unitId, error }
+  errorMessage String? @map("error_message")
+  startedAt   DateTime @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  retryCount  Int      @default(0) @map("retry_count")
+  deletedAt   DateTime? @map("deleted_at") // Soft delete
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([status])
+  @@index([status, createdAt]) // For filtering by status with sorting
+  @@index([deletedAt])
+  @@index([createdAt])
+  @@map("queue_processing_logs")
 }

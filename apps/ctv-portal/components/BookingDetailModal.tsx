@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, User, Phone, Mail, Calendar, Clock, MapPin, FileText, CheckCircle, Bed, Bath, Maximize2, Compass, Eye, ChevronLeft, ChevronRight, Building2, UserStar, Trash2 } from "lucide-react";
+import { X, User, Phone, Mail, Calendar, Clock, FileText, CheckCircle, Bed, Bath, Maximize2, Compass, Eye, ChevronLeft, ChevronRight, Building2, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
@@ -10,16 +10,23 @@ import { getModalResponsiveClasses } from "@/app/utils/responsive";
 import { toastNotification } from '@/app/utils/toastNotification';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
+import type { Booking } from '@/lib/types/api.types';
+
+type BookingWithExtraFields = Booking & {
+    visitDate?: string | null;
+    visitStartTime?: string | null;
+    visitEndTime?: string | null;
+};
+
 type BookingDetailModalProps = {
-    booking: any;
+    booking: BookingWithExtraFields;
     onClose: () => void;
     onComplete?: () => void;
     readOnly?: boolean;
 };
 
-export default function BookingDetailModal({ booking, onClose, onComplete, readOnly = false }: BookingDetailModalProps) {
-    if (!booking) return null;
-
+export default function BookingDetailModal({ booking: bookingProp, onClose, onComplete, readOnly = false }: BookingDetailModalProps) {
+    const booking = bookingProp as BookingWithExtraFields;
     const deviceInfo = useDeviceDetect();
     const responsive = getModalResponsiveClasses(deviceInfo);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -29,6 +36,8 @@ export default function BookingDetailModal({ booking, onClose, onComplete, readO
     const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    if (!booking) return null;
 
     // Parse images from database
     const defaultImages = [
@@ -292,10 +301,10 @@ export default function BookingDetailModal({ booking, onClose, onComplete, readO
                                 )}
 
                                 {/* House Certificate */}
-                                {booking.unit.houseCertificate && (
+                                {booking.unit && 'houseCertificate' in booking.unit && (booking.unit as { houseCertificate?: string }).houseCertificate && (
                                     <div className="mt-4 pt-4 border-t">
                                         <p className="text-sm font-medium text-gray-700 mb-2">Chứng từ:</p>
-                                        <p className="text-sm text-blue-600 font-medium">{booking.unit.houseCertificate}</p>
+                                        <p className="text-sm text-blue-600 font-medium">{(booking.unit as { houseCertificate?: string }).houseCertificate}</p>
                                     </div>
                                 )}
                             </div>

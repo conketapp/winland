@@ -3,17 +3,17 @@
  * Form to edit existing unit information
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { unitsApi } from '../../api/units.api';
 import { projectsApi } from '../../api/projects.api';
 import type { Unit } from '../../types/unit.types';
 import type { Project } from '../../types/project.types';
-import PageHeader from '../../components/ui/PageHeader';
 import FormSection from '../../components/shared/FormSection';
 import FormField from '../../components/shared/FormField';
 import LoadingState from '../../components/ui/LoadingState';
 import { Button } from '../../components/ui/button';
+import { useToast } from '../../components/ui/toast';
 import {
   Select,
   SelectContent,
@@ -26,10 +26,26 @@ import { ArrowLeft } from 'lucide-react';
 export default function EditUnitPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [buildings, setBuildings] = useState<any[]>([]);
+  const [buildings, setBuildings] = useState<Array<{
+    id: string;
+    code: string;
+    name: string;
+    floorsData?: Array<{
+      id: string;
+      number: number;
+      buildingId: string;
+    }>;
+  }>>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_floors, setFloors] = useState<Array<{
+    id: string;
+    number: number;
+    buildingId: string;
+  }>>([]);
   const [unit, setUnit] = useState<Unit | null>(null);
 
   const [formData, setFormData] = useState({
@@ -48,36 +64,37 @@ export default function EditUnitPage() {
     notes: '',
   });
 
-  useEffect(() => {
-    loadProjects();
-    loadUnitData();
-  }, [id]);
-
-  useEffect(() => {
-    if (formData.projectId) {
-      loadBuildings(formData.projectId);
-    }
-  }, [formData.projectId]);
-
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     try {
       const data = await projectsApi.getAll();
-      setProjects(data);
+      setProjects(data.items || []);
     } catch (error) {
       console.error('Failed to load projects:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Không thể tải danh sách dự án';
+      toastError(errorMessage);
     }
-  };
+  }, [toastError]);
 
-  const loadBuildings = async (projectId: string) => {
+  const loadBuildings = useCallback(async (projectId: string) => {
     try {
       const project = await projectsApi.getById(projectId);
-      setBuildings(project.buildings || []);
+      // Project type doesn't have buildings property, need to fetch separately or cast
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setBuildings((project as any).buildings || []);
     } catch (error) {
       console.error('Failed to load buildings:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Không thể tải danh sách tòa nhà';
+      toastError(errorMessage);
+      setBuildings([]);
+      setFloors([]);
     }
-  };
+  }, [toastError]);
 
-  const loadUnitData = async () => {
+  const loadUnitData = useCallback(async () => {
     try {
       setLoading(true);
       const data = await unitsApi.getById(id!);
@@ -91,8 +108,8 @@ export default function EditUnitPage() {
         buildingId: data.buildingId,
         floorId: data.floorId || '',
         area: data.area.toString(),
-        bedrooms: data.bedrooms.toString(),
-        bathrooms: data.bathrooms.toString(),
+        bedrooms: (data.bedrooms ?? 0).toString(),
+        bathrooms: (data.bathrooms ?? 0).toString(),
         price: data.price?.toString() || '',
         commissionRate: data.commissionRate?.toString() || '',
         direction: data.direction || '',
@@ -101,12 +118,41 @@ export default function EditUnitPage() {
       });
     } catch (error) {
       console.error('Failed to load unit:', error);
-      alert('Không thể tải thông tin căn hộ');
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (typeof error === 'object' && error !== null && 'message' in error)
+          ? String(error.message)
+          : 'Không thể tải thông tin căn hộ';
+      toastError(errorMessage);
       navigate('/units');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate, toastError]);
+
+  useEffect(() => {
+    loadProjects();
+    loadUnitData();
+  }, [loadProjects, loadUnitData]);
+
+  useEffect(() => {
+    if (formData.projectId) {
+      loadBuildings(formData.projectId);
+    }
+  }, [formData.projectId, loadBuildings]);
+
+  useEffect(() => {
+    if (formData.buildingId && buildings.length > 0) {
+      const selectedBuilding = buildings.find(b => b.id === formData.buildingId);
+      if (selectedBuilding?.floorsData) {
+        setFloors(selectedBuilding.floorsData);
+      } else {
+        setFloors([]);
+      }
+    } else {
+      setFloors([]);
+    }
+  }, [formData.buildingId, buildings]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,32 +161,32 @@ export default function EditUnitPage() {
       setSubmitting(true);
       
       await unitsApi.update(id!, {
-        code: formData.code,
-        unitNumber: formData.unitNumber || undefined,
-        projectId: formData.projectId,
-        buildingId: formData.buildingId,
-        floorId: formData.floorId || undefined,
         area: parseFloat(formData.area),
         bedrooms: parseInt(formData.bedrooms),
         bathrooms: parseInt(formData.bathrooms),
         price: formData.price ? parseFloat(formData.price) : undefined,
         commissionRate: formData.commissionRate ? parseFloat(formData.commissionRate) : undefined,
         direction: formData.direction || undefined,
-        status: formData.status as any,
-        notes: formData.notes || undefined,
+        status: formData.status as Unit['status'],
+        description: formData.notes || undefined,
       });
 
-      alert('Cập nhật căn hộ thành công!');
+      toastSuccess('Cập nhật căn hộ thành công!');
       navigate(`/units/${id}`);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to update unit:', error);
-      alert(error.response?.data?.message || 'Không thể cập nhật căn hộ');
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (typeof error === 'object' && error !== null && 'message' in error)
+          ? String(error.message)
+          : 'Không thể cập nhật căn hộ';
+      toastError(errorMessage);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: string | number | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -196,6 +242,7 @@ export default function EditUnitPage() {
                 value={formData.projectId}
                 onValueChange={(value) => handleChange('projectId', value)}
                 required
+                disabled
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn dự án" />
@@ -216,7 +263,7 @@ export default function EditUnitPage() {
                 value={formData.buildingId}
                 onValueChange={(value) => handleChange('buildingId', value)}
                 required
-                disabled={!formData.projectId}
+                disabled
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn tòa nhà" />

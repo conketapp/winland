@@ -3,16 +3,18 @@
  * Admin duyệt phiếu booking (10tr)
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { bookingsApi } from '../../api/bookings.api';
 import type { Booking } from '../../types/booking.types';
+import type { Project } from '../../types/project.types';
+import type { User } from '../../types/auth.types';
 import LoadingState from '../../components/ui/LoadingState';
+import { ErrorState } from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import BookingDetailModal from '../../components/bookings/BookingDetailModal';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Eye } from 'lucide-react';
 import {
@@ -22,11 +24,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
+import { formatCurrency, formatDate, formatShortAmount } from '../../lib/utils';
+import { projectsApi } from '../../api/projects.api';
+import { apiRequest } from '../../api/client';
+import { API_ENDPOINTS } from '../../constants/api';
+import StatusBadge from '../../components/shared/StatusBadge';
+import { useFilterRouting } from '../../hooks/useFilterRouting';
 
 const BookingsApprovalPage: React.FC = () => {
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [error, setError] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [ctvs, setCtvs] = useState<User[]>([]);
+  const [filters, setFilters] = useState({
+    status: 'all',
+    projectId: 'all',
+    ctvId: 'all',
+  });
+  const statusFilter = filters.status;
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     type: 'approve' | 'reject';
@@ -35,28 +51,94 @@ const BookingsApprovalPage: React.FC = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [detailModal, setDetailModal] = useState<{
     open: boolean;
-    booking: any | null;
+    booking: Booking | null;
   }>({ open: false, booking: null });
 
-  useEffect(() => {
-    loadBookings();
-  }, [statusFilter]);
+  // Sync filters with URL
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useFilterRouting(filters, setFilters as any, {
+    transformToUrl: (currentFilters) => {
+      const result: Record<string, string> = {};
+      if (currentFilters.status && currentFilters.status !== 'all') {
+        result.status = String(currentFilters.status);
+      }
+      if (currentFilters.projectId && currentFilters.projectId !== 'all') {
+        result.projectId = String(currentFilters.projectId);
+      }
+      if (currentFilters.ctvId && currentFilters.ctvId !== 'all') {
+        result.ctvId = String(currentFilters.ctvId);
+      }
+      return result;
+    },
+    transformFromUrl: (params) => {
+      return {
+        status: params.get('status') || 'all',
+        projectId: params.get('projectId') || 'all',
+        ctvId: params.get('ctvId') || 'all',
+      };
+    },
+  });
 
-  const loadBookings = async () => {
+  useEffect(() => {
+    loadMeta();
+  }, []);
+
+  const loadMeta = async () => {
+    try {
+      const [projectsData, usersData] = await Promise.all([
+        projectsApi.getAll(),
+        apiRequest<User[]>({
+          method: 'GET',
+          url: API_ENDPOINTS.USERS.BASE,
+          params: { role: 'CTV', status: 'active' },
+        }),
+      ]);
+      
+      // Handle both paginated response (new) and array response (old/fallback)
+      const projectsList = Array.isArray(projectsData) 
+        ? projectsData 
+        : (projectsData?.items || []);
+      
+      setProjects(projectsList);
+      setCtvs(usersData || []);
+    } catch (err) {
+      // ignore meta errors, only log
+      console.error('Error loading booking meta:', err);
+      setProjects([]); // Set empty array on error
+      setCtvs([]);
+    }
+  };
+
+  const loadBookings = useCallback(async () => {
     try {
       setIsLoading(true);
-      const params: any = {};
+      setError(null);
+      const params: Record<string, string> = {};
       if (statusFilter && statusFilter !== 'all') {
         params.status = statusFilter;
       }
+      if (filters.projectId !== 'all') {
+        params.projectId = filters.projectId;
+      }
+      if (filters.ctvId !== 'all') {
+        params.ctvId = filters.ctvId;
+      }
       const data = await bookingsApi.getAll(params);
-      setBookings(data);
-    } catch (err) {
+      // Handle paginated responses - extract items if it's a paginated response
+      const bookings = Array.isArray(data) ? data : (data as { items?: Booking[] })?.items || [];
+      setBookings(bookings);
+    } catch (err: unknown) {
       console.error('Error loading bookings:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Không thể tải danh sách booking';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter, filters]);
+
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]);
 
   const handleApprove = (id: string) => {
     setConfirmDialog({ open: true, type: 'approve', bookingId: id });
@@ -70,35 +152,37 @@ const BookingsApprovalPage: React.FC = () => {
     try {
       if (confirmDialog.type === 'approve') {
         await bookingsApi.approve(confirmDialog.bookingId);
-        alert('✅ Duyệt booking thành công!');
       } else {
         if (!rejectReason) {
-          alert('Vui lòng nhập lý do từ chối');
           return;
         }
         await bookingsApi.reject(confirmDialog.bookingId, rejectReason);
-        alert('Từ chối booking thành công');
         setRejectReason('');
       }
       loadBookings();
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi xử lý');
+    } catch (err: unknown) {
+      console.error('Error handling booking action:', err);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      PENDING_PAYMENT: 'bg-orange-100 text-orange-800',
-      PENDING_APPROVAL: 'bg-yellow-100 text-yellow-800',
-      CONFIRMED: 'bg-green-100 text-green-800',
-      CANCELLED: 'bg-red-100 text-red-800',
-      EXPIRED: 'bg-gray-100 text-gray-800',
-    };
-    return styles[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  if (isLoading) {
+  if (isLoading && !error) {
     return <LoadingState message="Đang tải danh sách booking..." />;
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 space-y-4">
+        <PageHeader
+          title="Duyệt Phiếu Booking"
+          description="Xác nhận booking 10 triệu từ CTV"
+        />
+        <ErrorState
+          title="Lỗi tải danh sách booking"
+          description={error}
+          onRetry={loadBookings}
+        />
+      </div>
+    );
   }
 
   return (
@@ -132,19 +216,67 @@ const BookingsApprovalPage: React.FC = () => {
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="flex items-center gap-4">
-          <label className="text-sm font-medium text-gray-700">Trạng thái:</label>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Chờ duyệt" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
-              <SelectItem value="PENDING_APPROVAL">Chờ duyệt</SelectItem>
-              <SelectItem value="CONFIRMED">Đã duyệt</SelectItem>
-              <SelectItem value="CANCELLED">Đã hủy</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap items-end gap-4">
+          {/* Status filter */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Trạng thái:</label>
+            <Select 
+              value={statusFilter} 
+              onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Chọn trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="PENDING_APPROVAL">Chờ duyệt</SelectItem>
+                <SelectItem value="CONFIRMED">Đã duyệt</SelectItem>
+                <SelectItem value="CANCELLED">Đã hủy</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Project filter */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Dự án:</label>
+            <Select
+              value={filters.projectId}
+              onValueChange={(value) => setFilters((prev) => ({ ...prev, projectId: value }))}
+            >
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="Chọn dự án" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả dự án</SelectItem>
+                {(projects || []).map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* CTV filter */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">CTV:</label>
+            <Select
+              value={filters.ctvId}
+              onValueChange={(value) => setFilters((prev) => ({ ...prev, ctvId: value }))}
+            >
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="Chọn CTV" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả CTV</SelectItem>
+                {(ctvs || []).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.fullName} {c.phone ? `(${c.phone})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </Card>
 
@@ -174,7 +306,7 @@ const BookingsApprovalPage: React.FC = () => {
                 <tr key={booking.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{booking.code}</div>
-                    <div className="text-xs text-gray-500">{new Date(booking.createdAt).toLocaleDateString('vi-VN')}</div>
+                    <div className="text-xs text-gray-500">{formatDate(booking.createdAt)}</div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{booking.unit?.code}</div>
@@ -187,7 +319,7 @@ const BookingsApprovalPage: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-semibold text-gray-900">
-                      {(booking.bookingAmount / 1000000).toFixed(0)}tr
+                      {formatShortAmount(booking.bookingAmount)} ({formatCurrency(booking.bookingAmount)})
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -196,18 +328,11 @@ const BookingsApprovalPage: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-xs text-gray-600">
-                      {new Date(booking.expiresAt).toLocaleDateString('vi-VN')}
+                      {formatDate(booking.expiresAt)}
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <Badge variant={
-                      booking.status === 'PENDING_APPROVAL' ? 'secondary' :
-                      booking.status === 'CONFIRMED' ? 'default' :
-                      booking.status === 'CANCELLED' ? 'destructive' :
-                      'outline'
-                    }>
-                      {booking.status}
-                    </Badge>
+                    <StatusBadge status={booking.status} />
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2">

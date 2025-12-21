@@ -105,7 +105,8 @@ export async function POST(request: NextRequest) {
     console.log('User created successfully:', newUser.id)
 
     // Return user data (exclude password)
-    const { password, ...userWithoutPassword } = newUser
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _, ...userWithoutPassword } = newUser
 
     return NextResponse.json({
       success: true,

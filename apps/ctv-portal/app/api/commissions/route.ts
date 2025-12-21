@@ -26,57 +26,64 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        // Get all deposits for this CTV to calculate commissions
-        const deposits = await prisma.deposit.findMany({
+        // Get commissions from Commission table (not calculating from deposits)
+        const commissions = await prisma.commission.findMany({
             where: {
                 ctvId: user.id,
-                status: {
-                    in: ['CONFIRMED', 'COMPLETED']
-                }
             },
             include: {
+                deposit: {
+                    select: {
+                        id: true,
+                        code: true,
+                        customerName: true,
+                        depositAmount: true,
+                        depositDate: true,
+                    },
+                },
                 unit: {
                     select: {
                         code: true,
                         project: {
                             select: {
-                                name: true
-                            }
-                        }
-                    }
-                }
+                                name: true,
+                            },
+                        },
+                    },
+                },
             },
             orderBy: {
-                createdAt: 'desc'
-            }
+                createdAt: 'desc',
+            },
         })
 
-        // Calculate commissions (2% of deposit amount)
-        const commissions = deposits.map(deposit => ({
-            id: deposit.id,
-            depositCode: deposit.code,
-            unitCode: deposit.unit?.code || 'N/A',
-            projectName: deposit.unit?.project?.name || 'N/A',
-            customerName: deposit.customerName,
-            depositAmount: deposit.depositAmount,
-            commissionAmount: deposit.depositAmount * 0.02, // 2% commission
-            commissionRate: 0.02,
-            status: deposit.status,
-            depositDate: deposit.depositDate,
-            createdAt: deposit.createdAt
+        // Transform to response format
+        const formattedCommissions = commissions.map(commission => ({
+            id: commission.id,
+            depositCode: commission.deposit.code,
+            unitCode: commission.unit?.code || 'N/A',
+            projectName: commission.unit?.project?.name || 'N/A',
+            customerName: commission.deposit.customerName,
+            depositAmount: commission.deposit.depositAmount,
+            commissionAmount: commission.amount,
+            commissionRate: commission.rate,
+            status: commission.status,
+            paidAt: commission.paidAt,
+            depositDate: commission.deposit.depositDate,
+            createdAt: commission.createdAt,
         }))
 
         // Calculate summary
-        const totalCommission = commissions.reduce((sum, c) => sum + c.commissionAmount, 0)
-        const totalDeposits = deposits.length
+        const totalCommission = commissions.reduce((sum, c) => sum + c.amount, 0)
+        const totalCommissions = commissions.length
 
         return NextResponse.json({
-            commissions,
+            commissions: formattedCommissions,
             summary: {
                 totalCommission,
-                totalDeposits,
-                averageCommission: totalDeposits > 0 ? totalCommission / totalDeposits : 0
-            }
+                totalCommissions,
+                averageCommission: totalCommissions > 0 ? totalCommission / totalCommissions : 0,
+            },
         })
 
     } catch (error) {

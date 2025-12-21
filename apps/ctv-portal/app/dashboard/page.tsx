@@ -9,22 +9,19 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from 'next/navigation';
 import {
-    User,
     Calendar,
-    ArrowUpRight,
     LogOut,
     Sun,
     Moon,
-    AlertTriangle,
     FileText,
     Trash2,
     TrendingUp,
     DollarSign,
-    CheckCircle,
     Clock,
+    User,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatCurrency } from '@/lib/utils';
@@ -36,22 +33,32 @@ import ReservationDetailModal from '@/components/ReservationDetailModal';
 import DepositDetailModal from '@/components/DepositDetailModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { toastNotification } from '@/app/utils/toastNotification';
+import type { Reservation, Booking, Deposit, User as UserType } from '@/lib/types/api.types';
+import { ReservationStatus, BookingStatus, DepositStatus } from '@/lib/types/api.types';
+
+// Extend Booking type to include visit schedule fields
+type BookingWithVisitSchedule = Booking & {
+    visitDate?: string | null;
+    visitStartTime?: string | null;
+    visitEndTime?: string | null;
+};
 
 export default function DashboardScreen(): JSX.Element {
     const { activeNav, setActiveNav } = useNavigation();
     const router = useRouter();
     const { isDark, toggleTheme } = useTheme();
-    const [userData, setUserData] = useState<any>(null);
-    const [urgentReservations, setUrgentReservations] = useState<any[]>([]);
-    const [recentReservations, setRecentReservations] = useState<any[]>([]);
-    const [recentBookings, setRecentBookings] = useState<any[]>([]);
-    const [recentDeposits, setRecentDeposits] = useState<any[]>([]);
+    const [userData, setUserData] = useState<UserType | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [urgentReservations, setUrgentReservations] = useState<Reservation[]>([]);
+    const [recentReservations, setRecentReservations] = useState<Reservation[]>([]);
+    const [recentBookings, setRecentBookings] = useState<BookingWithVisitSchedule[]>([]);
+    const [recentDeposits, setRecentDeposits] = useState<Deposit[]>([]);
     const [stats, setStats] = useState({ reservations: 0, bookings: 0, deposits: 0 });
     const [isLoading, setIsLoading] = useState(true);
     const [greeting, setGreeting] = useState<string>("Chào buổi");
-    const [selectedBooking, setSelectedBooking] = useState<any>(null);
-    const [selectedReservation, setSelectedReservation] = useState<any>(null);
-    const [selectedDeposit, setSelectedDeposit] = useState<any>(null);
+    const [selectedBooking, setSelectedBooking] = useState<BookingWithVisitSchedule | null>(null);
+    const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+    const [selectedDeposit, setSelectedDeposit] = useState<Deposit | null>(null);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showDeleteReservationDialog, setShowDeleteReservationDialog] = useState(false);
     const [showDeleteDepositDialog, setShowDeleteDepositDialog] = useState(false);
@@ -61,7 +68,7 @@ export default function DashboardScreen(): JSX.Element {
     const [isDeleting, setIsDeleting] = useState(false);
 
     // Fetch all dashboard data
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = useCallback(async () => {
         try {
             const userPhone = sessionStorage.getItem('login:userPhone');
 
@@ -110,7 +117,7 @@ export default function DashboardScreen(): JSX.Element {
             const deposits = depositsRes.ok ? await depositsRes.json() : [];
 
             if (user && !user.error) {
-                setUserData(user);
+                setUserData(user as UserType);
             } else {
                 router.push('/login');
                 return;
@@ -118,51 +125,51 @@ export default function DashboardScreen(): JSX.Element {
 
             // Filter urgent reservations (expiring within 24 hours)
             const now = new Date();
-            const urgent = reservations
-                .filter((r: any) => {
+            const urgent = (reservations as Reservation[])
+                .filter((r) => {
                     const expiryDate = new Date(r.reservedUntil);
                     const hoursUntilExpiry = (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-                    return hoursUntilExpiry > 0 && hoursUntilExpiry <= 24 && r.status === 'ACTIVE';
+                    return hoursUntilExpiry > 0 && hoursUntilExpiry <= 24 && r.status === ReservationStatus.ACTIVE;
                 })
-                .sort((a: any, b: any) => new Date(a.reservedUntil).getTime() - new Date(b.reservedUntil).getTime())
+                .sort((a, b) => new Date(a.reservedUntil).getTime() - new Date(b.reservedUntil).getTime())
                 .slice(0, 4);
 
             setUrgentReservations(urgent);
 
             // Get recent reservations (last 4) - exclude hidden ones
-            const recentRes = reservations
-                .filter((r: any) => !r.notes?.includes('[HIDDEN_FROM_DASHBOARD]'))
-                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            const recentRes = (reservations as Reservation[])
+                .filter((r) => !r.notes?.includes('[HIDDEN_FROM_DASHBOARD]'))
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 4);
 
             setRecentReservations(recentRes);
 
             // Get recent bookings (last 4) - exclude hidden ones
-            const recent = bookings
-                .filter((b: any) => !b.notes?.includes('[HIDDEN_FROM_DASHBOARD]'))
-                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            const recent = (bookings as Booking[])
+                .filter((b) => !b.notes?.includes('[HIDDEN_FROM_DASHBOARD]'))
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 4);
 
-            setRecentBookings(recent);
+            setRecentBookings(recent as BookingWithVisitSchedule[]);
 
             // Get recent deposits (last 4) - exclude hidden ones
-            const recentDeps = deposits
-                .filter((d: any) => !d.notes?.includes('[HIDDEN_FROM_DASHBOARD]'))
-                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            const recentDeps = (deposits as Deposit[])
+                .filter((d) => !d.notes?.includes('[HIDDEN_FROM_DASHBOARD]'))
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 4);
 
             setRecentDeposits(recentDeps);
 
             // Set stats - exclude cancelled and hidden items
             setStats({
-                reservations: reservations.filter((r: any) =>
-                    r.status !== 'CANCELLED' && !r.notes?.includes('[HIDDEN_FROM_DASHBOARD]')
+                reservations: (reservations as Reservation[]).filter((r) =>
+                    r.status !== ReservationStatus.CANCELLED && !r.notes?.includes('[HIDDEN_FROM_DASHBOARD]')
                 ).length,
-                bookings: bookings.filter((b: any) =>
-                    b.status !== 'CANCELLED' && !b.notes?.includes('[HIDDEN_FROM_DASHBOARD]')
+                bookings: (bookings as Booking[]).filter((b) =>
+                    b.status !== BookingStatus.CANCELLED && !b.notes?.includes('[HIDDEN_FROM_DASHBOARD]')
                 ).length,
-                deposits: deposits.filter((d: any) =>
-                    d.status !== 'CANCELLED' && !d.notes?.includes('[HIDDEN_FROM_DASHBOARD]')
+                deposits: (deposits as Deposit[]).filter((d) =>
+                    d.status !== DepositStatus.CANCELLED && !d.notes?.includes('[HIDDEN_FROM_DASHBOARD]')
                 ).length
             });
 
@@ -171,11 +178,11 @@ export default function DashboardScreen(): JSX.Element {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [router]);
 
     useEffect(() => {
         fetchDashboardData();
-    }, [router]);
+    }, [fetchDashboardData]);
 
     // Set greeting on client side only to avoid hydration mismatch
     useEffect(() => {
@@ -292,6 +299,7 @@ export default function DashboardScreen(): JSX.Element {
     };
 
     // Helper function to calculate time until expiry
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const getTimeUntilExpiry = (expiryDate: string) => {
         const now = new Date();
         const expiry = new Date(expiryDate);
@@ -468,7 +476,7 @@ export default function DashboardScreen(): JSX.Element {
                                 <div className="text-center py-8 text-slate-400">Chưa có giữ chỗ nào</div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                                    {recentReservations.map((reservation: any, index: number) => (
+                                    {recentReservations.map((reservation: Reservation, index: number) => (
                                         <motion.div
                                             key={reservation.id}
                                             initial={{ opacity: 0, y: 20 }}
@@ -488,7 +496,17 @@ export default function DashboardScreen(): JSX.Element {
                                                     <p className="text-sm font-medium truncate">{reservation.unit?.code || 'N/A'}</p>
                                                     {reservation.status === 'ACTIVE' && (
                                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'}`}>
-                                                            Đang hoạt động
+                                                            Đang chờ
+                                                        </span>
+                                                    )}
+                                                    {reservation.status === 'YOUR_TURN' && (
+                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-700'}`}>
+                                                            ⚡ Đến lượt
+                                                        </span>
+                                                    )}
+                                                    {reservation.status === 'MISSED' && (
+                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-orange-900/30 text-orange-400' : 'bg-orange-100 text-orange-700'}`}>
+                                                            ⚠️ Bỏ lỡ
                                                         </span>
                                                     )}
                                                     {reservation.status === 'COMPLETED' && (
@@ -507,10 +525,22 @@ export default function DashboardScreen(): JSX.Element {
                                                         </span>
                                                     )}
                                                 </div>
+                                                {/* Queue Position */}
+                                                {reservation.priority && ['ACTIVE', 'YOUR_TURN'].includes(reservation.status) && (
+                                                    <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold ${isDark ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700'} mb-1`}>
+                                                        <span>Vị trí:</span>
+                                                        <span className="text-base">#{reservation.priority}</span>
+                                                    </div>
+                                                )}
                                                 <p className="text-xs opacity-70 mt-1">Khách hàng: {reservation.customerName}</p>
                                                 {reservation.status === 'ACTIVE' && (
                                                     <p className="text-xs text-orange-600 font-medium mt-1">
                                                         Hết hạn: {new Date(reservation.reservedUntil).toLocaleString('vi-VN')}
+                                                    </p>
+                                                )}
+                                                {reservation.status === 'YOUR_TURN' && reservation.depositDeadline && (
+                                                    <p className="text-xs text-red-600 font-bold mt-1">
+                                                        ⚠️ Hạn nộp cọc: {new Date(reservation.depositDeadline).toLocaleString('vi-VN')}
                                                     </p>
                                                 )}
                                                 <p className="text-xs opacity-70 mt-1">Tạo lúc: {new Date(reservation.createdAt).toLocaleDateString('vi-VN')}</p>
@@ -561,7 +591,7 @@ export default function DashboardScreen(): JSX.Element {
                                 <div className="text-center py-8 text-slate-400">Chưa có booking nào</div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                                    {recentBookings.map((booking: any, index: number) => {
+                                    {recentBookings.map((booking: BookingWithVisitSchedule, index: number) => {
                                         // Extract schedule from notes if fields are null (backward compatibility)
                                         let visitDate = booking.visitDate;
                                         let visitStartTime = booking.visitStartTime;
@@ -594,7 +624,7 @@ export default function DashboardScreen(): JSX.Element {
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <p className="text-sm font-medium truncate">{booking.unit?.code || 'N/A'}</p>
-                                                        {booking.status === 'COMPLETED' && (
+                                                        {(booking.status as string) === 'COMPLETED' && (
                                                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'}`}>
                                                                 ✓ Đã Hoàn thành
                                                             </span>
@@ -634,7 +664,7 @@ export default function DashboardScreen(): JSX.Element {
                                                         >
                                                             Xem chi tiết
                                                         </button>
-                                                        {(booking.status === 'COMPLETED' || booking.status === 'EXPIRED' || booking.status === 'CANCELLED') && (
+                                                        {((booking.status as string) === 'COMPLETED' || booking.status === BookingStatus.EXPIRED || booking.status === BookingStatus.CANCELLED) && (
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -675,7 +705,7 @@ export default function DashboardScreen(): JSX.Element {
                                 <div className="text-center py-8 text-slate-400">Chưa có hợp đồng đặt cọc nào</div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                                    {recentDeposits.map((deposit: any, index: number) => (
+                                    {recentDeposits.map((deposit: Deposit, index: number) => (
                                         <motion.div
                                             key={deposit.id}
                                             initial={{ opacity: 0, y: 20 }}

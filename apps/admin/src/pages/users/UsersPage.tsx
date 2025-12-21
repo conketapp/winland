@@ -14,13 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
+import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import LoadingState from '../../components/ui/LoadingState';
 import EmptyState from '../../components/ui/EmptyState';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { apiRequest } from '../../api/client';
 import { API_ENDPOINTS } from '../../constants/api';
-import { Plus, Edit, Ban, CheckCircle } from 'lucide-react';
+import { Plus, Edit, Ban, CheckCircle, Search, X } from 'lucide-react';
+import { useToast } from '../../components/ui/ToastProvider';
 
 interface User {
   id: string;
@@ -29,14 +31,34 @@ interface User {
   fullName: string;
   role: 'SUPER_ADMIN' | 'ADMIN' | 'CTV' | 'USER';
   isActive: boolean;
+  totalDeals?: number | null;
   createdAt: string;
+}
+
+interface PaginatedUsersResponse {
+  items: User[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 20,
+    total: 0,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false,
+  });
   const [filters, setFilters] = useState({
-    role: 'all',
+    role: 'CTV', // default focus on CTVs as primary audience
     status: 'all',
   });
 
@@ -47,34 +69,85 @@ export default function UsersPage() {
     userName: '',
     currentStatus: false,
   });
+  const { showSuccess, showError } = useToast();
 
   useEffect(() => {
     loadUsers();
-  }, [filters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, pagination.page, pagination.pageSize, searchQuery]);
+
+  // Reset to page 1 when filters or search change
+  useEffect(() => {
+    if (pagination.page !== 1) {
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }
+  }, [filters.role, filters.status, searchQuery, pagination.page]);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const params: any = {};
       
-      if (filters.role !== 'all') {
-        params.role = filters.role;
+      // If search query exists, use search endpoint
+      if (searchQuery.trim()) {
+        const data = await apiRequest<User[]>({
+          method: 'GET',
+          url: `${API_ENDPOINTS.USERS.BASE}/search`,
+          params: {
+            q: searchQuery,
+            ...(filters.status !== 'all' ? { status: filters.status } : {}),
+            ...(filters.role !== 'all' ? { role: filters.role } : {}),
+          },
+        });
+        setUsers(data);
+        // Search results are limited to 50, so set pagination accordingly
+        setPagination({
+          page: 1,
+          pageSize: 20,
+          total: data.length,
+          totalPages: Math.ceil(data.length / 20),
+          hasNext: data.length > 20,
+          hasPrev: false,
+        });
+      } else {
+        // Use paginated endpoint
+        const data = await apiRequest<PaginatedUsersResponse>({
+          method: 'GET',
+          url: API_ENDPOINTS.USERS.BASE,
+          params: {
+            // Backend expects `status` as 'active' | 'inactive' | 'all'
+            ...(filters.status !== 'all' ? { status: filters.status } : {}),
+            ...(filters.role !== 'all' ? { role: filters.role } : {}),
+            page: pagination.page,
+            limit: pagination.pageSize,
+          },
+        });
+        
+        // Handle both paginated response and array response
+        if (Array.isArray(data)) {
+          setUsers(data);
+          setPagination({
+            page: 1,
+            pageSize: 20,
+            total: data.length,
+            totalPages: 1,
+            hasNext: false,
+            hasPrev: false,
+          });
+        } else {
+          setUsers(data.items || []);
+          setPagination({
+            page: data.page || 1,
+            pageSize: data.pageSize || 20,
+            total: data.total || 0,
+            totalPages: data.totalPages || 1,
+            hasNext: data.hasNext || false,
+            hasPrev: data.hasPrev || false,
+          });
+        }
       }
-      if (filters.status === 'active') {
-        params.isActive = true;
-      } else if (filters.status === 'inactive') {
-        params.isActive = false;
-      }
-
-      const data = await apiRequest<User[]>({
-        method: 'GET',
-        url: API_ENDPOINTS.USERS.BASE,
-        params,
-      });
-      setUsers(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to load users:', error);
-      alert(error.message || 'Lỗi tải danh sách users!');
+      showError((error as Error)?.message || 'Lỗi tải danh sách users!');
     } finally {
       setLoading(false);
     }
@@ -89,11 +162,11 @@ export default function UsersPage() {
       });
 
       setToggleDialog({ open: false, userId: '', userName: '', currentStatus: false });
-      alert(`✅ ${toggleDialog.currentStatus ? 'Vô hiệu hóa' : 'Kích hoạt'} user thành công!`);
+      showSuccess(`${toggleDialog.currentStatus ? 'Vô hiệu hóa' : 'Kích hoạt'} user thành công!`);
       loadUsers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to toggle user status:', error);
-      alert(error.message || 'Lỗi cập nhật trạng thái!');
+      showError((error as Error)?.message || 'Lỗi cập nhật trạng thái!');
     }
   };
 
@@ -153,9 +226,33 @@ export default function UsersPage() {
         }}
       />
 
-      {/* Filters */}
+      {/* Filters & Search */}
       <Card className="p-4">
         <div className="flex items-center gap-4">
+          {/* Search */}
+          <div className="flex-1">
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              Tìm kiếm:
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Tìm theo tên, email, số điện thoại..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-10"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Role Filter */}
           <div className="flex-1">
             <label className="text-sm font-medium text-gray-700 mb-2 block">
@@ -201,7 +298,7 @@ export default function UsersPage() {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-5 gap-4">
         <Card className="p-4">
           <div className="text-sm text-gray-600">Tổng users</div>
           <div className="text-2xl font-bold">{users.length}</div>
@@ -224,6 +321,14 @@ export default function UsersPage() {
             {users.filter((u) => u.isActive).length}
           </div>
         </Card>
+        <Card className="p-4">
+          <div className="text-sm text-gray-600">Tổng deal (CTV)</div>
+          <div className="text-2xl font-bold text-purple-600">
+            {users
+              .filter((u) => u.role === 'CTV')
+              .reduce((sum, u) => sum + (u.totalDeals || 0), 0)}
+          </div>
+        </Card>
       </div>
 
       {/* Users Table */}
@@ -240,13 +345,19 @@ export default function UsersPage() {
                       Họ tên
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Email / Phone
+                      Email
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Số điện thoại
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Vai trò
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Trạng thái
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Tổng deal (CTV)
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Ngày tạo
@@ -263,7 +374,10 @@ export default function UsersPage() {
                         <div className="font-medium text-gray-900">{user.fullName}</div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        {user.email || user.phone || '-'}
+                        {user.email || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {user.phone || '-'}
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={getRoleBadgeVariant(user.role)}>
@@ -282,6 +396,9 @@ export default function UsersPage() {
                             Vô hiệu hóa
                           </Badge>
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {user.role === 'CTV' ? user.totalDeals || 0 : '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {new Date(user.createdAt).toLocaleDateString('vi-VN')}
@@ -322,6 +439,44 @@ export default function UsersPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Pagination */}
+      {!searchQuery && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            Hiển thị {(pagination.page - 1) * pagination.pageSize + 1} - {Math.min(pagination.page * pagination.pageSize, pagination.total)} / {pagination.total.toLocaleString('vi-VN')} users
+            {pagination.totalPages > 1 && ` - Trang ${pagination.page} / ${pagination.totalPages}`}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!pagination.hasPrev || loading}
+              onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+            >
+              Trước
+            </Button>
+            <span className="text-sm text-gray-600 px-2">
+              {pagination.page} / {pagination.totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!pagination.hasNext || loading}
+              onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+            >
+              Sau
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Search results info */}
+      {searchQuery && users.length > 0 && (
+        <div className="text-sm text-gray-600">
+          Tìm thấy {users.length} kết quả cho "{searchQuery}"
+        </div>
       )}
     </div>
   );

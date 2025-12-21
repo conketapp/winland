@@ -3,12 +3,15 @@
  * Shows full booking information with payment proof
  */
 
-import React from 'react';
+import { useState } from 'react';
 import DetailModal from '../shared/DetailModal';
 import DetailRow from '../shared/DetailRow';
 import StatusBadge from '../shared/StatusBadge';
 import { Button } from '../ui/button';
+import { pdfApi } from '../../api/pdf.api';
+import { bookingsApi } from '../../api/bookings.api';
 import type { Booking } from '../../types/booking.types';
+import { formatCurrency, formatDate } from '../../lib/utils';
 
 interface BookingDetailModalProps {
   open: boolean;
@@ -25,17 +28,43 @@ export default function BookingDetailModal({
   onApprove,
   onReject,
 }: BookingDetailModalProps) {
+  const [downloading, setDownloading] = useState(false);
+  const [updatingProof, setUpdatingProof] = useState(false);
+  const [localProof, setLocalProof] = useState<string | File | null>(booking?.paymentProof || null);
+
   if (!booking) return null;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
+  const handleDownloadPdf = async () => {
+    if (!booking) return;
+    try {
+      setDownloading(true);
+      const res = await pdfApi.getBookingPdf(booking.id);
+      if (res.pdfUrl) {
+        window.open(res.pdfUrl, '_blank', 'noopener,noreferrer');
+      }
+    } catch (error) {
+       
+      console.error('Error downloading booking PDF', error);
+    } finally {
+      setDownloading(false);
+    }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleString('vi-VN');
+  const handleUpdatePaymentProof = async () => {
+    if (!booking) return;
+    try {
+      setUpdatingProof(true);
+      // Ở đây giả sử localProof đã là object/URL sau khi upload ở nơi khác
+      if (localProof) {
+        const res = await bookingsApi.updatePaymentProof(booking.id, localProof);
+        // Cập nhật lại local proof từ response
+        setLocalProof(res.booking.paymentProof || null);
+      }
+    } catch (error) {
+      console.error('Error updating payment proof', error);
+    } finally {
+      setUpdatingProof(false);
+    }
   };
 
   return (
@@ -45,21 +74,26 @@ export default function BookingDetailModal({
       title={`Chi tiết Booking - ${booking.code}`}
       description="Thông tin đầy đủ phiếu booking"
       footer={
-        booking.status === 'PENDING_APPROVAL' && onApprove && onReject ? (
-          <>
-            <Button variant="outline" onClick={onClose}>
-              Đóng
-            </Button>
-            <Button variant="destructive" onClick={() => onReject(booking)}>
-              Từ chối
-            </Button>
-            <Button onClick={() => onApprove(booking)}>
-              Duyệt ngay
-            </Button>
-          </>
-        ) : (
-          <Button onClick={onClose}>Đóng</Button>
-        )
+        <div className="flex flex-wrap gap-2 justify-end">
+          <Button variant="outline" onClick={handleDownloadPdf} disabled={downloading}>
+            {downloading ? 'Đang tạo PDF...' : '📄 Tải PDF'}
+          </Button>
+          {booking.status === 'PENDING_APPROVAL' && onApprove && onReject ? (
+            <>
+              <Button variant="outline" onClick={onClose}>
+                Đóng
+              </Button>
+              <Button variant="destructive" onClick={() => onReject(booking)}>
+                Từ chối
+              </Button>
+              <Button onClick={() => onApprove(booking)}>
+                Duyệt ngay
+              </Button>
+            </>
+          ) : (
+            <Button onClick={onClose}>Đóng</Button>
+          )}
+        </div>
       }
     >
       {/* Basic Info */}
@@ -110,13 +144,23 @@ export default function BookingDetailModal({
         </div>
 
         {/* Payment Proof */}
-        {booking.paymentProof && (
+        {localProof && (
           <div>
             <h3 className="font-semibold mb-3">Chứng từ thanh toán</h3>
-            <div className="bg-gray-50 rounded-lg p-4 border">
+            <div className="bg-gray-50 rounded-lg p-4 border space-y-3">
               <pre className="text-xs overflow-x-auto">
-                {JSON.stringify(booking.paymentProof, null, 2)}
+                {JSON.stringify(localProof, null, 2)}
               </pre>
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleUpdatePaymentProof}
+                  disabled={updatingProof}
+                >
+                  {updatingProof ? 'Đang lưu...' : 'Cập nhật chứng từ'}
+                </Button>
+              </div>
             </div>
           </div>
         )}

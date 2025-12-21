@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Request } from '@nestjs/common';
 import { UnitsService } from './units.service';
 import { CreateUnitDto } from './dto/create-unit.dto';
 import { BulkImportUnitsDto } from './dto/bulk-import-units.dto';
 import { QueryUnitDto } from './dto/query-unit.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('units')
 export class UnitsController {
@@ -14,9 +16,10 @@ export class UnitsController {
    * POST /api/units/bulk-import
    */
   @Post('bulk-import')
-  @UseGuards(JwtAuthGuard)
-  bulkImport(@Body() dto: BulkImportUnitsDto) {
-    return this.unitsService.bulkImport(dto);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  bulkImport(@Body() dto: BulkImportUnitsDto, @Request() req) {
+    return this.unitsService.bulkImport(dto, req.user?.userId);
   }
 
   /**
@@ -24,7 +27,8 @@ export class UnitsController {
    * POST /api/units
    */
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
   create(@Body() dto: CreateUnitDto) {
     return this.unitsService.create(dto);
   }
@@ -32,6 +36,7 @@ export class UnitsController {
   /**
    * Get all units with filters
    * GET /api/units
+   * Public or authenticated users can view (CTV and Admin)
    */
   @Get()
   findAll(@Query() query: QueryUnitDto) {
@@ -41,6 +46,7 @@ export class UnitsController {
   /**
    * Get unit by ID
    * GET /api/units/:id
+   * Public or authenticated users can view
    */
   @Get(':id')
   findOne(@Param('id') id: string) {
@@ -52,7 +58,8 @@ export class UnitsController {
    * PATCH /api/units/:id
    */
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
   update(@Param('id') id: string, @Body() dto: Partial<CreateUnitDto>) {
     return this.unitsService.update(id, dto);
   }
@@ -62,7 +69,8 @@ export class UnitsController {
    * DELETE /api/units/:id
    */
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPER_ADMIN')
   remove(@Param('id') id: string) {
     return this.unitsService.remove(id);
   }

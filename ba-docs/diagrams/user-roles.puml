@@ -1,0 +1,40 @@
+@startuml
+!theme plain
+title Phân Quyền Người Dùng
+
+skinparam rectangle {
+  BackgroundColor #E8F4F8
+  BorderColor #2E86AB
+}
+
+package "Super Admin\n(Quản trị tối cao)" {
+  rectangle "Quản lý toàn bộ hệ thống" as SA1
+  rectangle "Cấu hình thông số" as SA2
+  rectangle "Quản lý tất cả người dùng" as SA3
+}
+
+package "Admin\n(Quản lý)" {
+  rectangle "Quản lý dự án & căn hộ" as A1
+  rectangle "Duyệt phiếu đặt chỗ, đặt cọc" as A2
+  rectangle "Xác nhận giao dịch thanh toán" as A3
+  rectangle "Duyệt yêu cầu rút hoa hồng" as A4
+  rectangle "Xem báo cáo" as A5
+}
+
+package "CTV\n(Cộng tác viên)" {
+  rectangle "Xem căn hộ còn trống" as C1
+  rectangle "Tạo phiếu: Giữ chỗ, Đặt chỗ, Đặt cọc" as C2
+  rectangle "Tải lên chứng từ thanh toán" as C3
+  rectangle "Xem hoa hồng của mình" as C4
+  rectangle "Yêu cầu rút hoa hồng" as C5
+}
+
+SA1 ..> A1 : "Quản lý"
+A1 ..> C1 : "Quản lý"
+
+note right of C5
+  CTV chỉ xem và thao tác
+  trên thông tin của mình
+end note
+
+@enduml

@@ -64,9 +64,10 @@ async function main() {
   }
   console.log('✅ Created 3 Unit Types');
 
-  // 3. Project (OPEN status)
-  console.log('\n🏗️  Creating Project...');
-  const project = await prisma.project.upsert({
+  // 3. Projects (đa trạng thái để dễ demo)
+  console.log('\n🏗️  Creating Projects...');
+
+  const openProject = await prisma.project.upsert({
     where: { code: 'VHS-2025' },
     update: {},
     create: {
@@ -88,22 +89,69 @@ async function main() {
       createdBy: admin.id,
     },
   });
-  console.log('✅ Project:', project.name);
 
-  // 4. Buildings & Floors - FIXED: Using upsert instead of create
+  const upcomingProject = await prisma.project.upsert({
+    where: { code: 'SUNRISE-2026' },
+    update: {},
+    create: {
+      name: 'Sunrise Riverside',
+      code: 'SUNRISE-2026',
+      status: 'UPCOMING',
+      developer: 'Novaland',
+      location: 'Quận 7, TP.HCM',
+      address: 'Nguyễn Văn Linh',
+      district: 'Quận 7',
+      city: 'TP.HCM',
+      totalBuildings: 3,
+      totalUnits: 450,
+      priceFrom: 2500000000,
+      priceTo: 6000000000,
+      description: 'Khu căn hộ ven sông, chuẩn resort',
+      commissionRate: 2.0,
+      openDate: new Date('2026-03-01'),
+      createdBy: admin.id,
+    },
+  });
+
+  const closedProject = await prisma.project.upsert({
+    where: { code: 'LAKEVIEW-2024' },
+    update: {},
+    create: {
+      name: 'Lakeview Residence',
+      code: 'LAKEVIEW-2024',
+      status: 'CLOSED',
+      developer: 'Nam Long',
+      location: 'Thủ Đức, TP.HCM',
+      address: 'Phạm Văn Đồng',
+      district: 'Thủ Đức',
+      city: 'TP.HCM',
+      totalBuildings: 2,
+      totalUnits: 220,
+      priceFrom: 1800000000,
+      priceTo: 4000000000,
+      description: 'Dự án đã bán hết, view hồ trung tâm',
+      commissionRate: 1.5,
+      openDate: new Date('2024-05-01'),
+      createdBy: admin.id,
+    },
+  });
+
+  console.log('✅ Projects:', openProject.name, '/', upcomingProject.name, '/', closedProject.name);
+
+  // 4. Buildings & Floors cho dự án đang OPEN - FIXED: Using upsert instead of create
   console.log('\n🏢 Creating Buildings...');
   const buildings = [];
   for (let i = 1; i <= 2; i++) {
     const building = await prisma.building.upsert({
       where: {
         projectId_code: {
-          projectId: project.id,
+          projectId: openProject.id,
           code: `A${i}`,
         },
       },
       update: {},
       create: {
-        projectId: project.id,
+        projectId: openProject.id,
         code: `A${i}`,
         name: `Tòa A${i}`,
         floors: 15,
@@ -128,7 +176,7 @@ async function main() {
       });
     }
   }
-  console.log('✅ Created 2 Buildings');
+  console.log('✅ Created 2 Buildings for', openProject.code);
 
   // 5. Units - FIXED: Using upsert for units
   console.log('\n🏘️  Creating Units...');
@@ -144,12 +192,11 @@ async function main() {
         const code = `${building.code}-${floor.number}${u.toString().padStart(2, '0')}`;
         await prisma.unit.upsert({
           where: {
-              projectId: project.id,
               code: code,
           },
           update: {},
           create: {
-            projectId: project.id,
+            projectId: openProject.id,
             buildingId: building.id,
             floorId: floor.id,
             code,

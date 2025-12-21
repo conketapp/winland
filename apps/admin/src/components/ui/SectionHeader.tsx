@@ -3,7 +3,6 @@
  * For sections within pages
  */
 
-import React from 'react';
 
 interface SectionHeaderProps {
   title: string;

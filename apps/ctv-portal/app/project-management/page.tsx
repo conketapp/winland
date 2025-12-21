@@ -35,6 +35,7 @@ import DepositDetailModal from "@/components/DepositDetailModal";
 import { formatCurrency } from "@/lib/utils";
 import { toastNotification } from '@/app/utils/toastNotification';
 import { ToastContainer } from 'react-toastify';
+import type { Unit as ApiUnit, Booking, Deposit, Reservation, Project as ApiProject, Building as ApiBuilding } from '@/lib/types/api.types';
 
 /* ----------------------------- TYPES ----------------------------- */
 type UnitStatus = "available" | "reserved" | "sold" | "booking" | "deposit";
@@ -46,8 +47,8 @@ type Unit = {
     code: string;
     area: number;
     price: number;
-    bedrooms: number | null;
-    bathrooms: number | null;
+    bedrooms: number | null | undefined;
+    bathrooms: number | null | undefined;
     status: UnitStatus;
     commissionRate: number | null;
     floor: number;
@@ -57,7 +58,6 @@ type Unit = {
     description: string | null;
     unitNumber: string;
     buildingName?: string;
-    houseCertificate?: string | null;
 };
 
 type Building = {
@@ -154,17 +154,16 @@ export default function DashboardScreen(): JSX.Element {
     const deviceInfo = useDeviceDetect();
     const { isDark, toggleTheme } = useTheme();
     const [searchTerm, setSearchTerm] = useState("");
-    const [selectedUnit, setSelectedUnit] = useState<any>(null);
+    const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
     const [showDepositModal, setShowDepositModal] = useState(false);
     const [showReservedModal, setShowReservedModal] = useState(false);
     const [showBookingModal, setShowBookingModal] = useState(false);
-    const [selectedBookingDetail, setSelectedBookingDetail] = useState<any>(null);
-    const [selectedReservationDetail, setSelectedReservationDetail] = useState<any>(null);
-    const [selectedDepositDetail, setSelectedDepositDetail] = useState<any>(null);
+    const [selectedBookingDetail, setSelectedBookingDetail] = useState<Booking | null>(null);
+    const [selectedReservationDetail, setSelectedReservationDetail] = useState<Reservation | null>(null);
+    const [selectedDepositDetail, setSelectedDepositDetail] = useState<Deposit | null>(null);
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [autoRefresh, setAutoRefresh] = useState(true);
-    const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
     const [lastUpdateTime, setLastUpdateTime] = useState<string>("");
     const [selectedProjectId, setSelectedProjectId] = useState<string>("");
     const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
@@ -190,17 +189,21 @@ export default function DashboardScreen(): JSX.Element {
                 const data = await response.json();
 
                 // Transform database data to match component structure
-                const transformedProjects: Project[] = data.map((project: any) => ({
+                // API returns Project with buildings and units nested
+                type ApiProjectWithNested = ApiProject & {
+                    buildings?: (ApiBuilding & { units?: (ApiUnit & { bookings?: Booking[]; reservations?: Reservation[] })[] })[];
+                };
+                const transformedProjects = (data as ApiProjectWithNested[]).map((project) => ({
                     id: project.id,
                     name: project.name,
                     code: project.code,
-                    buildings: project.buildings.map((building: any) => ({
+                    buildings: (project.buildings || []).map((building: ApiBuilding & { units?: ApiUnit[] }) => ({
                         id: building.id,
                         name: building.name,
                         code: building.code,
-                        units: building.units.map((unit: any) => {
-                            const hasActiveBooking = unit.bookings && unit.bookings.length > 0;
-                            const hasActiveReservation = unit.reservations && unit.reservations.length > 0;
+                        units: (building.units || []).map((unit: ApiUnit & { bookings?: Booking[]; reservations?: Reservation[] }) => {
+                            const hasActiveBooking = !!(unit.bookings && unit.bookings.length > 0);
+                            const hasActiveReservation = !!(unit.reservations && unit.reservations.length > 0);
                             const bookingStatus = unit.bookings && unit.bookings.length > 0 ? unit.bookings[0].status : undefined;
 
                             return {
@@ -220,16 +223,14 @@ export default function DashboardScreen(): JSX.Element {
                                 images: unit.images,
                                 description: unit.description,
                                 unitNumber: unit.unitNumber,
-                                buildingName: building.name,
-                                houseCertificate: unit.houseCertificate
+                                buildingName: building.name
                             };
                         })
                     }))
-                }));
+                })) as Project[];
 
                 setProjects(transformedProjects);
                 const now = new Date();
-                setLastUpdate(now);
                 setLastUpdateTime(now.toLocaleTimeString('vi-VN'));
             } else {
                 if (!silent) {
@@ -323,7 +324,7 @@ export default function DashboardScreen(): JSX.Element {
                 if (response.ok) {
                     const bookings = await response.json();
                     // Find the booking for this unit
-                    const booking = bookings.find((b: any) => b.unitId === unit.id);
+                    const booking = (bookings as Booking[]).find((b) => b.unitId === unit.id);
                     if (booking) {
                         setSelectedBookingDetail(booking);
                     } else {
@@ -347,7 +348,7 @@ export default function DashboardScreen(): JSX.Element {
                 if (response.ok) {
                     const deposits = await response.json();
                     // Find the deposit for this unit
-                    const deposit = deposits.find((d: any) => d.unitId === unit.id);
+                    const deposit = (deposits as Deposit[]).find((d) => d.unitId === unit.id);
                     if (deposit) {
                         setSelectedDepositDetail(deposit);
                     } else {
@@ -371,7 +372,7 @@ export default function DashboardScreen(): JSX.Element {
                 if (response.ok) {
                     const reservations = await response.json();
                     // Find the reservation for this unit
-                    const reservation = reservations.find((r: any) => r.unitId === unit.id && ['ACTIVE', 'YOUR_TURN', 'EXPIRED'].includes(r.status));
+                    const reservation = (reservations as Reservation[]).find((r) => r.unitId === unit.id && ['ACTIVE', 'YOUR_TURN', 'EXPIRED'].includes(r.status));
                     if (reservation) {
                         setSelectedReservationDetail(reservation);
                     } else {
@@ -539,7 +540,7 @@ export default function DashboardScreen(): JSX.Element {
                                                 }`}
                                         >
                                             <option value="all">Tất cả tòa nhà</option>
-                                            {filteredProjects[0]?.buildings.map((building: any) => (
+                                            {filteredProjects[0]?.buildings.map((building) => (
                                                 <option key={building.id} value={building.id}>
                                                     {building.name}
                                                 </option>
@@ -579,7 +580,7 @@ export default function DashboardScreen(): JSX.Element {
                                             }`}
                                     >
                                         <option value="all">Tất cả tòa nhà</option>
-                                        {filteredProjects[0]?.buildings.map((building: any) => (
+                                        {filteredProjects[0]?.buildings.map((building) => (
                                             <option key={building.id} value={building.id}>
                                                 {building.name}
                                             </option>
@@ -703,7 +704,7 @@ export default function DashboardScreen(): JSX.Element {
 
                                         <AnimatePresence>
                                             {project.buildings
-                                                .filter((building: any) => selectedBuildingId === 'all' || building.id === selectedBuildingId)
+                                                .filter((building) => selectedBuildingId === 'all' || building.id === selectedBuildingId)
                                                 .map((building) => {
                                                     const totalUnits = building.units.length;
                                                     const totalPages = Math.ceil(totalUnits / unitsPerPage);
@@ -834,7 +835,7 @@ export default function DashboardScreen(): JSX.Element {
             />
             {selectedUnit && !showDepositModal && !showReservedModal && !showBookingModal && (
                 <UnitModal
-                    unit={selectedUnit}
+                    unit={selectedUnit as unknown as ApiUnit}
                     onClose={() => setSelectedUnit(null)}
                     onDeposit={() => {
                         setShowDepositModal(true);
@@ -849,7 +850,7 @@ export default function DashboardScreen(): JSX.Element {
             )}
             {selectedUnit && showDepositModal && (
                 <DepositModal
-                    unit={selectedUnit}
+                    unit={selectedUnit as unknown as ApiUnit}
                     onClose={() => {
                         setSelectedUnit(null);
                         setShowDepositModal(false);
@@ -862,7 +863,7 @@ export default function DashboardScreen(): JSX.Element {
             )}
             {selectedUnit && showReservedModal && (
                 <ReservedModal
-                    unit={selectedUnit}
+                    unit={selectedUnit as unknown as ApiUnit}
                     onClose={() => {
                         setSelectedUnit(null);
                         setShowReservedModal(false);
@@ -875,7 +876,7 @@ export default function DashboardScreen(): JSX.Element {
             )}
             {selectedUnit && showBookingModal && (
                 <BookingModal
-                    unit={selectedUnit}
+                    unit={selectedUnit as unknown as ApiUnit}
                     onClose={() => {
                         setSelectedUnit(null);
                         setShowBookingModal(false);

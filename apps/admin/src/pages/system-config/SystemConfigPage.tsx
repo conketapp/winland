@@ -3,13 +3,13 @@
  * Manage system-wide configurations
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '../../components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import LoadingState from '../../components/ui/LoadingState';
-import FormField from '../../components/shared/FormField';
+import { useToast } from '../../components/ui/toast';
 import { Save } from 'lucide-react';
 import { systemConfigApi, type SystemConfig } from '../../api/system-config.api';
 
@@ -18,23 +18,25 @@ export default function SystemConfigPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editedConfigs, setEditedConfigs] = useState<Record<string, string>>({});
+  const { error: toastError, success: toastSuccess } = useToast();
 
-  useEffect(() => {
-    loadConfigs();
-  }, []);
-
-  const loadConfigs = async () => {
+  const loadConfigs = useCallback(async () => {
     try {
       setLoading(true);
       const data = await systemConfigApi.getAll();
       setConfigs(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to load configs:', error);
-      alert(error.message || 'Lỗi tải cấu hình!');
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi tải cấu hình!';
+      toastError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [toastError]);
+
+  useEffect(() => {
+    loadConfigs();
+  }, [loadConfigs]);
 
   const handleChange = (key: string, value: string) => {
     setEditedConfigs((prev) => ({ ...prev, [key]: value }));
@@ -58,11 +60,11 @@ export default function SystemConfigPage() {
         delete updated[key];
         return updated;
       });
-      
-      alert('✅ Cập nhật thành công!');
-    } catch (error: any) {
+      toastSuccess('✅ Cập nhật cấu hình thành công!');
+    } catch (error: unknown) {
       console.error('Failed to save config:', error);
-      alert(error.message || 'Lỗi cập nhật cấu hình!');
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi cập nhật cấu hình!';
+      toastError(errorMessage);
     } finally {
       setSaving(false);
     }

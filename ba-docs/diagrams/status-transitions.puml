@@ -1,0 +1,80 @@
+@startuml
+!theme plain
+title Quy Trình Chuyển Đổi Tình Trạng
+
+skinparam state {
+  BackgroundColor #E8F4F8
+  BorderColor #2E86AB
+  ArrowColor #2E86AB
+}
+
+[*] --> AVAILABLE : "Căn Hộ"
+
+AVAILABLE --> RESERVED_BOOKING
+RESERVED_BOOKING --> DEPOSITED
+DEPOSITED --> SOLD
+SOLD --> [*]
+
+note right of AVAILABLE
+  Căn Hộ: Còn trống
+end note
+
+note right of SOLD
+  Căn Hộ: Đã bán
+end note
+
+state "Giữ Chỗ" as Reservation {
+  [*] --> ACTIVE
+  ACTIVE --> YOUR_TURN
+  YOUR_TURN --> COMPLETED : "Đặt cọc"
+  YOUR_TURN --> MISSED : "Không đặt cọc"
+  ACTIVE --> EXPIRED : "Hết hạn"
+  ACTIVE --> CANCELLED : "Hủy"
+  YOUR_TURN --> CANCELLED : "Hủy"
+  COMPLETED --> [*]
+  MISSED --> [*]
+  EXPIRED --> [*]
+  CANCELLED --> [*]
+}
+
+state "Đặt Chỗ" as Booking {
+  [*] --> PENDING_APPROVAL
+  PENDING_APPROVAL --> CONFIRMED : "Admin duyệt"
+  CONFIRMED --> [*] : "Nâng cấp lên Đặt cọc"
+  PENDING_APPROVAL --> CANCELLED : "Hủy/Từ chối"
+  CONFIRMED --> CANCELLED : "Hủy"
+  PENDING_APPROVAL --> EXPIRED : "Hết hạn"
+  CONFIRMED --> EXPIRED : "Hết hạn"
+  CANCELLED --> [*]
+  EXPIRED --> [*]
+}
+
+state "Đặt Cọc" as Deposit {
+  [*] --> PENDING_APPROVAL2
+  PENDING_APPROVAL2 --> CONFIRMED2 : "Admin duyệt"
+  CONFIRMED2 --> COMPLETED : "Đủ thanh toán"
+  PENDING_APPROVAL2 --> CANCELLED2 : "Hủy/Từ chối"
+  CONFIRMED2 --> CANCELLED2 : "Hủy"
+  CONFIRMED2 --> OVERDUE : "Quá hạn"
+  COMPLETED --> [*]
+  CANCELLED2 --> [*]
+  OVERDUE --> [*]
+}
+
+state "Hoa Hồng" as Commission {
+  [*] --> PENDING3
+  PENDING3 --> APPROVED : "Yêu cầu được duyệt"
+  APPROVED --> PAID : "Đã thanh toán"
+  PAID --> [*]
+}
+
+state "Yêu Cầu Rút" as PaymentRequest {
+  [*] --> PENDING4
+  PENDING4 --> APPROVED2 : "Admin duyệt"
+  APPROVED2 --> PAID2 : "Đã thanh toán"
+  PENDING4 --> REJECTED : "Từ chối"
+  PAID2 --> [*]
+  REJECTED --> [*]
+}
+
+@enduml

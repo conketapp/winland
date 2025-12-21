@@ -1,0 +1,45 @@
+@startuml
+!theme plain
+title Quy Trình Bán Căn Hộ - Từ Giữ Chỗ Đến Bán
+
+skinparam activity {
+  BackgroundColor #E8F4F8
+  BorderColor #2E86AB
+  FontSize 12
+}
+
+start
+
+:CTV Giữ chỗ\n(Dự án Sắp mở bán);
+note right: Nhiều CTV có thể\ncùng giữ 1 căn
+
+:Dự án chuyển sang\nĐang mở bán;
+
+:CTV 1 được thông báo\n(Có 48h để đặt cọc);
+
+if (CTV đặt cọc?) then (Có)
+  :Tạo phiếu Đặt chỗ\n(10 triệu);
+  :Admin duyệt;
+  :Tạo phiếu Đặt cọc\n(5%+ giá căn);
+  :Admin duyệt;
+  
+  :Hệ thống tự động tạo\nLịch trả góp 4 đợt;
+  
+  repeat
+    :CTV ghi nhận thanh toán;
+    :Admin xác nhận;
+    :Cập nhật lịch trả góp;
+  repeat while (Còn đợt chưa thanh toán?) is (Có)
+  
+  :Căn hộ = Đã bán;
+  :Tự động tính hoa hồng;
+  :CTV yêu cầu rút tiền;
+  :Admin duyệt và thanh toán;
+  stop
+else (Không)
+  :CTV 2 được thông báo;
+  :Lặp lại quy trình;
+  stop
+endif
+
+@enduml

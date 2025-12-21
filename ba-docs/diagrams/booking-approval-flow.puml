@@ -1,0 +1,42 @@
+@startuml
+!theme plain
+title Quy Trình Duyệt Phiếu Đặt Chỗ
+
+skinparam activity {
+  BackgroundColor #E8F4F8
+  BorderColor #2E86AB
+}
+
+start
+
+:CTV tạo phiếu Đặt chỗ\n(10 triệu VNĐ);
+:Upload chứng từ thanh toán;
+
+:Phiếu Đặt chỗ\nTình trạng = Chờ duyệt;
+
+:Admin nhận thông báo;
+
+:Admin xem chi tiết;
+
+if (Kiểm tra chứng từ) then (Hợp lệ)
+  :Admin Duyệt;
+  
+  :Phiếu Đặt chỗ = Đã duyệt;
+  :Căn hộ = Đã đặt chỗ;
+  :Thông báo cho CTV;
+  
+  :CTV có thể:\n- Nâng cấp lên Đặt cọc\n- Hoặc giữ phiếu (hết hạn sau 48h);
+  
+  stop
+else (Không hợp lệ)
+  :Admin Từ chối;
+  
+  :Nhập lý do từ chối;
+  :Phiếu Đặt chỗ = Đã hủy;
+  :Căn hộ = Còn trống;
+  :Thông báo cho CTV (có lý do);
+  
+  stop
+endif
+
+@enduml

@@ -5,15 +5,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useFilterRouting } from '../../hooks/useFilterRouting';
 import { projectsApi } from '../../api/projects.api';
 import type { Project } from '../../types/project.types';
 import LoadingState from '../../components/ui/LoadingState';
+import { ErrorState } from '../../components/ui/ErrorState';
 import EmptyState from '../../components/ui/EmptyState';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { Input } from '../../components/ui/input';
 import {
   Select,
   SelectContent,
@@ -22,41 +25,110 @@ import {
   SelectValue,
 } from '../../components/ui/select';
 import { Plus } from 'lucide-react';
+import { useToast } from '../../components/ui/toast';
+import { BUSINESS_MESSAGES } from '../../constants/businessMessages';
 
 const ProjectsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { success, error: toastError } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [filters, setFilters] = useState({
+    status: 'all',
+    search: '',
+  });
+  const statusFilter = filters.status;
+  const search = filters.search;
   
-  // Confirm Dialog
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  
+  // Confirm Dialog - change status
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     projectId: string;
     newStatus: 'UPCOMING' | 'OPEN' | 'CLOSED';
   }>({ open: false, projectId: '', newStatus: 'OPEN' });
 
+  // Confirm Dialog - delete project
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    projectId: string;
+    projectName: string;
+  }>({ open: false, projectId: '', projectName: '' });
+
+  // Loading states for individual actions
+  const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
+
+  // Sync filters with URL
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useFilterRouting(filters, setFilters as any, {
+    transformToUrl: (currentFilters) => {
+      const result: Record<string, string> = {};
+      if (currentFilters.status && currentFilters.status !== 'all') {
+        result.status = String(currentFilters.status);
+      }
+      if (currentFilters.search && currentFilters.search.trim()) {
+        result.search = String(currentFilters.search);
+      }
+      return result;
+    },
+    transformFromUrl: (params) => {
+      return {
+        status: params.get('status') || 'all',
+        search: params.get('search') || '',
+      };
+    },
+  });
+
   useEffect(() => {
     loadProjects();
-  }, [statusFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, search, page]);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    if (page !== 1) {
+      setPage(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, search]);
 
   const loadProjects = async () => {
     try {
       setIsLoading(true);
-      const params: any = {};
+      setError(null);
+      const params: Record<string, string | number> = {
+        page,
+        pageSize,
+      };
       if (statusFilter && statusFilter !== 'all') {
         params.status = statusFilter;
       }
-      const data = await projectsApi.getAll(params);
-      setProjects(data);
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải danh sách dự án');
+      if (filters.search && filters.search.trim().length > 0) {
+        params.search = filters.search.trim();
+      }
+      const response = await projectsApi.getAll(params);
+      setProjects(response.items);
+      setTotal(response.total);
+      setTotalPages(response.totalPages);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Không thể tải danh sách dự án';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages) return;
+    setPage(newPage);
   };
 
   const handleStatusChange = async (projectId: string, newStatus: 'UPCOMING' | 'OPEN' | 'CLOSED') => {
@@ -64,12 +136,89 @@ const ProjectsPage: React.FC = () => {
   };
 
   const confirmStatusChange = async () => {
+    const { projectId, newStatus } = confirmDialog;
+    const actionKey = `status-${projectId}`;
+    
+    // Find project to save old state for rollback
+    const project = projects.find((p) => p.id === projectId);
+    const oldStatus = project?.status;
+
+    if (!project) {
+      toastError('Không tìm thấy dự án');
+      return;
+    }
+
     try {
-      await projectsApi.changeStatus(confirmDialog.projectId, confirmDialog.newStatus);
+      // Optimistic update - update UI immediately
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === projectId ? { ...p, status: newStatus } : p
+        )
+      );
+      setConfirmDialog({ open: false, projectId: '', newStatus: 'OPEN' });
+      setLoadingActions((prev) => ({ ...prev, [actionKey]: true }));
+
+      // Call API
+      await projectsApi.changeStatus(projectId, newStatus);
+      
+      // Success - reload to get latest data (including queue processing status)
       await loadProjects();
-      alert('Cập nhật trạng thái thành công!');
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi cập nhật trạng thái');
+      success('Cập nhật trạng thái dự án thành công!');
+    } catch (err: unknown) {
+      // Rollback on error
+      if (oldStatus) {
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.id === projectId ? { ...p, status: oldStatus } : p
+          )
+        );
+      }
+      const errorMessage = err instanceof Error ? err.message : 'Lỗi khi cập nhật trạng thái';
+      toastError(errorMessage);
+    } finally {
+      setLoadingActions((prev) => ({ ...prev, [actionKey]: false }));
+    }
+  };
+
+  const handleDeleteClick = (project: Project) => {
+    setDeleteDialog({
+      open: true,
+      projectId: project.id,
+      projectName: project.name,
+    });
+  };
+
+  const confirmDelete = async () => {
+    const { projectId } = deleteDialog;
+    const actionKey = `delete-${projectId}`;
+    
+    // Find project to save for rollback
+    const project = projects.find((p) => p.id === projectId);
+
+    try {
+      // Optimistic update - remove from UI immediately
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      setDeleteDialog((prev) => ({ ...prev, open: false }));
+      setLoadingActions((prev) => ({ ...prev, [actionKey]: true }));
+
+      // Call API
+      await projectsApi.delete(projectId);
+      
+      // Success - reload to sync with server
+      await loadProjects();
+      success('Xóa dự án thành công!');
+    } catch (err: unknown) {
+      // Rollback on error - restore project
+      if (project) {
+        setProjects((prev) => [...prev, project].sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ));
+      }
+      // Backend trả message business (vd: còn căn đang giữ/cọc/bán), hiển thị lại cho admin
+      const errorMessage = err instanceof Error ? err.message : 'Không thể xóa dự án';
+      toastError(errorMessage);
+    } finally {
+      setLoadingActions((prev) => ({ ...prev, [actionKey]: false }));
     }
   };
 
@@ -82,16 +231,51 @@ const ProjectsPage: React.FC = () => {
     return variants[status as keyof typeof variants] || 'outline' as const;
   };
 
-  if (isLoading) {
+  const getStatusLabel = (status: string): string => {
+    switch (status) {
+      case 'UPCOMING':
+        return 'Sắp mở bán';
+      case 'OPEN':
+        return 'Đang mở bán';
+      case 'CLOSED':
+        return 'Đã đóng';
+      default:
+        return status;
+    }
+  };
+
+  const getTotalUnitsDisplay = (project: Project & { _count?: { units?: number } }): number => {
+    // Ưu tiên _count.units (Prisma include) rồi tới totalUnits field, cuối cùng fallback 0
+    if (project._count?.units != null) {
+      return project._count.units;
+    }
+    if (project.totalUnits != null) {
+      return project.totalUnits;
+    }
+    return 0;
+  };
+
+  if (isLoading && !error) {
     return <LoadingState message="Đang tải danh sách dự án..." />;
   }
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
-          {error}
-        </div>
+      <div className="p-6 space-y-4">
+        <PageHeader
+          title="Quản lý Dự án"
+          description="Quản lý các dự án bất động sản"
+          action={{
+            label: 'Tạo Dự Án',
+            onClick: () => navigate('/projects/create'),
+            icon: <Plus className="w-5 h-5" />
+          }}
+        />
+        <ErrorState
+          title="Lỗi tải danh sách dự án"
+          description={error}
+          onRetry={loadProjects}
+        />
       </div>
     );
   }
@@ -105,12 +289,29 @@ const ProjectsPage: React.FC = () => {
         title="Xác nhận thay đổi trạng thái"
         description={
           confirmDialog.newStatus === 'OPEN'
-            ? '⚠️ CRITICAL: Hệ thống sẽ tự động xử lý queue giữ chỗ và thông báo cho CTV!'
+            ? BUSINESS_MESSAGES.PROJECTS.OPEN_CRITICAL
             : 'Bạn có chắc muốn thay đổi trạng thái dự án?'
         }
         onConfirm={confirmStatusChange}
         confirmText="Xác nhận"
         variant={confirmDialog.newStatus === 'OPEN' ? 'default' : 'default'}
+      />
+
+      {/* Delete Project Dialog */}
+      <ConfirmDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog((prev) => ({ ...prev, open }))}
+        title="Xóa dự án"
+        description={
+          deleteDialog.projectName
+            ? `Bạn có chắc muốn xóa dự án "${deleteDialog.projectName}"? 
+
+Lưu ý: Chỉ có thể xóa dự án khi tất cả căn thuộc dự án đang ở trạng thái Còn trống.`
+            : 'Bạn có chắc muốn xóa dự án này?'
+        }
+        onConfirm={confirmDelete}
+        confirmText="Xóa dự án"
+        variant="destructive"
       />
 
       <PageHeader
@@ -125,19 +326,37 @@ const ProjectsPage: React.FC = () => {
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="flex items-center gap-4">
-          <label className="text-sm font-medium text-gray-700">Trạng thái:</label>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Tất cả" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
-              <SelectItem value="UPCOMING">Sắp mở bán</SelectItem>
-              <SelectItem value="OPEN">Đang mở bán</SelectItem>
-              <SelectItem value="CLOSED">Đã đóng</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Trạng thái:</label>
+            <Select 
+              value={statusFilter} 
+              onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Tất cả" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="UPCOMING">Sắp mở bán</SelectItem>
+                <SelectItem value="OPEN">Đang mở bán</SelectItem>
+                <SelectItem value="CLOSED">Đã đóng</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <Input
+              placeholder="Tìm theo tên hoặc mã dự án..."
+              value={search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setPage(1); // Reset to first page when searching
+                  loadProjects();
+                }
+              }}
+            />
+          </div>
         </div>
       </Card>
 
@@ -158,7 +377,7 @@ const ProjectsPage: React.FC = () => {
                   <p className="text-sm text-gray-500">{project.code}</p>
                 </div>
                 <Badge variant={getStatusVariant(project.status)}>
-                  {project.status}
+                  {getStatusLabel(project.status)}
                 </Badge>
               </div>
 
@@ -175,7 +394,7 @@ const ProjectsPage: React.FC = () => {
                   <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
-                  {project.totalUnits || 0} căn
+                  {getTotalUnitsDisplay(project)} căn
                 </div>
                 <div className="flex items-center text-gray-700">
                   <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -199,10 +418,28 @@ const ProjectsPage: React.FC = () => {
                   variant="secondary"
                   className="flex-1"
                   size="sm"
-                  onClick={() => navigate(`/projects/${project.id}/units`)}
+                  onClick={() => navigate(`/units?projectId=${project.id}`)}
                 >
                   Căn hộ
                 </Button>
+                {project.status !== 'OPEN' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    onClick={() => handleDeleteClick(project)}
+                    disabled={loadingActions[`delete-${project.id}`] || isLoading}
+                  >
+                    {loadingActions[`delete-${project.id}`] ? (
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      'Xóa'
+                    )}
+                  </Button>
+                )}
               </div>
 
               {/* Status Actions */}
@@ -210,12 +447,54 @@ const ProjectsPage: React.FC = () => {
                 <Button
                   className="w-full mt-3"
                   onClick={() => handleStatusChange(project.id, 'OPEN')}
+                  disabled={loadingActions[`status-${project.id}`] || isLoading}
                 >
-                  🔥 Mở Bán (Trigger Queue)
+                  {loadingActions[`status-${project.id}`] ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    '🔥 Mở bán & kích hoạt lượt giữ chỗ'
+                  )}
                 </Button>
               )}
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            Hiển thị {projects.length} / {total.toLocaleString('vi-VN')} dự án
+            {totalPages > 1 && ` - Trang ${page} / ${totalPages}`}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1 || isLoading}
+              onClick={() => handlePageChange(page - 1)}
+            >
+              Trước
+            </Button>
+            <span className="text-sm text-gray-600 px-2">
+              {page} / {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= totalPages || isLoading}
+              onClick={() => handlePageChange(page + 1)}
+            >
+              Sau
+            </Button>
+          </div>
         </div>
       )}
     </div>

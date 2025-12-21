@@ -1,0 +1,73 @@
+@startuml
+!theme plain
+title Quan Hệ Dữ Liệu - Data Relationships
+
+skinparam linetype ortho
+skinparam roundcorner 10
+
+package "Core Entities" {
+  entity "User (CTV)" as User
+  entity "Project" as Project
+  entity "Building" as Building
+  entity "Floor" as Floor
+  entity "Unit" as Unit
+}
+
+package "Sales Process" {
+  entity "Reservation" as Reservation
+  entity "Booking" as Booking
+  entity "Deposit" as Deposit
+}
+
+package "Payments" {
+  entity "PaymentSchedule" as PaymentSchedule
+  entity "Transaction" as Transaction
+}
+
+package "Commissions" {
+  entity "Commission" as Commission
+  entity "PaymentRequest" as PaymentRequest
+}
+
+' Project hierarchy
+Project ||--o{ Building : contains
+Building ||--o{ Floor : has
+Floor ||--o{ Unit : has
+Project ||--o{ Unit : includes
+
+' User relationships
+User ||--o{ Reservation : creates
+User ||--o{ Booking : creates
+User ||--o{ Deposit : creates
+User ||--o{ Commission : receives
+User ||--o{ PaymentRequest : requests
+
+' Unit relationships
+Unit ||--o{ Reservation : has
+Unit ||--o{ Booking : has
+Unit ||--o{ Deposit : has
+Unit ||--o{ Commission : generates
+
+' Deposit relationships
+Deposit ||--|| Commission : "creates (1:1)"
+Deposit ||--o{ PaymentSchedule : has
+Deposit ||--o{ Transaction : has
+
+' Payment schedule relationships
+PaymentSchedule ||--o{ Transaction : contains
+
+' Commission relationships
+Commission ||--o{ PaymentRequest : has
+
+note right of User
+  CTV có thể tạo nhiều
+  reservations, bookings, deposits
+end note
+
+note right of Deposit
+  Mỗi deposit tạo
+  1 commission (1:1)
+  và nhiều payment schedules
+end note
+
+@enduml

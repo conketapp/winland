@@ -62,8 +62,19 @@ export const transactionsApi = {
    */
   confirm: async (id: string): Promise<Transaction> => {
     return apiRequest<Transaction>({
-      method: 'POST',
+      method: 'PATCH',
       url: API_ENDPOINTS.TRANSACTIONS.CONFIRM(id),
+    });
+  },
+
+  /**
+   * Reject transaction (Admin only)
+   */
+  reject: async (id: string, reason: string): Promise<Transaction> => {
+    return apiRequest<Transaction>({
+      method: 'PATCH',
+      url: API_ENDPOINTS.TRANSACTIONS.BY_ID(id) + '/reject',
+      data: { reason },
     });
   },
 };

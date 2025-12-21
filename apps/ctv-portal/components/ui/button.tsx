@@ -52,7 +52,8 @@ function Button({
     <Comp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      {...(props as any)}
     />
   )
 }

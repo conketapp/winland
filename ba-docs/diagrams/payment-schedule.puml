@@ -1,0 +1,40 @@
+@startuml
+!theme plain
+title Lịch Trả Góp - Payment Schedule
+
+skinparam activity {
+  BackgroundColor #E8F4F8
+  BorderColor #2E86AB
+}
+
+start
+
+:Admin duyệt phiếu đặt cọc;
+
+:Hệ thống tự động tạo\n4 đợt thanh toán;
+
+:Đợt 1: Cọc\n5% giá căn\n✅ Đã thanh toán;
+
+:Đợt 2: 30% giá căn\n⏰ Hạn: +30 ngày\n🔄 Chờ thanh toán;
+
+:Đợt 3: 30% giá căn\n⏰ Hạn: +60 ngày\n🔄 Chờ thanh toán;
+
+:Đợt 4: 35% giá căn\n(Bàn giao)\n⏰ Hạn: +90 ngày\n🔄 Chờ thanh toán;
+
+repeat
+  :CTV ghi nhận thanh toán\n+ Upload chứng từ;
+  :Admin xác nhận giao dịch;
+  :Cập nhật đợt = Đã thanh toán;
+repeat while (Còn đợt chưa thanh toán?) is (Có)
+
+if (Tất cả 4 đợt đã thanh toán?) then (Có)
+  :Phiếu cọc = Đã hoàn thành;
+  :Căn hộ = Đã bán;
+  :Tạo hoa hồng cho CTV;
+  stop
+else (Chưa)
+  :Tiếp tục chờ thanh toán;
+  stop
+endif
+
+@enduml
