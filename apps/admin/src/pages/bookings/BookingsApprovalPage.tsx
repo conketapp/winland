@@ -14,7 +14,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import BookingDetailModal from '../../components/bookings/BookingDetailModal';
 import { Button } from '../../components/ui/button';
-import { Card } from '../../components/ui/card';
+import { Card, CardContent } from '../../components/ui/card';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Eye } from 'lucide-react';
 import {
@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { formatCurrency, formatDate, formatShortAmount } from '../../lib/utils';
+import { formatCurrency, formatDate } from '../../lib/utils';
 import { projectsApi } from '../../api/projects.api';
 import { apiRequest } from '../../api/client';
 import { API_ENDPOINTS } from '../../constants/api';
@@ -38,7 +38,7 @@ const BookingsApprovalPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [ctvs, setCtvs] = useState<User[]>([]);
   const [filters, setFilters] = useState({
-    status: 'all',
+    status: 'PENDING_APPROVAL',
     projectId: 'all',
     ctvId: 'all',
   });
@@ -72,7 +72,7 @@ const BookingsApprovalPage: React.FC = () => {
     },
     transformFromUrl: (params) => {
       return {
-        status: params.get('status') || 'all',
+        status: params.get('status') || 'PENDING_APPROVAL',
         projectId: params.get('projectId') || 'all',
         ctvId: params.get('ctvId') || 'all',
       };
@@ -186,7 +186,7 @@ const BookingsApprovalPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Confirm Dialog */}
       <ConfirmDialog
         open={confirmDialog.open}
@@ -210,21 +210,21 @@ const BookingsApprovalPage: React.FC = () => {
       />
 
       <PageHeader
-        title="Duyệt Phiếu Booking"
-        description="Xác nhận booking 10 triệu từ CTV"
+        title="Quản lý Phiếu Booking"
+        description="Duyệt và quản lý các phiếu booking từ CTV"
       />
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="flex flex-wrap items-end gap-4">
+      <Card className="p-3 md:p-4">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-3 md:gap-4">
           {/* Status filter */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Trạng thái:</label>
+          <div className="flex-1 min-w-0 sm:flex-initial">
+            <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">Trạng thái:</label>
             <Select 
               value={statusFilter} 
               onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Chọn trạng thái" />
               </SelectTrigger>
               <SelectContent>
@@ -237,13 +237,13 @@ const BookingsApprovalPage: React.FC = () => {
           </div>
 
           {/* Project filter */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Dự án:</label>
+          <div className="flex-1 min-w-0 sm:flex-initial">
+            <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">Dự án:</label>
             <Select
               value={filters.projectId}
               onValueChange={(value) => setFilters((prev) => ({ ...prev, projectId: value }))}
             >
-              <SelectTrigger className="w-[220px]">
+              <SelectTrigger className="w-full sm:w-[220px]">
                 <SelectValue placeholder="Chọn dự án" />
               </SelectTrigger>
               <SelectContent>
@@ -258,13 +258,13 @@ const BookingsApprovalPage: React.FC = () => {
           </div>
 
           {/* CTV filter */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">CTV:</label>
+          <div className="flex-1 min-w-0 sm:flex-initial">
+            <label className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2 block">CTV:</label>
             <Select
               value={filters.ctvId}
               onValueChange={(value) => setFilters((prev) => ({ ...prev, ctvId: value }))}
             >
-              <SelectTrigger className="w-[220px]">
+              <SelectTrigger className="w-full sm:w-[220px]">
                 <SelectValue placeholder="Chọn CTV" />
               </SelectTrigger>
               <SelectContent>
@@ -287,85 +287,167 @@ const BookingsApprovalPage: React.FC = () => {
           description={statusFilter === 'PENDING_APPROVAL' ? 'Chưa có booking chờ duyệt' : 'Không tìm thấy booking'}
         />
       ) : (
-        <Card className="overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Mã booking</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Căn hộ</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Khách hàng</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Số tiền</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">CTV</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Hạn</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Trạng thái</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+        <Card>
+          <CardContent className="p-0">
+            {/* Mobile Card View */}
+            <div className="md:hidden divide-y divide-gray-200">
               {bookings.map((booking) => (
-                <tr key={booking.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">{booking.code}</div>
-                    <div className="text-xs text-gray-500">{formatDate(booking.createdAt)}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">{booking.unit?.code}</div>
+                <div key={booking.id} className="px-4 py-3 hover:bg-gray-50">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900">{booking.code}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{formatDate(booking.createdAt)}</div>
+                    </div>
+                    <StatusBadge status={booking.status} />
+                  </div>
+                  
+                  <div className="space-y-1.5 text-xs mb-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Căn hộ:</span>
+                      <span className="font-medium text-gray-900">{booking.unit?.code}</span>
+                    </div>
                     <div className="text-xs text-gray-500">{booking.unit?.project?.name}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">{booking.customerName}</div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Khách hàng:</span>
+                      <span className="text-gray-900">{booking.customerName}</span>
+                    </div>
                     <div className="text-xs text-gray-500">{booking.customerPhone}</div>
                     <div className="text-xs text-gray-500">CMND: {booking.customerIdCard}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-semibold text-gray-900">
-                      {formatShortAmount(booking.bookingAmount)} ({formatCurrency(booking.bookingAmount)})
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Số tiền:</span>
+                      <span className="font-semibold text-gray-900">{formatCurrency(booking.bookingAmount)}</span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">{booking.ctv?.fullName}</div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">CTV:</span>
+                      <span className="text-gray-900">{booking.ctv?.fullName}</span>
+                    </div>
                     <div className="text-xs text-gray-500">{booking.ctv?.phone}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-xs text-gray-600">
-                      {formatDate(booking.expiresAt)}
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Hạn:</span>
+                      <span className="text-gray-900">{formatDate(booking.expiresAt)}</span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusBadge status={booking.status} />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDetailModal({ open: true, booking })}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      {booking.status === 'PENDING_APPROVAL' && (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => handleApprove(booking.id)}
-                          >
-                            ✅ Duyệt
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleReject(booking.id)}
-                          >
-                            ❌ Từ chối
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                  </div>
+
+                  <div className="flex gap-2 pt-2 border-t border-gray-100">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDetailModal({ open: true, booking })}
+                      className="flex-1 text-xs"
+                    >
+                      <Eye className="w-3.5 h-3.5 mr-1" />
+                      Xem
+                    </Button>
+                    {booking.status === 'PENDING_APPROVAL' && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleApprove(booking.id)}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                        >
+                          Duyệt
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleReject(booking.id)}
+                          className="flex-1 text-xs"
+                        >
+                          Từ chối
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Mã booking</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Căn hộ</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Khách hàng</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Số tiền</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">CTV</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Hạn</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Trạng thái</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {bookings.map((booking) => (
+                    <tr key={booking.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-medium text-gray-900">{booking.code}</div>
+                        <div className="text-xs text-gray-500">{formatDate(booking.createdAt)}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-medium text-gray-900">{booking.unit?.code}</div>
+                        <div className="text-xs text-gray-500">{booking.unit?.project?.name}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-900">{booking.customerName}</div>
+                        <div className="text-xs text-gray-500">{booking.customerPhone}</div>
+                        <div className="text-xs text-gray-500">CMND: {booking.customerIdCard}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(booking.bookingAmount)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-900">{booking.ctv?.fullName}</div>
+                        <div className="text-xs text-gray-500">{booking.ctv?.phone}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-xs text-gray-600">
+                          {formatDate(booking.expiresAt)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={booking.status} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDetailModal({ open: true, booking })}
+                            className="h-8"
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            Xem
+                          </Button>
+                          {booking.status === 'PENDING_APPROVAL' && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => handleApprove(booking.id)}
+                                className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
+                              >
+                                Duyệt
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleReject(booking.id)}
+                                className="h-8"
+                              >
+                                Từ chối
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
         </Card>
       )}
     </div>

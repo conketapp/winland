@@ -13,6 +13,8 @@ import { Card, CardContent } from '../ui/card';
 import type { Deposit } from '../../types/deposit.types';
 import { pdfApi } from '../../api/pdf.api';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import { DocumentList } from '../documents/DocumentList';
+import { DocumentUpload } from '../documents/DocumentUpload';
 
 interface DepositDetailModalProps {
   open: boolean;
@@ -74,37 +76,66 @@ export default function DepositDetailModal({
       title={`Chi tiết Cọc - ${deposit.code}`}
       description="Thông tin đầy đủ phiếu cọc và lịch thanh toán"
       footer={
-        <div className="flex flex-wrap gap-2 justify-end">
-          <Button
-            variant="outline"
-            onClick={handleDownloadPdf}
-            disabled={downloading}
-          >
-            {downloading ? 'Đang tạo PDF...' : '📄 Tải PDF'}
-          </Button>
-          {deposit.status === 'PENDING_APPROVAL' && onApprove && onReject ? (
-            <>
-              <Button variant="outline" onClick={onClose}>
+        <>
+          {/* Secondary actions */}
+          <div className="flex gap-2 sm:gap-2 sm:mr-auto">
+            <Button
+              variant="outline"
+              onClick={handleDownloadPdf}
+              disabled={downloading}
+              className="text-xs sm:text-sm h-9 sm:h-10"
+              size="sm"
+            >
+              {downloading ? 'Đang tạo PDF...' : '📄 Tải PDF'}
+            </Button>
+          </div>
+          
+          {/* Primary actions */}
+          <div className="flex gap-2 sm:gap-2">
+            {deposit.status === 'PENDING_APPROVAL' && onApprove && onReject ? (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={onClose}
+                  className="text-xs sm:text-sm h-9 sm:h-10"
+                  size="sm"
+                >
+                  Đóng
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => onReject(deposit)}
+                  className="text-xs sm:text-sm h-9 sm:h-10"
+                  size="sm"
+                >
+                  Từ chối
+                </Button>
+                <Button 
+                  onClick={() => onApprove(deposit)}
+                  className="text-xs sm:text-sm h-9 sm:h-10 bg-blue-600 hover:bg-blue-700"
+                  size="sm"
+                >
+                  Duyệt ngay
+                </Button>
+              </>
+            ) : (
+              <Button 
+                onClick={onClose}
+                className="text-xs sm:text-sm h-9 sm:h-10"
+                size="sm"
+              >
                 Đóng
               </Button>
-              <Button variant="destructive" onClick={() => onReject(deposit)}>
-                Từ chối
-              </Button>
-              <Button onClick={() => onApprove(deposit)}>
-                Duyệt ngay
-              </Button>
-            </>
-          ) : (
-            <Button onClick={onClose}>Đóng</Button>
-          )}
-        </div>
+            )}
+          </div>
+        </>
       }
     >
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Basic Info */}
         <div>
-          <h3 className="font-semibold mb-3">Thông tin cơ bản</h3>
-          <dl className="grid grid-cols-2 gap-4">
+          <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3">Thông tin cơ bản</h3>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <DetailRow label="Mã cọc" value={deposit.code} />
             <DetailRow label="Trạng thái" value={<StatusBadge status={deposit.status} />} />
             <DetailRow label="Số tiền cọc" value={formatCurrency(deposit.depositAmount)} />
@@ -114,8 +145,8 @@ export default function DepositDetailModal({
 
         {/* Unit Info */}
         <div>
-          <h3 className="font-semibold mb-3">Thông tin căn hộ</h3>
-          <dl className="grid grid-cols-2 gap-4">
+          <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3">Thông tin căn hộ</h3>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <DetailRow label="Mã căn" value={deposit.unit?.code || 'N/A'} />
             <DetailRow label="Dự án" value={deposit.unit?.project?.name || 'N/A'} />
             <DetailRow label="Diện tích" value={`${deposit.unit?.area || 0}m²`} />
@@ -125,8 +156,8 @@ export default function DepositDetailModal({
 
         {/* Customer Info */}
         <div>
-          <h3 className="font-semibold mb-3">Thông tin khách hàng</h3>
-          <dl className="grid grid-cols-2 gap-4">
+          <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3">Thông tin khách hàng</h3>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <DetailRow label="Tên khách hàng" value={deposit.customerName} />
             <DetailRow label="Số CCCD/CMT" value={deposit.customerIdCard} />
             <DetailRow label="Số điện thoại" value={deposit.customerPhone || 'N/A'} />
@@ -136,8 +167,8 @@ export default function DepositDetailModal({
 
         {/* CTV Info */}
         <div>
-          <h3 className="font-semibold mb-3">Thông tin CTV</h3>
-          <dl className="grid grid-cols-2 gap-4">
+          <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3">Thông tin CTV</h3>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <DetailRow label="Tên CTV" value={deposit.ctv?.fullName || 'N/A'} />
             <DetailRow label="SĐT CTV" value={deposit.ctv?.phone || 'N/A'} />
           </dl>
@@ -146,23 +177,23 @@ export default function DepositDetailModal({
         {/* Payment Schedules Timeline */}
         {schedules.length > 0 && (
           <div>
-            <h3 className="font-semibold mb-3">Lịch thanh toán</h3>
+            <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3">Lịch thanh toán</h3>
 
             {paymentSummary && (
               <Card className="mb-3">
-                <CardContent className="py-3 px-4">
+                <CardContent className="py-2 sm:py-3 px-3 sm:px-4">
                   <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-xs sm:text-sm">
                       <span className="text-gray-600">Tổng giá trị lịch thanh toán</span>
                       <span className="font-semibold">{formatCurrency(paymentSummary.totalAmount)}</span>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-xs sm:text-sm">
                       <span className="text-gray-600">Đã thanh toán</span>
                       <span className="font-semibold text-emerald-700">
                         {formatCurrency(paymentSummary.totalPaid)} ({paymentSummary.percent}%)
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-xs sm:text-sm">
                       <span className="text-gray-600">Còn lại</span>
                       <span className="font-semibold text-amber-700">
                         {formatCurrency(paymentSummary.remaining)}
@@ -181,73 +212,136 @@ export default function DepositDetailModal({
 
             <Card>
               <CardContent className="p-0">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Đợt</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Tên</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Số tiền</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">%</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Hạn TT</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Đã trả</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">Trạng thái</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {schedules.map((schedule) => {
-                      const isOverdue =
-                        schedule.status === 'OVERDUE' ||
-                        (schedule.status === 'PENDING' &&
-                          schedule.dueDate &&
-                          new Date(schedule.dueDate) < new Date());
-                      const remainingAmount =
-                        (schedule.amount || 0) - (schedule.paidAmount || 0);
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-gray-200">
+                  {schedules.map((schedule) => {
+                    const isOverdue =
+                      schedule.status === 'OVERDUE' ||
+                      (schedule.status === 'PENDING' &&
+                        schedule.dueDate &&
+                        new Date(schedule.dueDate) < new Date());
+                    const remainingAmount =
+                      (schedule.amount || 0) - (schedule.paidAmount || 0);
 
-                      return (
-                        <tr
-                          key={schedule.id}
-                          className={`border-t ${isOverdue ? 'bg-red-50' : ''}`}
-                        >
-                          <td className="px-4 py-3 text-sm font-medium">
+                    return (
+                      <div
+                        key={schedule.id}
+                        className={`px-3 py-2.5 space-y-1.5 ${isOverdue ? 'bg-red-50' : ''}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-gray-900">
                             Đợt {schedule.installment}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            {schedule.installment === 1 ? 'Cọc' : `Đợt ${schedule.installment}`}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right font-medium">
-                            {formatCurrency(schedule.amount)}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right">
-                            {deposit?.unit?.price ? `${Math.round((schedule.amount / deposit.unit.price) * 100)}%` : '-'}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            {schedule.dueDate ? formatDate(schedule.dueDate) : 'TBD'}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <div className="flex flex-col text-right">
-                              <span className="text-emerald-700 font-medium">
-                                {formatCurrency(schedule.paidAmount || 0)}
-                              </span>
-                              {remainingAmount > 0 && (
-                                <span className="text-xs text-gray-500">
-                                  Còn lại: {formatCurrency(remainingAmount)}
+                          </span>
+                          <StatusBadge status={schedule.status as 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED'} />
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {schedule.installment === 1 ? 'Cọc' : `Đợt ${schedule.installment}`}
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">Số tiền:</span>
+                          <span className="font-medium">{formatCurrency(schedule.amount)}</span>
+                        </div>
+                        {deposit?.unit?.price && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">Tỷ lệ:</span>
+                            <span>{Math.round((schedule.amount / deposit.unit.price) * 100)}%</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">Hạn TT:</span>
+                          <span>{schedule.dueDate ? formatDate(schedule.dueDate) : 'TBD'}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">Đã trả:</span>
+                          <span className="text-emerald-700 font-medium">
+                            {formatCurrency(schedule.paidAmount || 0)}
+                          </span>
+                        </div>
+                        {remainingAmount > 0 && (
+                          <div className="text-xs text-gray-500">
+                            Còn lại: {formatCurrency(remainingAmount)}
+                          </div>
+                        )}
+                        {isOverdue && (
+                          <Badge variant="destructive" className="text-[10px] mt-1">
+                            Quá hạn
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Đợt</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Tên</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Số tiền</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">%</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Hạn TT</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Đã trả</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {schedules.map((schedule) => {
+                        const isOverdue =
+                          schedule.status === 'OVERDUE' ||
+                          (schedule.status === 'PENDING' &&
+                            schedule.dueDate &&
+                            new Date(schedule.dueDate) < new Date());
+                        const remainingAmount =
+                          (schedule.amount || 0) - (schedule.paidAmount || 0);
+
+                        return (
+                          <tr
+                            key={schedule.id}
+                            className={`border-t ${isOverdue ? 'bg-red-50' : ''}`}
+                          >
+                            <td className="px-4 py-3 text-sm font-medium">
+                              Đợt {schedule.installment}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              {schedule.installment === 1 ? 'Cọc' : `Đợt ${schedule.installment}`}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right font-medium">
+                              {formatCurrency(schedule.amount)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right">
+                              {deposit?.unit?.price ? `${Math.round((schedule.amount / deposit.unit.price) * 100)}%` : '-'}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              {schedule.dueDate ? formatDate(schedule.dueDate) : 'TBD'}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="flex flex-col text-right">
+                                <span className="text-emerald-700 font-medium">
+                                  {formatCurrency(schedule.paidAmount || 0)}
                                 </span>
+                                {remainingAmount > 0 && (
+                                  <span className="text-xs text-gray-500">
+                                    Còn lại: {formatCurrency(remainingAmount)}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <StatusBadge status={schedule.status as 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED'} />
+                              {isOverdue && (
+                                <Badge variant="destructive" className="mt-1 text-[10px]">
+                                  Quá hạn
+                                </Badge>
                               )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <StatusBadge status={schedule.status as 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED'} />
-                            {isOverdue && (
-                              <Badge variant="destructive" className="mt-1 text-[10px]">
-                                Quá hạn
-                              </Badge>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -280,8 +374,8 @@ export default function DepositDetailModal({
 
         {/* Timestamps */}
         <div>
-          <h3 className="font-semibold mb-3">Lịch sử</h3>
-          <dl className="grid grid-cols-2 gap-4">
+          <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3">Lịch sử</h3>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <DetailRow label="Ngày tạo" value={formatDate(deposit.createdAt)} />
             {deposit.approvedAt && (
               <DetailRow label="Ngày duyệt" value={formatDate(deposit.approvedAt)} />
@@ -290,6 +384,41 @@ export default function DepositDetailModal({
               <DetailRow label="Người duyệt" value={deposit.approver?.fullName || 'N/A'} />
             )}
           </dl>
+        </div>
+
+        {/* Documents Section */}
+        <div className="mt-4 sm:mt-6 border-t pt-4 sm:pt-6">
+          <h3 className="text-sm sm:text-lg font-semibold mb-3 sm:mb-4">Tài liệu đính kèm</h3>
+          
+          {/* Upload Section */}
+          <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+            <DocumentUpload
+              entityType="deposit"
+              entityId={deposit.id}
+              documentType="PAYMENT_PROOF"
+              description="Chứng từ thanh toán"
+              multiple={true}
+              onSuccess={() => {
+                // Reload modal or refresh documents
+                window.location.reload();
+              }}
+              onError={(error) => {
+                console.error('Upload error:', error);
+                alert('Tải lên thất bại: ' + error.message);
+              }}
+            />
+          </div>
+
+          {/* Documents List */}
+          <DocumentList
+            entityType="deposit"
+            entityId={deposit.id}
+            onDocumentDeleted={() => {
+              // Reload documents
+              window.location.reload();
+            }}
+            showActions={true}
+          />
         </div>
       </div>
     </DetailModal>

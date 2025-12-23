@@ -30,6 +30,9 @@ import PaymentRequestsPage from './pages/payment-requests/PaymentRequestsPage';
 import SystemConfigPage from './pages/system-config/SystemConfigPage';
 import UsersPage from './pages/users/UsersPage';
 import AuditLogsPage from './pages/audit-logs/AuditLogsPage';
+import ReportsPage from './pages/reports/ReportsPage';
+import DocumentsPage from './pages/documents/DocumentsPage';
+import PdfTemplatesPage from './pages/pdf-templates/PdfTemplatesPage';
 
 function App() {
   return (
@@ -77,6 +80,9 @@ function App() {
             <Route path="system-config" element={<SystemConfigPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="audit-logs" element={<AuditLogsPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="documents" element={<DocumentsPage />} />
+            <Route path="pdf-templates" element={<PdfTemplatesPage />} />
           </Route>
 
           {/* Fallback */}

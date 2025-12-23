@@ -16,16 +16,24 @@ export class TemplateRenderer {
 
   /**
    * Get templates directory path
+   * Templates are .hbs files that are not compiled, so we always use src path
    */
   private static getTemplatesDir(): string {
-    // In development (TypeScript), templates are in src/modules/pdf/templates
-    // In production (compiled), templates should be copied to dist/modules/pdf/templates
-    // For now, use a path relative to process.cwd()
-    const isDevelopment = __dirname.includes('src');
-    if (isDevelopment) {
-      return path.join(process.cwd(), 'apps', 'backend', 'src', 'modules', 'pdf', 'templates');
+    // When running from dist, __dirname will be:
+    // .../dist/apps/backend/src/modules/pdf/utils
+    // We need to go back to the root (apps/backend) and then to src/modules/pdf/templates
+    
+    // Check if we're in compiled code (dist) or source code
+    if (__dirname.includes('dist')) {
+      // From dist/apps/backend/src/modules/pdf/utils, go up 7 levels to apps/backend root
+      const rootDir = path.resolve(__dirname, '../../../../../../..');
+      return path.join(rootDir, 'src', 'modules', 'pdf', 'templates');
     }
-    return path.join(process.cwd(), 'apps', 'backend', 'dist', 'modules', 'pdf', 'templates');
+    
+    // In development (source code), __dirname is in src/modules/pdf/utils
+    // Go up 4 levels to apps/backend root
+    const rootDir = path.resolve(__dirname, '../../../../');
+    return path.join(rootDir, 'src', 'modules', 'pdf', 'templates');
   }
 
   /**

@@ -26,30 +26,31 @@ export function ReasonDialog({
   const disabled = !reason.trim();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-lg bg-white shadow-lg p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-lg bg-white shadow-lg p-4 sm:p-6 space-y-3 sm:space-y-4 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900 break-words">{title}</h2>
         {description && (
-          <p className="text-sm text-gray-600">
+          <p className="text-xs sm:text-sm text-gray-600 break-words">
             {description}
           </p>
         )}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">
+          <label className="text-xs sm:text-sm font-medium text-gray-700">
             Lý do <span className="text-red-500">*</span>
           </label>
           <textarea
-            className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md text-sm"
+            className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md text-xs sm:text-sm"
             value={reason}
             onChange={(e) => onReasonChange(e.target.value)}
             placeholder="Nhập lý do chi tiết..."
           />
         </div>
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
           <Button
             type="button"
             variant="outline"
             onClick={onCancel}
+            className="w-full sm:w-auto text-xs sm:text-sm"
           >
             Hủy
           </Button>
@@ -57,6 +58,7 @@ export function ReasonDialog({
             type="button"
             onClick={onConfirm}
             disabled={disabled}
+            className="w-full sm:w-auto text-xs sm:text-sm"
           >
             {confirmText}
           </Button>

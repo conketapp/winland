@@ -218,7 +218,7 @@ const ReservationsPage: React.FC = () => {
       ) : (
         <Card>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[900px]">
               <thead>
                 <tr className="border-b">
                   <th className="text-left p-4 font-medium">Mã</th>

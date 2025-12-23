@@ -15,6 +15,7 @@ import { PaymentRequestsModule } from './modules/payment-requests/payment-reques
 import { CommissionsModule } from './modules/commissions/commissions.module';
 import { QrcodeModule } from './modules/qrcode/qrcode.module';
 import { PdfModule } from './modules/pdf/pdf.module';
+import { DocumentsModule } from './modules/documents/documents.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { UsersModule } from './modules/users/users.module';
@@ -22,6 +23,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { CommonModule } from './modules/common/common.module';
 import { QueryAnalysisModule } from './modules/query-analysis/query-analysis.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -30,6 +32,7 @@ import { QueryAnalysisModule } from './modules/query-analysis/query-analysis.mod
     CommonModule, // Global module for shared services
     AuthModule,
     DashboardModule,
+    ReportsModule,
     // Model B Modules (Complete MVP Flow)
     ProjectsModule,
     UnitsModule,
@@ -42,6 +45,7 @@ import { QueryAnalysisModule } from './modules/query-analysis/query-analysis.mod
     CommissionsModule,
     QrcodeModule,
     PdfModule,
+    DocumentsModule,
     SystemConfigModule,
     UsersModule,
     NotificationsModule,

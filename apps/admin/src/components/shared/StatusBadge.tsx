@@ -5,37 +5,38 @@
 
 import { Badge } from '../ui/badge';
 
-const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info'> = {
   // Project statuses
-  OPEN: 'default',
-  UPCOMING: 'secondary',
+  OPEN: 'success',
+  UPCOMING: 'warning',
   CLOSED: 'outline',
-  DRAFT: 'outline',
+  DRAFT: 'secondary',
   
   // Unit statuses
-  AVAILABLE: 'default',
-  RESERVED: 'secondary',
-  RESERVED_BOOKING: 'secondary',
-  DEPOSITED: 'secondary',
+  AVAILABLE: 'success',
+  RESERVED: 'warning',
+  RESERVED_BOOKING: 'warning',
+  DEPOSITED: 'info',
   SOLD: 'outline',
   
   // Common statuses (used by multiple entities)
-  PENDING_APPROVAL: 'secondary',
-  CONFIRMED: 'default',
+  PENDING_APPROVAL: 'warning',
+  PENDING_CONFIRMATION: 'warning',
+  CONFIRMED: 'success',
   CANCELLED: 'destructive',
   EXPIRED: 'destructive',
   REJECTED: 'destructive',
-  COMPLETED: 'outline',
+  COMPLETED: 'success',
   
   // Reservation statuses
-  ACTIVE: 'default',
-  YOUR_TURN: 'default',
+  ACTIVE: 'info',
+  YOUR_TURN: 'warning',
   MISSED: 'destructive',
   
   // Commission statuses
-  PENDING: 'secondary',
-  APPROVED: 'default',
-  PAID: 'default',
+  PENDING: 'warning',
+  APPROVED: 'info',
+  PAID: 'success',
 };
 
 const STATUS_LABELS: Record<string, string> = {

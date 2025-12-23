@@ -15,16 +15,16 @@ export default function DetailRow({ label, value, fullWidth = false }: DetailRow
   if (fullWidth) {
     return (
       <div className="col-span-2 space-y-1">
-        <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
-        <dd className="text-sm">{value}</dd>
+        <dt className="text-xs sm:text-sm font-medium text-muted-foreground">{label}</dt>
+        <dd className="text-xs sm:text-sm break-words">{value}</dd>
       </div>
     );
   }
 
   return (
     <div className="space-y-1">
-      <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
-      <dd className="text-sm">{value}</dd>
+      <dt className="text-xs sm:text-sm font-medium text-muted-foreground">{label}</dt>
+      <dd className="text-xs sm:text-sm break-words">{value}</dd>
     </div>
   );
 }

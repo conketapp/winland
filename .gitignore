@@ -54,3 +54,5 @@ Thumbs.db
 .old-databases/
 *.db
 *.db.bak
+storage/
+uploads/

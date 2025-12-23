@@ -32,6 +32,7 @@ model User {
   projectsCreated      Project[]        @relation("ProjectCreator")
   reservations         Reservation[]    @relation("CTVReservations")
   notifications        Notification[]
+  documentsUploaded    Document[]       @relation("DocumentUploader")
 
   @@index([role])
   @@index([role, isActive]) // Composite index for filtering by role and active status
@@ -42,6 +43,55 @@ model User {
   @@index([phone]) // For full-text search
   @@index([email]) // For full-text search
   @@map("users")
+}
+
+enum DocumentType {
+  CMND_FRONT // CMND/CCCD mặt trước
+  CMND_BACK // CMND/CCCD mặt sau
+  PASSPORT // Hộ chiếu
+  MARRIAGE_CERT // Giấy chứng nhận đăng ký kết hôn
+  AUTHORIZATION // Giấy ủy quyền
+  CONTRACT_SIGNED // Bản sao hợp đồng đã ký (scan)
+  PAYMENT_PROOF // Chứng từ thanh toán
+  HANDOVER_REPORT // Biên bản nghiệm thu
+  UNIT_IMAGE // Ảnh căn hộ
+  OTHER // Khác
+}
+
+enum DocumentStatus {
+  DRAFT // Bản nháp
+  FINAL // Bản chính thức
+  ARCHIVED // Đã lưu trữ
+}
+
+model Document {
+  id           String         @id @default(uuid())
+  entityType   String         @map("entity_type") // 'deposit', 'booking', 'reservation', 'unit', 'transaction', 'user'
+  entityId     String         @map("entity_id") // ID của entity liên quan
+  documentType DocumentType   @map("document_type")
+  fileName     String         @map("file_name")
+  fileUrl      String         @map("file_url")
+  fileSize     BigInt         @map("file_size") // bytes
+  mimeType     String         @map("mime_type") // 'image/jpeg', 'application/pdf', etc.
+  version      Int            @default(1)
+  status       DocumentStatus @default(DRAFT)
+  description  String? // Mô tả tài liệu
+  uploadedBy   String         @map("uploaded_by") // User ID
+  uploadedAt   DateTime       @default(now()) @map("uploaded_at")
+  metadata     Json? // Additional metadata (JSON)
+  deletedAt    DateTime?      @map("deleted_at") // Soft delete
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  uploader User @relation("DocumentUploader", fields: [uploadedBy], references: [id])
+
+  @@index([entityType, entityId]) // Composite index for entity lookup
+  @@index([documentType])
+  @@index([status])
+  @@index([uploadedBy])
+  @@index([deletedAt])
+  @@index([entityType, entityId, documentType]) // For finding specific document type
+  @@map("documents")
 }
 
 model OTP {
@@ -59,36 +109,36 @@ model OTP {
 }
 
 model Project {
-  id             String        @id @default(uuid())
-  name           String
-  code           String        @unique
-  status         ProjectStatus @default(UPCOMING)
-  developer      String
-  location       String
-  address        String
-  district       String
-  city           String
-  latitude       Float?
-  longitude      Float?
-  totalArea      Float?        @map("total_area")
-  totalBuildings Int?          @map("total_buildings")
-  totalUnits     Int?          @map("total_units")
-  priceFrom      Float?        @map("price_from")
-  priceTo        Float?        @map("price_to")
-  description    String?
-  amenities      String?
-  images         String?
-  masterPlan     String?       @map("master_plan")
-  floorPlan      String?       @map("floor_plan")
-  openDate       DateTime?     @map("open_date")
-  commissionRate Float         @default(2.0) @map("commission_rate")
-  createdBy      String        @map("created_by")
-  deletedAt      DateTime?     @map("deleted_at") // Soft delete
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  buildings      Building[]
-  creator        User          @relation("ProjectCreator", fields: [createdBy], references: [id])
-  units          Unit[]
+  id                  String               @id @default(uuid())
+  name                String
+  code                String               @unique
+  status              ProjectStatus        @default(UPCOMING)
+  developer           String
+  location            String
+  address             String
+  district            String
+  city                String
+  latitude            Float?
+  longitude           Float?
+  totalArea           Float?               @map("total_area")
+  totalBuildings      Int?                 @map("total_buildings")
+  totalUnits          Int?                 @map("total_units")
+  priceFrom           Float?               @map("price_from")
+  priceTo             Float?               @map("price_to")
+  description         String?
+  amenities           String?
+  images              String?
+  masterPlan          String?              @map("master_plan")
+  floorPlan           String?              @map("floor_plan")
+  openDate            DateTime?            @map("open_date")
+  commissionRate      Float                @default(2.0) @map("commission_rate")
+  createdBy           String               @map("created_by")
+  deletedAt           DateTime?            @map("deleted_at") // Soft delete
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  buildings           Building[]
+  creator             User                 @relation("ProjectCreator", fields: [createdBy], references: [id])
+  units               Unit[]
   queueProcessingLogs QueueProcessingLog[]
 
   @@index([code])
@@ -528,27 +578,27 @@ model AuditLog {
 }
 
 model Notification {
-  id            String                @id @default(uuid())
-  userId        String                @map("user_id")
-  type          NotificationType      @map("type")
-  title         String
-  message       String
-  entityType    String?               @map("entity_type")
-  entityId      String?               @map("entity_id")
-  metadata      String?               @map("metadata")
-  channel       NotificationChannel   @default(IN_APP)
-  status        NotificationStatus    @default(PENDING) // PENDING, SENT, FAILED, QUEUED
-  isRead        Boolean               @default(false) @map("is_read")
-  readAt        DateTime?             @map("read_at")
-  sentAt        DateTime?             @map("sent_at")
-  failedAt      DateTime?             @map("failed_at")
-  errorMessage  String?               @map("error_message")
-  retryCount    Int                   @default(0) @map("retry_count")
-  nextRetryAt   DateTime?             @map("next_retry_at")
-  deletedAt     DateTime?             @map("deleted_at") // Soft delete
-  createdAt     DateTime              @default(now()) @map("created_at")
-  updatedAt     DateTime              @updatedAt @map("updated_at")
-  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String              @id @default(uuid())
+  userId       String              @map("user_id")
+  type         NotificationType    @map("type")
+  title        String
+  message      String
+  entityType   String?             @map("entity_type")
+  entityId     String?             @map("entity_id")
+  metadata     String?             @map("metadata")
+  channel      NotificationChannel @default(IN_APP)
+  status       NotificationStatus  @default(PENDING) // PENDING, SENT, FAILED, QUEUED
+  isRead       Boolean             @default(false) @map("is_read")
+  readAt       DateTime?           @map("read_at")
+  sentAt       DateTime?           @map("sent_at")
+  failedAt     DateTime?           @map("failed_at")
+  errorMessage String?             @map("error_message")
+  retryCount   Int                 @default(0) @map("retry_count")
+  nextRetryAt  DateTime?           @map("next_retry_at")
+  deletedAt    DateTime?           @map("deleted_at") // Soft delete
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
   @@index([userId, isRead, createdAt]) // Composite index for user's notifications with sorting
@@ -665,10 +715,10 @@ enum NotificationChannel {
 }
 
 enum NotificationStatus {
-  PENDING  // Just created, not sent yet
-  QUEUED   // Queued for retry
-  SENT     // Successfully sent
-  FAILED   // Failed after max retries
+  PENDING // Just created, not sent yet
+  QUEUED // Queued for retry
+  SENT // Successfully sent
+  FAILED // Failed after max retries
 }
 
 model Sequence {
@@ -682,22 +732,22 @@ model Sequence {
 }
 
 model QueueProcessingLog {
-  id          String   @id @default(uuid())
-  projectId   String   @map("project_id")
-  status      String   // "PROCESSING" | "COMPLETED" | "FAILED" | "PARTIAL"
-  totalUnits  Int      @map("total_units")
-  processed   Int      @default(0)
-  skipped     Int      @default(0)
-  failed      Int      @default(0)
-  failedUnits String?  @map("failed_units") // JSON array of { unitId, error }
-  errorMessage String? @map("error_message")
-  startedAt   DateTime @default(now()) @map("started_at")
-  completedAt DateTime? @map("completed_at")
-  retryCount  Int      @default(0) @map("retry_count")
-  deletedAt   DateTime? @map("deleted_at") // Soft delete
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id           String    @id @default(uuid())
+  projectId    String    @map("project_id")
+  status       String // "PROCESSING" | "COMPLETED" | "FAILED" | "PARTIAL"
+  totalUnits   Int       @map("total_units")
+  processed    Int       @default(0)
+  skipped      Int       @default(0)
+  failed       Int       @default(0)
+  failedUnits  String?   @map("failed_units") // JSON array of { unitId, error }
+  errorMessage String?   @map("error_message")
+  startedAt    DateTime  @default(now()) @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+  retryCount   Int       @default(0) @map("retry_count")
+  deletedAt    DateTime? @map("deleted_at") // Soft delete
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([status])

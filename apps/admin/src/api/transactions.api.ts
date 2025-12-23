@@ -8,27 +8,39 @@ import { API_ENDPOINTS } from '../constants/api';
 export interface Transaction {
   id: string;
   depositId: string;
-  paymentScheduleId: string;
-  unitId: string;
-  customerId: string;
+  paymentScheduleId?: string | null;
   amount: number;
   paymentMethod: string;
-  proofImages?: string | null;
-  transactionDate: string;
-  status: 'PENDING_APPROVAL' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED';
-  approvedBy?: string | null;
-  approvedAt?: string | null;
-  rejectedReason?: string | null;
+  paymentProof?: string | null;
+  transactionRef?: string | null;
+  paymentDate: string;
+  status: 'PENDING_CONFIRMATION' | 'CONFIRMED' | 'CANCELLED';
+  confirmedAt?: string | null;
   notes?: string | null;
   createdAt: string;
-  customer?: {
-    fullName: string;
-    phone: string;
-  };
-  unit?: {
+  deposit?: {
+    id: string;
     code: string;
-    unitNumber: string;
-  };
+    customerName: string;
+    customerPhone?: string | null;
+    depositAmount: number;
+    unit?: {
+      id: string;
+      code: string;
+      project?: {
+        id: string;
+        name: string;
+      } | null;
+    } | null;
+  } | null;
+  paymentSchedule?: {
+    id: string;
+    installment: number;
+    name: string;
+    amount: number;
+    dueDate?: string | null;
+    status: string;
+  } | null;
 }
 
 export const transactionsApi = {

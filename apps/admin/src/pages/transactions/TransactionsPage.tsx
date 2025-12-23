@@ -24,6 +24,7 @@ import { CheckCircle, XCircle, Eye } from 'lucide-react';
 import { transactionsApi, type Transaction } from '../../api/transactions.api';
 import { ReasonDialog } from '../../components/ui/ReasonDialog';
 import { useToast } from '../../components/ui/toast';
+import TransactionDetailModal from '../../components/transactions/TransactionDetailModal';
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -43,6 +44,13 @@ export default function TransactionsPage() {
     open: false,
     transactionId: '',
     reason: '',
+  });
+  const [detailModal, setDetailModal] = useState<{
+    open: boolean;
+    transaction: Transaction | null;
+  }>({
+    open: false,
+    transaction: null,
   });
   const { success: toastSuccess, error: toastError } = useToast();
 
@@ -125,6 +133,13 @@ export default function TransactionsPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Transaction Detail Modal */}
+      <TransactionDetailModal
+        open={detailModal.open}
+        onClose={() => setDetailModal({ open: false, transaction: null })}
+        transaction={detailModal.transaction}
+      />
+
       <ReasonDialog
         open={rejectDialog.open}
         title="Từ chối giao dịch"
@@ -170,9 +185,8 @@ export default function TransactionsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="PENDING_APPROVAL">Chờ duyệt</SelectItem>
+                <SelectItem value="PENDING_CONFIRMATION">Chờ xác nhận</SelectItem>
                 <SelectItem value="CONFIRMED">Đã xác nhận</SelectItem>
-                <SelectItem value="REJECTED">Bị từ chối</SelectItem>
                 <SelectItem value="CANCELLED">Đã hủy</SelectItem>
               </SelectContent>
             </Select>
@@ -181,26 +195,26 @@ export default function TransactionsPage() {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="text-sm text-gray-600">Tổng giao dịch</div>
-          <div className="text-2xl font-bold">{transactions.length}</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <Card className="p-3 md:p-4">
+          <div className="text-xs md:text-sm text-gray-600 truncate">Tổng giao dịch</div>
+          <div className="text-xl md:text-2xl font-bold mt-1 break-words">{transactions.length}</div>
         </Card>
-        <Card className="p-4">
-          <div className="text-sm text-gray-600">Chờ duyệt</div>
-          <div className="text-2xl font-bold text-orange-600">
-            {transactions.filter((t) => t.status === 'PENDING_APPROVAL').length}
+        <Card className="p-3 md:p-4">
+          <div className="text-xs md:text-sm text-gray-600 truncate">Chờ duyệt</div>
+          <div className="text-xl md:text-2xl font-bold text-orange-600 mt-1 break-words">
+            {transactions.filter((t) => t.status === 'PENDING_CONFIRMATION').length}
           </div>
         </Card>
-        <Card className="p-4">
-          <div className="text-sm text-gray-600">Đã xác nhận</div>
-          <div className="text-2xl font-bold text-green-600">
+        <Card className="p-3 md:p-4">
+          <div className="text-xs md:text-sm text-gray-600 truncate">Đã xác nhận</div>
+          <div className="text-xl md:text-2xl font-bold text-green-600 mt-1 break-words">
             {transactions.filter((t) => t.status === 'CONFIRMED').length}
           </div>
         </Card>
-        <Card className="p-4">
-          <div className="text-sm text-gray-600">Tổng giá trị</div>
-          <div className="text-2xl font-bold">
+        <Card className="p-3 md:p-4">
+          <div className="text-xs md:text-sm text-gray-600 truncate">Tổng giá trị</div>
+          <div className="text-base md:text-lg lg:text-xl font-bold mt-1 break-words">
             {formatCurrency(
               transactions
                 .filter((t) => t.status === 'CONFIRMED')
@@ -217,7 +231,7 @@ export default function TransactionsPage() {
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[1000px]">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -259,14 +273,21 @@ export default function TransactionsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">
-                          {transaction.customer?.fullName}
+                          {transaction.deposit?.customerName || 'N/A'}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {transaction.customer?.phone}
-                        </div>
+                        {transaction.deposit?.customerPhone && (
+                          <div className="text-sm text-gray-500">
+                            {transaction.deposit.customerPhone}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        {transaction.unit?.code}
+                        {transaction.deposit?.unit?.code || 'N/A'}
+                        {transaction.paymentSchedule && (
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {transaction.paymentSchedule.name}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">
@@ -277,49 +298,54 @@ export default function TransactionsPage() {
                         {transaction.paymentMethod}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatDate(transaction.transactionDate)}
+                        {formatDate(transaction.paymentDate)}
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={transaction.status} />
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
-                          {transaction.status === 'PENDING_APPROVAL' && (
+                          {transaction.status === 'PENDING_CONFIRMATION' && (
                             <>
                               <Button
-                                variant="ghost"
                                 size="sm"
-                                onClick={() =>
+                                onClick={() => {
                                   setConfirmDialog({
                                     open: true,
                                     transactionId: transaction.id,
                                     action: 'confirm',
-                                  })
-                                }
+                                  });
+                                }}
+                                className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
                               >
-                                <CheckCircle className="w-4 h-4 text-green-600" />
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Xác nhận
                               </Button>
                               <Button
-                                variant="ghost"
                                 size="sm"
-                                onClick={() =>
-                                  setConfirmDialog({
+                                variant="destructive"
+                                onClick={() => {
+                                  setRejectDialog({
                                     open: true,
                                     transactionId: transaction.id,
-                                    action: 'reject',
-                                  })
-                                }
+                                    reason: '',
+                                  });
+                                }}
+                                className="h-8"
                               >
-                                <XCircle className="w-4 h-4 text-red-600" />
+                                <XCircle className="w-4 h-4 mr-1" />
+                                Từ chối
                               </Button>
                             </>
                           )}
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            onClick={() => console.log('View transaction:', transaction.id)}
+                            onClick={() => setDetailModal({ open: true, transaction })}
+                            className="h-8"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-4 h-4 mr-1" />
+                            Xem
                           </Button>
                         </div>
                       </td>

@@ -29,6 +29,7 @@ import {
   AlertTriangle 
 } from 'lucide-react';
 import { formatCurrency } from '../lib/utils';
+import { AnalyticsSection } from '../components/analytics/AnalyticsSection';
 
 type DashboardStats = AdminDashboardStats;
 
@@ -285,14 +286,14 @@ const DashboardPage: React.FC = () => {
         {statCards.map((stat, index) => (
           <Card key={index}>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">{stat.title}</p>
-                  <p className={`text-3xl font-bold mt-2 ${stat.valueColor}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-600 truncate">{stat.title}</p>
+                  <p className={`text-2xl sm:text-3xl font-bold mt-2 ${stat.valueColor} break-words`}>
                     {stat.value}
                   </p>
                 </div>
-                <div className={`${stat.iconBg} p-3 rounded-lg`}>
+                <div className={`${stat.iconBg} p-3 rounded-lg flex-shrink-0`}>
                   <stat.icon className={`w-8 h-8 ${stat.iconColor}`} />
                 </div>
               </div>
@@ -313,15 +314,15 @@ const DashboardPage: React.FC = () => {
               {unitCards.map((stat, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-4 rounded-lg border border-gray-100"
+                  className="flex items-center justify-between p-4 rounded-lg border border-gray-100 gap-3"
                 >
-                  <div>
-                    <p className="text-sm text-gray-600">{stat.title}</p>
-                    <p className={`text-2xl font-bold mt-1 ${stat.valueColor}`}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-600 truncate">{stat.title}</p>
+                    <p className={`text-xl sm:text-2xl font-bold mt-1 ${stat.valueColor} break-words`}>
                       {stat.value}
                     </p>
                   </div>
-                  <div className={`${stat.iconBg} p-3 rounded-lg`}>
+                  <div className={`${stat.iconBg} p-3 rounded-lg flex-shrink-0`}>
                     <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                   </div>
                 </div>
@@ -340,7 +341,7 @@ const DashboardPage: React.FC = () => {
               {pendingCards.map((stat, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-4 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-50"
+                  className="flex items-center justify-between p-4 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-50 gap-3"
                   onClick={() => {
                     if (stat.title.includes('Booking')) navigate('/bookings');
                     else if (stat.title.includes('Cọc')) navigate('/deposits');
@@ -348,13 +349,13 @@ const DashboardPage: React.FC = () => {
                     else if (stat.title.includes('Doanh thu')) navigate('/transactions');
                   }}
                 >
-                  <div>
-                    <p className="text-sm text-gray-600">{stat.title}</p>
-                    <p className={`text-2xl font-bold mt-1 ${stat.valueColor}`}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-600 truncate">{stat.title}</p>
+                    <p className={`text-lg sm:text-xl md:text-2xl font-bold mt-1 ${stat.valueColor} break-words`}>
                       {stat.value}
                     </p>
                   </div>
-                  <div className={`${stat.iconBg} p-3 rounded-lg`}>
+                  <div className={`${stat.iconBg} p-3 rounded-lg flex-shrink-0`}>
                     <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                   </div>
                 </div>
@@ -718,6 +719,17 @@ const DashboardPage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Analytics Section */}
+      <div className="mt-8">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold tracking-tight">Phân tích & Báo cáo</h2>
+          <p className="text-muted-foreground">
+            Phân tích chi tiết doanh thu, hiệu suất CTV và dự án
+          </p>
+        </div>
+        <AnalyticsSection />
       </div>
     </div>
   );

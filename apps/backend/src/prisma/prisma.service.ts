@@ -77,6 +77,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get auditLog() { return this.prisma.auditLog; }
   get oTP() { return this.prisma.oTP; }
   get sequence() { return this.prisma.sequence; }
+  get document() { return this.prisma.document; }
   async onModuleInit() {
     await this._prismaBase.$connect();
     console.log('✅ Database connected');

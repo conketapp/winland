@@ -92,6 +92,20 @@ const DashboardLayout: React.FC = () => {
             </svg>
           ),
         },
+        {
+          title: 'Báo cáo',
+          url: '/reports',
+          icon: (
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          ),
+        },
       ],
     },
     {
@@ -145,7 +159,7 @@ const DashboardLayout: React.FC = () => {
           ),
         },
         {
-          title: 'Duyệt Bookings',
+          title: 'Quản lý Bookings',
           url: '/bookings',
           icon: (
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -165,7 +179,7 @@ const DashboardLayout: React.FC = () => {
       label: 'Cọc & Thanh toán',
       items: [
         {
-          title: 'Duyệt Cọc',
+          title: 'Quản lý Cọc',
           url: '/deposits',
           icon: (
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -245,6 +259,34 @@ const DashboardLayout: React.FC = () => {
     {
       label: 'Hệ thống',
       items: [
+        {
+          title: 'Tài liệu & Hợp đồng',
+          url: '/documents',
+          icon: (
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          ),
+        },
+        {
+          title: 'Template PDF',
+          url: '/pdf-templates',
+          icon: (
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          ),
+        },
         {
           title: 'Cấu hình',
           url: '/system-config',
