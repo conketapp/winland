@@ -35,5 +35,9 @@
     "next-auth": "^4.24.11",
     "react-toastify": "^11.0.5",
     "styled-components": "^5.3.11"
+  },
+  "overrides": {
+    "glob": "^10.4.6",
+    "@next/eslint-plugin-next": "^16.1.0"
   }
 }
