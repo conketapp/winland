@@ -150,6 +150,7 @@ export class PdfTemplatesService {
     
     try {
       // Validate Handlebars syntax by trying to compile
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const Handlebars = require('handlebars');
       Handlebars.compile(content);
     } catch (error) {
