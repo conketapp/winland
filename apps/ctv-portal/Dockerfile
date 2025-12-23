@@ -28,10 +28,18 @@ COPY package.json package-lock.json ./
 COPY apps/ctv-portal ./apps/ctv-portal
 COPY packages/shared ./packages/shared
 
-# Install dependencies in workspace to ensure they're available
-# This ensures react, react-dom and other deps are accessible to Next.js
+# Ensure react and react-dom are available in workspace
+# Next.js needs these in the workspace node_modules or accessible from parent
 WORKDIR /app/apps/ctv-portal
-RUN npm install --legacy-peer-deps
+
+# Create node_modules if it doesn't exist and install critical dependencies
+RUN mkdir -p node_modules && \
+    if [ ! -d "node_modules/react" ]; then \
+        npm install react@19.1.0 react-dom@19.1.0 --save --legacy-peer-deps; \
+    fi
+
+# Verify react is available
+RUN test -d node_modules/react || (echo "React not found, installing..." && npm install react react-dom --save --legacy-peer-deps)
 
 # Generate Prisma Client
 RUN npx prisma generate
