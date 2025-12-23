@@ -6,26 +6,30 @@ FROM node:20-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY apps/ctv-portal/package*.json ./apps/ctv-portal/
-COPY packages/shared/package*.json ./packages/shared/
+# Copy package files for monorepo
+COPY package.json package-lock.json ./
+COPY apps/ctv-portal/package.json ./apps/ctv-portal/
+COPY packages/shared/package.json ./packages/shared/
 
-# Install dependencies
-RUN npm ci
+# Install all dependencies (monorepo hoisting)
+RUN npm install --legacy-peer-deps
 
 # Build the application
 FROM base AS builder
 WORKDIR /app
 
-# Copy dependencies
+# Copy all dependencies
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/ctv-portal/node_modules ./apps/ctv-portal/node_modules
+COPY --from=deps /app/packages ./packages
 
 # Copy source code
-COPY . .
+COPY package.json package-lock.json ./
 COPY apps/ctv-portal ./apps/ctv-portal
 COPY packages/shared ./packages/shared
+
+# Verify dependencies are available
+RUN cd apps/ctv-portal && npm list @radix-ui/react-dialog || npm install @radix-ui/react-dialog --legacy-peer-deps
 
 # Generate Prisma Client
 WORKDIR /app/apps/ctv-portal
