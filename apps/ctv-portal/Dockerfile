@@ -32,20 +32,21 @@ COPY packages/shared ./packages/shared
 WORKDIR /app
 RUN npm install --legacy-peer-deps
 
+# Install react and react-dom at root level
+# Next.js (installed in root node_modules) needs to find react from root node_modules
+RUN npm install react@19.1.0 react-dom@19.1.0 --save --legacy-peer-deps
+
+# Verify react is now in root node_modules
+RUN test -d node_modules/react || (echo "ERROR: react not found in root node_modules" && exit 1)
+RUN test -d node_modules/react-dom || (echo "ERROR: react-dom not found in root node_modules" && exit 1)
+
 # Generate Prisma Client
 WORKDIR /app/apps/ctv-portal
 RUN npx prisma generate
 
-# Install dependencies directly in workspace to ensure react and react-dom are available
-# This is necessary because Next.js requires these in the workspace node_modules
-WORKDIR /app/apps/ctv-portal
-RUN npm install --legacy-peer-deps
-
-# Verify react is now available
-RUN test -d node_modules/react || (echo "ERROR: react not found after install" && ls -la node_modules/ && exit 1)
-RUN test -d node_modules/react-dom || (echo "ERROR: react-dom not found after install" && exit 1)
-
 # Build the application
+# Next.js will find react from root node_modules
+WORKDIR /app/apps/ctv-portal
 RUN npm run build
 
 # Production image
