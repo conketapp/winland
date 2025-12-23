@@ -1,5 +1,6 @@
 # CTV Portal Dockerfile (Next.js)
-FROM node:18-alpine AS base
+# Next.js 16 requires Node.js >= 20.9.0
+FROM node:20-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps

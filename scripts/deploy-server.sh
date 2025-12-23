@@ -8,9 +8,19 @@ set -e
 # Configuration
 DOCKER_HUB_USERNAME="${DOCKER_HUB_USERNAME:-your-username}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
+
+# Internal ports (inside containers)
 BACKEND_PORT="${BACKEND_PORT:-3002}"
 ADMIN_PORT="${ADMIN_PORT:-80}"
 CTV_PORT="${CTV_PORT:-3000}"
+
+# External ports (mapped from host - for reverse proxy)
+EXTERNAL_BACKEND_PORT="${EXTERNAL_BACKEND_PORT:-3002}"
+EXTERNAL_ADMIN_PORT="${EXTERNAL_ADMIN_PORT:-8080}"
+EXTERNAL_CTV_PORT="${EXTERNAL_CTV_PORT:-3000}"
+
+# Base directory (default: /opt/apps/winland)
+BASE_DIR="${BASE_DIR:-/opt/apps/winland}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -66,13 +76,16 @@ create_pod() {
     
     echo -e "${YELLOW}📦 Creating pod ${pod_name}...${NC}"
     podman pod create --name "${pod_name}" \
-        -p "${BACKEND_PORT}:3002" \
-        -p "${ADMIN_PORT}:80" \
-        -p "${CTV_PORT}:3000" || {
+        -p "${EXTERNAL_BACKEND_PORT}:${BACKEND_PORT}" \
+        -p "${EXTERNAL_ADMIN_PORT}:${ADMIN_PORT}" \
+        -p "${EXTERNAL_CTV_PORT}:${CTV_PORT}" || {
         echo -e "${RED}❌ Failed to create pod${NC}"
         exit 1
     }
     echo -e "${GREEN}✅ Pod ${pod_name} created${NC}"
+    echo -e "${GREEN}   Backend: localhost:${EXTERNAL_BACKEND_PORT} → container:${BACKEND_PORT}${NC}"
+    echo -e "${GREEN}   Admin: localhost:${EXTERNAL_ADMIN_PORT} → container:${ADMIN_PORT}${NC}"
+    echo -e "${GREEN}   CTV Portal: localhost:${EXTERNAL_CTV_PORT} → container:${CTV_PORT}${NC}"
 }
 
 # Function to run backend container
