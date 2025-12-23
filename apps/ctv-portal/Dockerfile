@@ -28,11 +28,12 @@ COPY package.json package-lock.json ./
 COPY apps/ctv-portal ./apps/ctv-portal
 COPY packages/shared ./packages/shared
 
-# Verify dependencies are available
-RUN cd apps/ctv-portal && npm list @radix-ui/react-dialog || npm install @radix-ui/react-dialog --legacy-peer-deps
+# Install dependencies in workspace to ensure they're available
+# This ensures react, react-dom and other deps are accessible to Next.js
+WORKDIR /app/apps/ctv-portal
+RUN npm install --legacy-peer-deps
 
 # Generate Prisma Client
-WORKDIR /app/apps/ctv-portal
 RUN npx prisma generate
 
 # Build the application
